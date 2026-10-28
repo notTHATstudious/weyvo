@@ -6,7 +6,10 @@ export type ShortTag = 'WEEKEND' | 'ONE_NIGHT' | 'LONG_DRIVE' | 'DAY_TRIP';
 export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
 export interface Me { id: number; username: string; displayName: string; bio: string | null }
-export interface PublicUser { username: string; displayName: string; bio: string | null }
+export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean }
+export interface FollowStats { followers: number; following: number; followedByMe: boolean }
+export type ReactionType = 'been' | 'want' | 'save';
+export interface Reactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean; savedByMe: boolean }
 export interface Author { username: string; displayName: string }
 export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
 export interface Section { heading: string | null; body: string; photoCaption: string | null; photo: PhotoRef | null }
@@ -15,6 +18,7 @@ export interface TripCard {
   id: number; slug: string; kind: Kind; shortTag: ShortTag | null; title: string; place: string;
   author: Author; visibility: Visibility; status: 'DRAFT' | 'PUBLISHED'; publishedAt: string | null;
   cover: PhotoRef | null;
+  reactions: Reactions;
 }
 
 export interface TripView extends TripCard {
@@ -66,6 +70,10 @@ export const api = {
   user: (username: string) => request<PublicUser>('GET', `/users/${encodeURIComponent(username)}`),
   userTrips: (username: string) => request<TripCard[]>('GET', `/users/${encodeURIComponent(username)}/trips`),
   myTrips: () => request<TripCard[]>('GET', '/me/trips'),
+  followingFeed: () => request<TripCard[]>('GET', '/me/following'),
+  myList: (type: 'save' | 'want') => request<TripCard[]>('GET', `/me/reactions/${type}`),
+  react: (tripId: number, type: ReactionType, on: boolean) => request<Reactions>(on ? 'PUT' : 'DELETE', `/trips/${tripId}/reactions/${type}`),
+  follow: (username: string, on: boolean) => request<FollowStats>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/follow`),
   createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),
   publishTrip: (id: number) => request<TripView>('POST', `/trips/${id}/publish`),
   uploadPhoto: (tripId: number, file: File, role: 'COVER' | 'SECTION', position = 0) => {

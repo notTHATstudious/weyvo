@@ -111,7 +111,7 @@ export function Story() {
             </>
           )}
           {trip.finalNote && <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>}
-          {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions been={0} want={0} /></div>}
+          {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} /></div>}
         </div>
       )}
     </div>

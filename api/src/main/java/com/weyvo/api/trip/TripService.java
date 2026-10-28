@@ -3,6 +3,8 @@ package com.weyvo.api.trip;
 import com.weyvo.api.common.ApiException;
 import com.weyvo.api.photo.PhotoService;
 import com.weyvo.api.photo.PhotoService.PhotoRef;
+import com.weyvo.api.social.FollowService;
+import com.weyvo.api.social.ReactionService;
 import com.weyvo.api.trip.TripDtos.Author;
 import com.weyvo.api.trip.TripDtos.Section;
 import com.weyvo.api.trip.TripDtos.SectionInput;
@@ -34,12 +36,17 @@ public class TripService {
     private final UserRepository users;
     private final StoryGate gate;
     private final PhotoService photos;
+    private final ReactionService reactions;
+    private final FollowService follows;
 
-    public TripService(TripRepository trips, UserRepository users, StoryGate gate, PhotoService photos) {
+    public TripService(TripRepository trips, UserRepository users, StoryGate gate, PhotoService photos,
+                       ReactionService reactions, FollowService follows) {
         this.trips = trips;
         this.users = users;
         this.gate = gate;
         this.photos = photos;
+        this.reactions = reactions;
+        this.follows = follows;
     }
 
     // ---- reads ----
@@ -64,22 +71,45 @@ public class TripService {
                 trip.getStartDate(), trip.getEndDate(), trip.getIntro(), author(trip.getOwner()),
                 trip.getVisibility(), trip.getStatus(), trip.getPublishedAt(), pics.cover(),
                 shown, all.size(), locked ? List.of() : List.copyOf(trip.getMoments()), locked ? null : trip.getFinalNote(),
-                locked, trip.isOwnedBy(viewerId));
+                locked, trip.isOwnedBy(viewerId), reactions.forTrips(List.of(trip.getId()), viewerId).get(trip.getId()));
     }
 
     @Transactional(readOnly = true)
-    public List<TripCard> feed(Trip.Kind kind) {
-        return cards(trips.findPublicFeed(kind, PageRequest.of(0, PAGE_SIZE)));
+    public List<TripCard> feed(Trip.Kind kind, Long viewerId) {
+        return cards(trips.findPublicFeed(kind, PageRequest.of(0, PAGE_SIZE)), viewerId);
+    }
+
+    /** Public trips from people the reader follows, newest first. */
+    @Transactional(readOnly = true)
+    public List<TripCard> following(long viewerId) {
+        List<Long> followees = follows.followeeIds(viewerId);
+        if (followees.isEmpty()) return List.of();
+        return cards(trips.findPublicByOwnerIds(followees, PageRequest.of(0, PAGE_SIZE)), viewerId);
     }
 
     @Transactional(readOnly = true)
-    public List<TripCard> byUser(String username) {
-        return cards(trips.findPublicByUsername(username, PageRequest.of(0, PAGE_SIZE)));
+    public List<TripCard> byUser(String username, Long viewerId) {
+        return cards(trips.findPublicByUsername(username, PageRequest.of(0, PAGE_SIZE)), viewerId);
     }
 
     @Transactional(readOnly = true)
     public List<TripCard> mine(long ownerId) {
-        return cards(trips.findAllByOwner(ownerId, PageRequest.of(0, 100)));
+        return cards(trips.findAllByOwner(ownerId, PageRequest.of(0, 100)), ownerId);
+    }
+
+    /**
+     * Trips the reader saved or wants to visit, most recent first. A trip that has since gone private or
+     * back to draft drops out of the list rather than leaking.
+     */
+    @Transactional(readOnly = true)
+    public List<TripCard> reacted(long userId, ReactionService.Type type) {
+        List<Long> ids = reactions.tripIds(userId, type, 100);
+        Map<Long, Trip> byId = new java.util.HashMap<>();
+        trips.findAllWithOwnerByIdIn(ids).forEach(t -> byId.put(t.getId(), t));
+        List<Trip> ordered = ids.stream().map(byId::get)
+                .filter(t -> t != null && t.isVisibleTo(userId) && t.getStatus() == Trip.Status.PUBLISHED)
+                .toList();
+        return cards(ordered, userId);
     }
 
     // ---- writes (owner only) ----
@@ -99,6 +129,9 @@ public class TripService {
         Trip trip = owned(ownerId, tripId);
         if (req.kind() != trip.getKind()) throw ApiException.badRequest("A trip's kind can't change after it's created");
         validateTemplate(req);
+        // Hibernate flushes inserts before orphan deletes; clear first so new rows can reuse positions.
+        trip.replaceSections(List.of());
+        trips.flush();
         apply(trip, req);
         trip.touch();
         photos.pruneSections(trip.getId(), trip.getSections().size());
@@ -182,11 +215,13 @@ public class TripService {
         return slug;
     }
 
-    private List<TripCard> cards(List<Trip> list) {
+    private List<TripCard> cards(List<Trip> list, Long viewerId) {
         Map<Long, PhotoRef> covers = photos.coversFor(list);
+        Map<Long, ReactionService.Reactions> counts = reactions.forTrips(list.stream().map(Trip::getId).toList(), viewerId);
         return list.stream()
                 .map(t -> new TripCard(t.getId(), t.getSlug(), t.getKind(), t.getShortTag(), t.getTitle(), t.getPlace(),
-                        author(t.getOwner()), t.getVisibility(), t.getStatus(), t.getPublishedAt(), covers.get(t.getId())))
+                        author(t.getOwner()), t.getVisibility(), t.getStatus(), t.getPublishedAt(), covers.get(t.getId()),
+                        counts.get(t.getId())))
                 .toList();
     }
 

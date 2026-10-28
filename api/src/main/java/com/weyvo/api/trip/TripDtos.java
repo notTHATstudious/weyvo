@@ -1,6 +1,7 @@
 package com.weyvo.api.trip;
 
 import com.weyvo.api.photo.PhotoService.PhotoRef;
+import com.weyvo.api.social.ReactionService.Reactions;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -42,9 +43,10 @@ public final class TripDtos {
             LocalDate startDate, LocalDate endDate, String intro, Author author,
             Trip.Visibility visibility, Trip.Status status, Instant publishedAt, PhotoRef cover,
             List<Section> sections, int totalSections, List<String> moments, String finalNote,
-            boolean locked, boolean owner) {}
+            boolean locked, boolean owner, Reactions reactions) {}
 
     public record TripCard(
             long id, String slug, Trip.Kind kind, Trip.ShortTag shortTag, String title, String place,
-            Author author, Trip.Visibility visibility, Trip.Status status, Instant publishedAt, PhotoRef cover) {}
+            Author author, Trip.Visibility visibility, Trip.Status status, Instant publishedAt, PhotoRef cover,
+            Reactions reactions) {}
 }

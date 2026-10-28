@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, avatarOf, sceneFor, TAG_LABEL, type TripCard } from '../api';
+import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
@@ -9,16 +10,22 @@ import { Empty, ErrorNote, Loading } from '../components/States';
 import { places } from '../mocks/data';
 import { useApi } from '../useApi';
 
-const TABS = [
+const ALL_TABS = [
+  { id: 'following', label: 'Following' },
   { id: 'latest', label: 'Latest' },
   { id: 'shorts', label: 'Short Stories' },
   { id: 'places', label: 'Destinations' },
   { id: 'issue', label: "This week's Issue" },
 ] as const;
-type Tab = (typeof TABS)[number]['id'];
+type Tab = (typeof ALL_TABS)[number]['id'];
 
 export function Discover() {
-  const [tab, setTab] = useState<Tab>('latest');
+  const { signedIn } = useAuth();
+  // Following needs an account; signed-out readers start on Latest.
+  const TABS = signedIn ? ALL_TABS : ALL_TABS.filter((t) => t.id !== 'following');
+  const [picked, setPicked] = useState<Tab | null>(null);
+  const tab: Tab = picked ?? (signedIn ? 'following' : 'latest');
+  const setTab = setPicked;
 
   return (
     <div className="app">
@@ -37,6 +44,7 @@ export function Discover() {
       </div>
 
       <div style={{ padding: '0 20px' }}>
+        {tab === 'following' && <FollowingTrips onBrowse={() => setTab('latest')} />}
         {tab === 'latest' && <LatestTrips />}
         {tab === 'shorts' && <LatestShorts />}
 
@@ -69,6 +77,22 @@ export function Discover() {
   );
 }
 
+function FollowingTrips({ onBrowse }: { onBrowse: () => void }) {
+  const { data, error, loading } = useApi(() => api.followingFeed(), []);
+  if (loading) return <Loading />;
+  if (error) return <ErrorNote message={error.message} />;
+  if (!data?.length) {
+    return (
+      <div className="paper-card" style={{ textAlign: 'center', padding: '32px 20px' }}>
+        <p className="display" style={{ margin: 0, fontSize: 26 }}>Your Following feed is quiet</p>
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, color: 'var(--ink-soft)' }}>Follow travellers whose stories you like, and their new trips show up here.</p>
+        <button type="button" className="btn btn-primary" onClick={onBrowse} style={{ marginTop: 18 }}>Find travellers</button>
+      </div>
+    );
+  }
+  return <>{data.map((t) => <TripFeedCard key={t.id} trip={t} />)}</>;
+}
+
 function LatestTrips() {
   const { data, error, loading } = useApi(() => api.feed('FULL'), []);
   if (loading) return <Loading />;
@@ -93,7 +117,7 @@ function TripFeedCard({ trip }: { trip: TripCard }) {
           <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{trip.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{trip.title}</p></div>
         </div>
       </Link>
-      <div style={{ marginTop: 12 }}><Reactions been={0} want={0} /></div>
+      <div style={{ marginTop: 12 }}><Reactions tripId={trip.id} initial={trip.reactions} /></div>
     </article>
   );
 }

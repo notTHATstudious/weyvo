@@ -152,6 +152,19 @@ class ApiIntegrationTest {
         mvc.perform(delete("/api/trips/" + id).cookie(owner)).andExpect(status().isNoContent());
     }
 
+    @Test
+    void ownersCanEditATripAndReplaceItsSections() throws Exception {
+        Cookie owner = signup("editor");
+        long id = create(owner, fullTrip("PUBLIC", 2)).get("id").asLong();
+        mvc.perform(put("/api/trips/" + id).cookie(owner).contentType(MediaType.APPLICATION_JSON).content(fullTrip("PUBLIC", 3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sections", hasSize(3)))
+                .andExpect(jsonPath("$.sections[0].heading").value("Part 1"));
+        mvc.perform(put("/api/trips/" + id).cookie(owner).contentType(MediaType.APPLICATION_JSON).content(fullTrip("PUBLIC", 1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sections", hasSize(1)));
+    }
+
     // ---- template limits ----
 
     @Test

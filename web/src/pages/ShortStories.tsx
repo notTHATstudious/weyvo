@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, avatarOf, sceneFor, TAG_LABEL, type ShortTag } from '../api';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
@@ -18,7 +18,9 @@ export function ShortStories() {
 
   const [si, setSi] = useState(0);
   const [pi, setPi] = useState(0);
+  // Local overrides after tapping Want; the server's state comes with each card.
   const [wanted, setWanted] = useState<Record<number, boolean>>({});
+  const navigate = useNavigate();
 
   // Open at the story the reader tapped, once the feed has loaded.
   useEffect(() => {
@@ -59,8 +61,19 @@ export function ShortStories() {
   const by = avatarOf(card.author.displayName);
   const hidden = story ? pi >= story.sections.length : false;
   const caption = story && !hidden ? story.sections[pi]?.body : '';
-  const isWanted = !!wanted[card.id];
+  const isWanted = wanted[card.id] ?? card.reactions.wantByMe;
   const next = encodeURIComponent(`/shorts?start=${card.slug}`);
+
+  async function toggleWant() {
+    if (!user) return navigate(`/signin?mode=join&next=${next}`);
+    const id = card!.id;
+    setWanted((w) => ({ ...w, [id]: !isWanted }));
+    try {
+      await api.react(id, 'want', !isWanted);
+    } catch {
+      setWanted((w) => ({ ...w, [id]: isWanted }));
+    }
+  }
 
   return shell(
     <>
@@ -113,11 +126,11 @@ export function ShortStories() {
             {caption && <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.45, opacity: 0.92 }}>{caption}</p>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', fontSize: 11 }}>
-            <button type="button" aria-label="Want to go" aria-pressed={isWanted} onClick={() => setWanted((w) => ({ ...w, [card.id]: !isWanted }))}
+            <button type="button" aria-label="Want to go" aria-pressed={isWanted} onClick={toggleWant}
               style={{ width: 52, height: 52, borderRadius: '50%', border: 0, background: isWanted ? 'var(--gold)' : 'rgba(255,255,255,.18)', color: isWanted ? '#1C1B18' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: isWanted ? 'pop .35s ease-out' : undefined }}>
               <Icon.pin size={24} />
             </button>
-            <span>Want</span>
+            <span>{card.reactions.want - (card.reactions.wantByMe ? 1 : 0) + (isWanted ? 1 : 0)}</span>
             <Link to={`/trips/${card.slug}`} aria-label="Open as a page" style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,.18)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}><Icon.chat size={24} /></Link>
             <span>Open</span>
           </div>

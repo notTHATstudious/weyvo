@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { api, avatarOf, sceneFor } from '../api';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { api, avatarOf, sceneFor, type FollowStats } from '../api';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
@@ -12,10 +12,12 @@ import { useApi } from '../useApi';
 export function Profile() {
   const { handle = '' } = useParams();
   const { user } = useAuth();
-  const [following, setFollowing] = useState(false);
+  const navigate = useNavigate();
+  const [follow, setFollow] = useState<FollowStats | null>(null);
+  const [busy, setBusy] = useState(false);
   const isMe = user?.username.toLowerCase() === handle.toLowerCase();
 
-  const person = useApi(() => api.user(handle), [handle]);
+  const person = useApi(() => api.user(handle), [handle, user?.id]);
   // Your own profile includes drafts and private trips; anyone else's shows public ones only.
   const trips = useApi(() => (isMe ? api.myTrips() : api.userTrips(handle)), [handle, isMe]);
 
@@ -25,11 +27,26 @@ export function Profile() {
   }
 
   const p = person.data;
+  const f = follow ?? { followers: p.followers, following: p.following, followedByMe: p.followedByMe };
   const a = avatarOf(p.displayName);
   const all = trips.data ?? [];
   const full = all.filter((t) => t.kind === 'FULL');
   const shorts = all.filter((t) => t.kind === 'SHORT');
-  const stats: [string, string][] = [[String(full.length), 'trips'], [String(shorts.length), 'short stories']];
+  const stats: [string, string][] = [[String(full.length), 'trips'], [String(shorts.length), 'short'], [String(f.followers), 'followers'], [String(f.following), 'following']];
+
+  async function toggleFollow() {
+    if (!user) return navigate(`/signin?mode=join&next=${encodeURIComponent(`/u/${handle}`)}`);
+    const on = !f.followedByMe;
+    setFollow({ ...f, followedByMe: on, followers: f.followers + (on ? 1 : -1) });
+    setBusy(true);
+    try {
+      setFollow(await api.follow(handle, on));
+    } catch {
+      setFollow(f);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="app">
@@ -50,8 +67,9 @@ export function Profile() {
         {isMe ? (
           <Link to="/create" className="btn btn-primary" style={{ flex: 1, minHeight: 44 }}>New story</Link>
         ) : (
-          <button type="button" className={following ? 'btn btn-outline' : 'btn btn-primary'} onClick={() => setFollowing(!following)} style={{ flex: 1, minHeight: 44 }}>
-            {following ? 'Following' : 'Follow'}
+          <button type="button" className={f.followedByMe ? 'btn btn-outline' : 'btn btn-primary'} onClick={toggleFollow} disabled={busy}
+            aria-pressed={f.followedByMe} style={{ flex: 1, minHeight: 44 }}>
+            {f.followedByMe ? 'Following' : 'Follow'}
           </button>
         )}
         <button type="button" className="btn btn-outline" style={{ minHeight: 44, borderColor: 'var(--line-strong)' }}
@@ -61,7 +79,7 @@ export function Profile() {
       {/* Sample pins until trips carry real place data. */}
       <div style={{ margin: '20px 20px 0' }}><TravelMap /></div>
 
-      <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', textAlign: 'center' }}>
+      <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', textAlign: 'center' }}>
         {stats.map(([n, l]) => (
           <div key={l}><p className="display" style={{ margin: 0, fontSize: 28 }}>{n}</p><p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>{l}</p></div>
         ))}
@@ -106,7 +124,38 @@ export function Profile() {
           </div>
         </>
       )}
+
+      {isMe && <MyList type="want" title="Want to go" empty="Tap Want to go on any story to plan your next trip." />}
+      {isMe && <MyList type="save" title="Saved" empty="Bookmark stories to read later. Only you see this list." />}
       <BottomNav />
     </div>
+  );
+}
+
+/** Your private lists, shown only on your own profile. */
+function MyList({ type, title, empty }: { type: 'save' | 'want'; title: string; empty: string }) {
+  const { data, loading } = useApi(() => api.myList(type), [type]);
+  const items = data ?? [];
+  return (
+    <>
+      <div style={{ margin: '28px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--ink)', paddingBottom: 8 }}>
+        <h2 className="display" style={{ margin: 0, fontSize: 26 }}>{title}</h2><span style={{ fontSize: 12, color: 'var(--muted)' }}>Only you see this</span>
+      </div>
+      {loading ? null : items.length === 0 ? (
+        <p style={{ margin: '12px 20px 0', fontSize: 14, color: 'var(--ink-soft)' }}>{empty}</p>
+      ) : (
+        <div className="scroll-x" style={{ gap: 10, padding: '14px 20px 0' }}>
+          {items.map((t) => (
+            <Link key={t.id} to={`/trips/${t.slug}`} className="cover" style={{ flex: '0 0 140px', height: 180, borderRadius: 14 }}>
+              <Photo scene={sceneFor(t.id)} src={t.cover?.thumbUrl} />
+              <span style={{ position: 'absolute', left: 8, right: 8, bottom: 8, textShadow: '0 1px 6px rgba(0,0,0,.45)' }}>
+                <span style={{ display: 'block', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase' }}>{t.place}</span>
+                <span className="display" style={{ display: 'block', fontSize: 16 }}>{t.title}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

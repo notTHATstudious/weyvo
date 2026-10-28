@@ -33,6 +33,19 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     List<Trip> findPublicByUsername(String username, Pageable page);
 
     @EntityGraph(attributePaths = "owner")
+    @Query("""
+            select t from Trip t
+            where t.owner.id in ?1
+              and t.status = com.weyvo.api.trip.Trip.Status.PUBLISHED
+              and t.visibility = com.weyvo.api.trip.Trip.Visibility.PUBLIC
+            order by t.publishedAt desc""")
+    List<Trip> findPublicByOwnerIds(java.util.Collection<Long> ownerIds, Pageable page);
+
+    @EntityGraph(attributePaths = "owner")
+    @Query("select t from Trip t where t.id in ?1")
+    List<Trip> findAllWithOwnerByIdIn(java.util.Collection<Long> ids);
+
+    @EntityGraph(attributePaths = "owner")
     @Query("select t from Trip t where t.owner.id = ?1 order by t.updatedAt desc")
     List<Trip> findAllByOwner(Long ownerId, Pageable page);
 }
