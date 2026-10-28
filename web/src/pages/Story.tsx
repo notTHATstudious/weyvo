@@ -37,7 +37,7 @@ export function Story() {
       </div>
 
       <div style={{ height: '72vh', minHeight: 480, maxHeight: 640, position: 'relative', color: '#fff' }}>
-        <Photo scene={sceneFor(trip.id)} />
+        <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} alt={`Cover photo: ${trip.title}`} />
         <div style={{ position: 'absolute', top: 12, left: 10, right: 10, display: 'flex', justifyContent: 'space-between' }}>
           <Link to="/discover" className="icon-btn solid" aria-label="Back" style={{ color: 'var(--ink)' }}><Icon.back /></Link>
           <button type="button" className="icon-btn solid" aria-label="Copy link" style={{ color: 'var(--ink)' }}
@@ -67,13 +67,17 @@ export function Story() {
               <h2 className="eyebrow" style={{ margin: '30px 0 8px', fontWeight: 600 }}>{NUMERALS[i]}{s.heading ? ` · ${s.heading}` : ''}</h2>
             )}
             {trip.kind === 'SHORT' && <div style={{ height: 22 }} />}
-            {trip.kind === 'SHORT' && <div style={{ height: 320, borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 10 }}><Photo scene={sceneFor(trip.id + i + 1)} /></div>}
+            {trip.kind === 'SHORT' && (
+              <div style={{ height: 380, borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 10 }}>
+                <Photo scene={sceneFor(trip.id + i + 1)} src={s.photo?.url} alt={s.body} />
+              </div>
+            )}
             <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'var(--ink-soft)' }}>{s.body}</p>
           </div>
-          {trip.kind === 'FULL' && s.photoCaption && (
+          {trip.kind === 'FULL' && s.photo && (
             <figure style={{ margin: '22px 0 0' }}>
-              <div style={{ height: 320 }}><Photo scene={sceneFor(trip.id + i + 1)} /></div>
-              <figcaption style={{ padding: '8px 22px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.photoCaption}</figcaption>
+              <div style={{ height: 'min(70vw, 460px)' }}><Photo scene={sceneFor(trip.id + i + 1)} src={s.photo.url} alt={s.photoCaption ?? s.heading ?? 'Trip photo'} /></div>
+              {s.photoCaption && <figcaption style={{ padding: '8px 22px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.photoCaption}</figcaption>}
             </figure>
           )}
         </section>

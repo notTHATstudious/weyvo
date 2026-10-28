@@ -1,5 +1,6 @@
 package com.weyvo.api.trip;
 
+import com.weyvo.api.photo.PhotoService.PhotoRef;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,17 +34,17 @@ public final class TripDtos {
 
     public record Author(String username, String displayName) {}
 
-    public record Section(String heading, String body, String photoCaption) {}
+    public record Section(String heading, String body, String photoCaption, PhotoRef photo) {}
 
     /** A single trip. When locked, sections hold only the free share and moments/finalNote are withheld. */
     public record TripView(
             long id, String slug, Trip.Kind kind, Trip.ShortTag shortTag, String title, String place,
             LocalDate startDate, LocalDate endDate, String intro, Author author,
-            Trip.Visibility visibility, Trip.Status status, Instant publishedAt,
+            Trip.Visibility visibility, Trip.Status status, Instant publishedAt, PhotoRef cover,
             List<Section> sections, int totalSections, List<String> moments, String finalNote,
             boolean locked, boolean owner) {}
 
     public record TripCard(
             long id, String slug, Trip.Kind kind, Trip.ShortTag shortTag, String title, String place,
-            Author author, Trip.Visibility visibility, Trip.Status status, Instant publishedAt) {}
+            Author author, Trip.Visibility visibility, Trip.Status status, Instant publishedAt, PhotoRef cover) {}
 }

@@ -107,6 +107,11 @@ public class Trip {
         return userId != null && owner.getId().equals(userId);
     }
 
+    /** Drafts and private trips exist only for their owner; published public and unlisted trips for anyone. */
+    public boolean isVisibleTo(Long userId) {
+        return isOwnedBy(userId) || (status == Status.PUBLISHED && visibility != Visibility.PRIVATE);
+    }
+
     public void replaceSections(List<TripSection> next) {
         sections.clear();
         sections.addAll(next);

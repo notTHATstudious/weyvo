@@ -11,6 +11,10 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 16MB
 
 server:
   port: ${PORT:8080}
@@ -34,3 +38,10 @@ app:
   signup:
     # Reject email domains with no mail server (DNS MX/A lookup). Throwaway inboxes are always rejected.
     check-mail-domain: ${APP_SIGNUP_CHECK_MAIL_DOMAIN:true}
+  storage:
+    # local: files under local-dir (development). supabase: private Supabase Storage bucket.
+    provider: ${APP_STORAGE_PROVIDER:local}
+    local-dir: ${APP_STORAGE_LOCAL_DIR:data/photos}
+    supabase-url: ${SUPABASE_URL:}
+    supabase-service-key: ${SUPABASE_SERVICE_KEY:}
+    supabase-bucket: ${SUPABASE_BUCKET:trip-photos}

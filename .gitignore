@@ -16,3 +16,6 @@ api/target/
 !.vscode/extensions.json
 
 *.tsbuildinfo
+
+# Locally stored photo uploads
+api/data/

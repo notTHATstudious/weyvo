@@ -30,8 +30,15 @@ const SCENES: Record<Scene, Palette> = {
     p3: 'M0 285 L400 285 L400 300 L0 300Z' },
 };
 
-/** Illustrated stand-in for a travel photo. Replaced by real uploads once storage exists. */
-export function Photo({ scene, className, style }: { scene: Scene; className?: string; style?: CSSProperties }) {
+/**
+ * A trip photo filling its box. With `src` it shows the uploaded image; without one it draws an
+ * illustrated stand-in so stories without photos still look finished.
+ */
+export function Photo({ scene, src, alt = '', className, style }: { scene: Scene; src?: string | null; alt?: string; className?: string; style?: CSSProperties }) {
+  if (src) {
+    return <img src={src} alt={alt} loading="lazy" decoding="async" className={className}
+      style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', background: 'var(--line)', ...style }} />;
+  }
   const s = SCENES[scene];
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden="true"

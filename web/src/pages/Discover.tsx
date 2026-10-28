@@ -87,7 +87,7 @@ function TripFeedCard({ trip }: { trip: TripCard }) {
         <Link to={`/u/${trip.author.username}`} style={{ fontSize: 13, fontWeight: 500, padding: '12px 0 12px 8px' }}>View</Link>
       </div>
       <Link to={`/trips/${trip.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>
-        <Photo scene={sceneFor(trip.id)} />
+        <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} />
         <div className="cover-overlay">
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Full trip</span><span>Weyvo</span></div>
           <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{trip.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{trip.title}</p></div>
@@ -109,7 +109,7 @@ function LatestShorts() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
         {data.map((s) => (
           <Link key={s.id} to={`/shorts?start=${s.slug}`} className="cover rise" style={{ height: 250, borderRadius: 16 }}>
-            <Photo scene={sceneFor(s.id)} />
+            <Photo scene={sceneFor(s.id)} src={s.cover?.thumbUrl} />
             <div className="cover-overlay" style={{ padding: 10 }}>
               {s.shortTag && <span className="tag" style={{ alignSelf: 'flex-start', fontSize: 10 }}>{TAG_LABEL[s.shortTag]}</span>}
               <p className="display" style={{ margin: 0, fontSize: 19 }}>{s.title}</p>

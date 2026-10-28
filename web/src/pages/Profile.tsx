@@ -79,7 +79,7 @@ export function Profile() {
             {full.map((t) => (
               <Link key={t.id} to={`/trips/${t.slug}`} className="lift" style={{ display: 'block', background: 'var(--card)', padding: 6, textDecoration: 'none' }}>
                 <div className="cover" style={{ height: 200 }}>
-                  <Photo scene={sceneFor(t.id)} />
+                  <Photo scene={sceneFor(t.id)} src={t.cover?.thumbUrl} />
                   <div className="cover-overlay" style={{ padding: 10 }}>
                     <span style={{ fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase' }}>{t.status === 'DRAFT' ? 'Draft' : t.visibility === 'PUBLIC' ? t.place : t.visibility.toLowerCase()}</span>
                     <span className="display" style={{ fontSize: 20 }}>{t.title}</span>
@@ -99,7 +99,7 @@ export function Profile() {
           <div className="scroll-x" style={{ gap: 10, padding: '14px 20px 0' }}>
             {shorts.map((s) => (
               <Link key={s.id} to={`/trips/${s.slug}`} className="cover" style={{ flex: '0 0 120px', height: 180, borderRadius: 14 }}>
-                <Photo scene={sceneFor(s.id)} />
+                <Photo scene={sceneFor(s.id)} src={s.cover?.thumbUrl} />
                 <span className="display" style={{ position: 'absolute', left: 8, right: 8, bottom: 8, fontSize: 15, textShadow: '0 1px 6px rgba(0,0,0,.4)' }}>{s.title}</span>
               </Link>
             ))}

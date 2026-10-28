@@ -8,11 +8,13 @@ export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 export interface Me { id: number; username: string; displayName: string; bio: string | null }
 export interface PublicUser { username: string; displayName: string; bio: string | null }
 export interface Author { username: string; displayName: string }
-export interface Section { heading: string | null; body: string; photoCaption: string | null }
+export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
+export interface Section { heading: string | null; body: string; photoCaption: string | null; photo: PhotoRef | null }
 
 export interface TripCard {
   id: number; slug: string; kind: Kind; shortTag: ShortTag | null; title: string; place: string;
   author: Author; visibility: Visibility; status: 'DRAFT' | 'PUBLISHED'; publishedAt: string | null;
+  cover: PhotoRef | null;
 }
 
 export interface TripView extends TripCard {
@@ -35,12 +37,14 @@ export class ApiError extends Error {
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
+  const isForm = body instanceof FormData;
   try {
     res = await fetch(`/api${path}`, {
       method,
       credentials: 'same-origin',
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      // FormData sets its own multipart boundary header.
+      headers: body === undefined || isForm ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError("Can't reach Weyvo right now. Check your connection.", 0);
@@ -64,7 +68,21 @@ export const api = {
   myTrips: () => request<TripCard[]>('GET', '/me/trips'),
   createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),
   publishTrip: (id: number) => request<TripView>('POST', `/trips/${id}/publish`),
+  uploadPhoto: (tripId: number, file: File, role: 'COVER' | 'SECTION', position = 0) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('role', role);
+    form.append('position', String(position));
+    return request<PhotoRef>('POST', `/trips/${tripId}/photos`, form);
+  },
 };
+
+/** Quick checks before uploading; the server re-checks everything. */
+export function photoProblem(file: File): string | null {
+  if (!['image/jpeg', 'image/png'].includes(file.type)) return 'Use a JPEG or PNG photo';
+  if (file.size > 15 * 1024 * 1024) return 'That photo is over 15 MB. Choose a smaller one';
+  return null;
+}
 
 export const TAG_LABEL: Record<ShortTag, string> = {
   WEEKEND: 'Weekend', ONE_NIGHT: 'One night', LONG_DRIVE: 'Long drive', DAY_TRIP: 'Day trip',

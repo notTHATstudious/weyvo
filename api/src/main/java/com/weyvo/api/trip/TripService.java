@@ -1,7 +1,8 @@
 package com.weyvo.api.trip;
 
 import com.weyvo.api.common.ApiException;
-import com.weyvo.api.config.AppProperties;
+import com.weyvo.api.photo.PhotoService;
+import com.weyvo.api.photo.PhotoService.PhotoRef;
 import com.weyvo.api.trip.TripDtos.Author;
 import com.weyvo.api.trip.TripDtos.Section;
 import com.weyvo.api.trip.TripDtos.SectionInput;
@@ -14,6 +15,7 @@ import java.security.SecureRandom;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.IntStream;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -30,12 +32,14 @@ public class TripService {
 
     private final TripRepository trips;
     private final UserRepository users;
-    private final double freeShare;
+    private final StoryGate gate;
+    private final PhotoService photos;
 
-    public TripService(TripRepository trips, UserRepository users, AppProperties props) {
+    public TripService(TripRepository trips, UserRepository users, StoryGate gate, PhotoService photos) {
         this.trips = trips;
         this.users = users;
-        this.freeShare = props.story().freeShare();
+        this.gate = gate;
+        this.photos = photos;
     }
 
     // ---- reads ----
@@ -47,39 +51,35 @@ public class TripService {
     @Transactional(readOnly = true)
     public TripView view(String slug, Long viewerId) {
         Trip trip = trips.findBySlug(slug).orElseThrow(ApiException::notFound);
-        boolean owner = trip.isOwnedBy(viewerId);
-        boolean visibleToOthers = trip.getStatus() == Trip.Status.PUBLISHED && trip.getVisibility() != Trip.Visibility.PRIVATE;
-        if (!owner && !visibleToOthers) throw ApiException.notFound();
+        if (!trip.isVisibleTo(viewerId)) throw ApiException.notFound();
 
-        boolean locked = !owner && viewerId == null;
-        List<Section> all = trip.getSections().stream().map(s -> new Section(s.getHeading(), s.getBody(), s.getPhotoCaption())).toList();
-        List<Section> shown = locked ? all.subList(0, freeCount(all.size())) : all;
+        boolean locked = gate.locked(trip, viewerId);
+        PhotoService.TripPhotos pics = photos.forTrip(trip);
+        List<Section> all = trip.getSections().stream()
+                .map(s -> new Section(s.getHeading(), s.getBody(), s.getPhotoCaption(), pics.sections().get(s.getPosition())))
+                .toList();
+        List<Section> shown = locked ? all.subList(0, gate.freeCount(all.size())) : all;
 
         return new TripView(trip.getId(), trip.getSlug(), trip.getKind(), trip.getShortTag(), trip.getTitle(), trip.getPlace(),
                 trip.getStartDate(), trip.getEndDate(), trip.getIntro(), author(trip.getOwner()),
-                trip.getVisibility(), trip.getStatus(), trip.getPublishedAt(),
+                trip.getVisibility(), trip.getStatus(), trip.getPublishedAt(), pics.cover(),
                 shown, all.size(), locked ? List.of() : List.copyOf(trip.getMoments()), locked ? null : trip.getFinalNote(),
-                locked, owner);
-    }
-
-    int freeCount(int total) {
-        if (total == 0) return 0;
-        return Math.max(1, (int) Math.ceil(total * freeShare));
+                locked, trip.isOwnedBy(viewerId));
     }
 
     @Transactional(readOnly = true)
     public List<TripCard> feed(Trip.Kind kind) {
-        return trips.findPublicFeed(kind, PageRequest.of(0, PAGE_SIZE)).stream().map(this::card).toList();
+        return cards(trips.findPublicFeed(kind, PageRequest.of(0, PAGE_SIZE)));
     }
 
     @Transactional(readOnly = true)
     public List<TripCard> byUser(String username) {
-        return trips.findPublicByUsername(username, PageRequest.of(0, PAGE_SIZE)).stream().map(this::card).toList();
+        return cards(trips.findPublicByUsername(username, PageRequest.of(0, PAGE_SIZE)));
     }
 
     @Transactional(readOnly = true)
     public List<TripCard> mine(long ownerId) {
-        return trips.findAllByOwner(ownerId, PageRequest.of(0, 100)).stream().map(this::card).toList();
+        return cards(trips.findAllByOwner(ownerId, PageRequest.of(0, 100)));
     }
 
     // ---- writes (owner only) ----
@@ -101,6 +101,7 @@ public class TripService {
         validateTemplate(req);
         apply(trip, req);
         trip.touch();
+        photos.pruneSections(trip.getId(), trip.getSections().size());
         return view(trip.getSlug(), ownerId);
     }
 
@@ -114,7 +115,9 @@ public class TripService {
 
     @Transactional
     public void delete(long ownerId, long tripId) {
-        trips.delete(owned(ownerId, tripId));
+        Trip trip = owned(ownerId, tripId);
+        photos.deleteAllFor(trip.getId());
+        trips.delete(trip);
     }
 
     /** Loads a trip only if the caller owns it. Someone else's trip looks exactly like a missing one. */
@@ -179,9 +182,12 @@ public class TripService {
         return slug;
     }
 
-    private TripCard card(Trip t) {
-        return new TripCard(t.getId(), t.getSlug(), t.getKind(), t.getShortTag(), t.getTitle(), t.getPlace(),
-                author(t.getOwner()), t.getVisibility(), t.getStatus(), t.getPublishedAt());
+    private List<TripCard> cards(List<Trip> list) {
+        Map<Long, PhotoRef> covers = photos.coversFor(list);
+        return list.stream()
+                .map(t -> new TripCard(t.getId(), t.getSlug(), t.getKind(), t.getShortTag(), t.getTitle(), t.getPlace(),
+                        author(t.getOwner()), t.getVisibility(), t.getStatus(), t.getPublishedAt(), covers.get(t.getId())))
+                .toList();
     }
 
     private static Author author(User u) {

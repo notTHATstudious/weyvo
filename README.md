@@ -53,3 +53,13 @@ Set these in every deployed environment (never commit real values):
 | `APP_JWT_SECRET` | Base64 key, 32+ random bytes, for signing session tokens |
 | `APP_COOKIE_SECURE` | `true` behind HTTPS |
 | `APP_CORS_ORIGINS` | Web app origin(s) allowed to call the API |
+| `APP_STORAGE_PROVIDER` | `local` (default, files under `api/data/photos`) or `supabase` |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET` | Private Supabase Storage bucket for photos (server-side only) |
+
+## Photos
+
+Uploads are re-encoded on the server: format checked from the file bytes (JPEG/PNG), 40 MP cap checked before decoding,
+EXIF orientation applied, then all metadata (GPS, camera, timestamps) dropped. Each photo is stored as a 2000px
+version and a 600px thumbnail. Photos are only ever served through `GET /api/photos/{id}/{large|thumb}`, which applies
+the same rules as the story: private and draft trips are owner-only, and signed-out readers can't load photos past the
+60% preview.

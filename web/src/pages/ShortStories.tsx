@@ -65,7 +65,7 @@ export function ShortStories() {
   return shell(
     <>
       <div key={card.id + '-' + pi} style={{ position: 'absolute', inset: 0, animation: 'slideUp .5s cubic-bezier(.2,.7,.2,1) both', filter: hidden ? 'blur(14px)' : undefined }}>
-        <Photo scene={sceneFor(card.id + pi)} />
+        <Photo scene={sceneFor(card.id + pi)} src={hidden ? null : story?.sections[pi]?.photo?.url ?? (pi === 0 ? card.cover?.url : null)} alt={caption ?? ''} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,8,6,.85), rgba(10,8,6,.1) 50%, rgba(10,8,6,.35))' }} />
       </div>
 
