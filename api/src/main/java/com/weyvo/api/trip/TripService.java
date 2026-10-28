@@ -1,7 +1,9 @@
 package com.weyvo.api.trip;
 
 import com.weyvo.api.common.ApiException;
+import com.weyvo.api.config.AppProperties.PlanLimits;
 import com.weyvo.api.photo.PhotoService;
+import com.weyvo.api.plan.PlanService;
 import com.weyvo.api.photo.PhotoService.PhotoRef;
 import com.weyvo.api.social.FollowService;
 import com.weyvo.api.social.ReactionService;
@@ -26,8 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TripService {
 
-    static final int MAX_FULL_SECTIONS = 3;
-    static final int MAX_SHORT_PHOTOS = 4;
     static final int MAX_SHORT_CAPTION = 140;
     private static final int PAGE_SIZE = 20;
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -38,9 +38,11 @@ public class TripService {
     private final PhotoService photos;
     private final ReactionService reactions;
     private final FollowService follows;
+    private final PlanService plans;
 
     public TripService(TripRepository trips, UserRepository users, StoryGate gate, PhotoService photos,
-                       ReactionService reactions, FollowService follows) {
+                       ReactionService reactions, FollowService follows, PlanService plans) {
+        this.plans = plans;
         this.trips = trips;
         this.users = users;
         this.gate = gate;
@@ -116,7 +118,7 @@ public class TripService {
 
     @Transactional
     public TripView create(long ownerId, TripRequest req) {
-        validateTemplate(req);
+        validateTemplate(req, plans.limitsFor(ownerId));
         User owner = users.findById(ownerId).orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Sign in again"));
         Trip trip = new Trip(owner, uniqueSlug(req.title()), req.kind());
         apply(trip, req);
@@ -128,7 +130,7 @@ public class TripService {
     public TripView update(long ownerId, long tripId, TripRequest req) {
         Trip trip = owned(ownerId, tripId);
         if (req.kind() != trip.getKind()) throw ApiException.badRequest("A trip's kind can't change after it's created");
-        validateTemplate(req);
+        validateTemplate(req, plans.limitsFor(ownerId));
         // Hibernate flushes inserts before orphan deletes; clear first so new rows can reuse positions.
         trip.replaceSections(List.of());
         trips.flush();
@@ -183,17 +185,18 @@ public class TripService {
                 .toList());
     }
 
-    private void validateTemplate(TripRequest req) {
+    /** Template rules, with section and photo counts taken from the owner's plan. */
+    private void validateTemplate(TripRequest req, PlanLimits limits) {
         int sections = req.sections() == null ? 0 : req.sections().size();
         if (req.startDate() != null && req.endDate() != null && req.startDate().isAfter(req.endDate())) {
             throw ApiException.badRequest("The trip can't end before it starts");
         }
         if (req.kind() == Trip.Kind.FULL) {
             if (req.shortTag() != null) throw ApiException.badRequest("Only short stories have a tag");
-            if (sections > MAX_FULL_SECTIONS) throw ApiException.badRequest("A full trip has up to " + MAX_FULL_SECTIONS + " story sections");
+            if (sections > limits.fullTripSections()) throw ApiException.badRequest("Your plan allows up to " + limits.fullTripSections() + " story sections");
         } else {
             if (req.shortTag() == null) throw ApiException.badRequest("Pick what kind of escape this was");
-            if (sections > MAX_SHORT_PHOTOS) throw ApiException.badRequest("A short story has up to " + MAX_SHORT_PHOTOS + " photos");
+            if (sections > limits.shortStoryPhotos()) throw ApiException.badRequest("Your plan allows up to " + limits.shortStoryPhotos() + " photos in a short story");
             boolean longCaption = req.sections() != null && req.sections().stream().anyMatch(s -> s.body().trim().length() > MAX_SHORT_CAPTION);
             if (longCaption) throw ApiException.badRequest("Short story captions are up to " + MAX_SHORT_CAPTION + " characters");
             if (req.moments() != null && !req.moments().isEmpty()) throw ApiException.badRequest("Favourite moments are for full trips");

@@ -30,7 +30,8 @@ public final class TripDtos {
             @Size(max = 250) String intro,
             @Size(max = 200) String finalNote,
             @NotNull Trip.Visibility visibility,
-            @Size(max = 4) List<@Valid SectionInput> sections,
+            // Hard ceiling for any plan; the owner's plan sets the real limit in TripService.
+            @Size(max = 20) List<@Valid SectionInput> sections,
             @Size(max = 3) List<@NotBlank @Size(max = 120) String> moments) {}
 
     public record Author(String username, String displayName) {}

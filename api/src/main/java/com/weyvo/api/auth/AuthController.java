@@ -4,6 +4,8 @@ import com.weyvo.api.common.ApiException;
 import com.weyvo.api.user.User;
 import com.weyvo.api.user.UserRepository;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -38,6 +40,8 @@ public class AuthController {
         }
     }
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final UserRepository users;
     private final PasswordEncoder passwords;
     private final JwtService jwt;
@@ -59,6 +63,7 @@ public class AuthController {
         if (users.existsByEmailIgnoreCase(req.email())) throw ApiException.conflict("That email is already registered");
         if (users.existsByUsernameIgnoreCase(req.username())) throw ApiException.conflict("That username is taken");
         User user = users.save(new User(req.email().trim(), passwords.encode(req.password()), req.username(), req.displayName().trim()));
+        log.info("Account created userId={}", user.getId());
         return withSession(user, HttpStatus.CREATED);
     }
 
@@ -67,7 +72,13 @@ public class AuthController {
         User user = users.findByEmailIgnoreCase(req.email().trim())
                 .filter(u -> passwords.matches(req.password(), u.getPasswordHash()))
                 .filter(User::isActive)
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect"));
+                .orElse(null);
+        if (user == null) {
+            // Never log the email or password; a burst of these lines is the signal for a rate limit.
+            log.warn("Failed sign-in attempt");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect");
+        }
+        log.info("Signed in userId={}", user.getId());
         return withSession(user, HttpStatus.OK);
     }
 

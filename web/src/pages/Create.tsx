@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, ApiError, TAG_LABEL, type ShortTag, type TripInput, type Visibility } from '../api';
+import { api, ApiError, TAG_LABEL, type PlanUsage, type ShortTag, type TripInput, type Visibility } from '../api';
+import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
@@ -21,6 +22,7 @@ export function Create() {
   const [params] = useSearchParams();
   const initial = params.get('type') === 'short' ? 'short' : params.get('type') === 'full' ? 'full' : 'pick';
   const [mode, setMode] = useState<'pick' | 'short' | 'full'>(initial);
+  const plan = useApi(() => (signedIn ? api.myPlan() : Promise.resolve(null)), [signedIn]);
 
   if (loading) return null;
   if (!signedIn) return <Navigate to={`/signin?mode=join&next=${encodeURIComponent('/create')}`} replace />;
@@ -44,20 +46,21 @@ export function Create() {
               <div style={{ height: 170 }}><Photo scene="mountain" /></div>
               <div style={{ padding: '16px 18px 18px' }}>
                 <span className="display" style={{ fontSize: 28, display: 'block' }}>A full trip</span>
-                <span style={{ display: 'block', marginTop: 6, fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>A magazine issue. Cover photo, up to 3 story sections with photos, favourite moments and a final note.</span>
+                <span style={{ display: 'block', marginTop: 6, fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>A magazine issue. Cover photo, story sections with photos, favourite moments and a final note.</span>
               </div>
             </button>
             <button type="button" onClick={() => setMode('short')} className="lift rise" style={{ width: '100%', textAlign: 'left', border: '1px solid var(--ink)', padding: 0, background: 'var(--card)', color: 'var(--ink)', borderRadius: 22, overflow: 'hidden', display: 'flex' }}>
               <div style={{ flex: '0 0 120px', minHeight: 150 }}><Photo scene="road" /></div>
               <div style={{ padding: '16px 16px 18px' }}>
                 <span className="display" style={{ fontSize: 26, display: 'block' }}>A short story</span>
-                <span style={{ display: 'block', marginTop: 6, fontSize: 14, lineHeight: 1.5, color: 'var(--ink-soft)' }}>A weekend, a one-night stay or a long drive. Up to 4 photos with a line each.</span>
+                <span style={{ display: 'block', marginTop: 6, fontSize: 14, lineHeight: 1.5, color: 'var(--ink-soft)' }}>A weekend, a one-night stay or a long drive. A few photos with a line each.</span>
               </div>
             </button>
           </>
         )}
-        {mode === 'short' && <ShortForm />}
-        {mode === 'full' && <FullForm />}
+        {mode !== 'pick' && plan.data && <PlanNote usage={plan.data} />}
+        {mode === 'short' && <ShortForm maxPhotos={plan.data?.limits.shortStoryPhotos ?? 4} />}
+        {mode === 'full' && <FullForm maxSections={plan.data?.limits.fullTripSections ?? 3} />}
       </div>
     </div>
   );
@@ -109,7 +112,7 @@ function useSave() {
   return { save, busy, progress, error, setError, fields };
 }
 
-function ShortForm() {
+function ShortForm({ maxPhotos }: { maxPhotos: number }) {
   const [tag, setTag] = useState<ShortTag>('LONG_DRIVE');
   const [title, setTitle] = useState('');
   const [place, setPlace] = useState('');
@@ -141,7 +144,7 @@ function ShortForm() {
       <TextField id="st" label="Title" value={title} onChange={setTitle} max={60} error={fields.title} placeholder="Sunday drive to Lonavala" display />
       <TextField id="sp" label="Where" value={place} onChange={setPlace} max={120} error={fields.place} placeholder="Lonavala, Maharashtra" />
 
-      <p className="field-label" style={{ marginTop: 4 }}>Photos <span>· up to 4, with a line each. JPEG or PNG</span></p>
+      <p className="field-label" style={{ marginTop: 4 }}>Photos <span>· up to {maxPhotos}, with a line each. JPEG or PNG</span></p>
       {items.map((it, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
           <div style={{ flex: '0 0 88px' }}>
@@ -152,7 +155,7 @@ function ShortForm() {
             onChange={(e) => update(i, { caption: e.target.value })} style={{ flex: 1 }} />
         </div>
       ))}
-      {items.length < 4 && (
+      {items.length < maxPhotos && (
         <button type="button" className="pill" onClick={() => setItems((xs) => [...xs, { caption: '', file: null }])} style={{ marginBottom: 18 }}><Icon.plus size={16} /> Add a photo</button>
       )}
 
@@ -163,7 +166,7 @@ function ShortForm() {
   );
 }
 
-function FullForm() {
+function FullForm({ maxSections }: { maxSections: number }) {
   const [f, setF] = useState({ title: '', place: '', startDate: '', endDate: '', intro: '', finalNote: '' });
   const [cover, setCover] = useState<File | null>(null);
   const [sections, setSections] = useState([{ heading: '', body: '', photoCaption: '', file: null as File | null }]);
@@ -214,7 +217,7 @@ function FullForm() {
       </div>
       <TextField id="fi" label="Introduction · 250 characters" value={f.intro} onChange={set('intro')} max={250} error={fields.intro} placeholder="Set the scene in two sentences" multiline />
 
-      <p className="eyebrow" style={{ margin: '18px 0 10px', fontWeight: 600 }}>Story sections · up to 3</p>
+      <p className="eyebrow" style={{ margin: '18px 0 10px', fontWeight: 600 }}>Story sections · up to {maxSections}</p>
       {sections.map((s, i) => (
         <div key={i} className="paper-card" style={{ marginBottom: 12 }}>
           <TextField id={`h${i}`} label={`Section ${i + 1} heading`} value={s.heading} onChange={(v) => updateSection(i, { heading: v })} max={60} placeholder="The road in" />
@@ -226,7 +229,7 @@ function FullForm() {
           <TextField id={`c${i}`} label="Photo caption (optional)" value={s.photoCaption} onChange={(v) => updateSection(i, { photoCaption: v })} max={120} placeholder="Chandratal at dawn" />
         </div>
       ))}
-      {sections.length < 3 && (
+      {sections.length < maxSections && (
         <button type="button" className="pill" onClick={() => setSections((ss) => [...ss, { heading: '', body: '', photoCaption: '', file: null }])} style={{ marginBottom: 18 }}><Icon.plus size={16} /> Add a section</button>
       )}
 
@@ -240,6 +243,18 @@ function FullForm() {
       {error && <p role="alert" style={{ margin: '14px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
       <FooterBar busy={busy} progress={progress} primary="Publish" onDraft={(e) => submit(e, false)} />
     </form>
+  );
+}
+
+/** Plan and photo usage, so limits never come as a surprise at upload time. */
+function PlanNote({ usage }: { usage: PlanUsage }) {
+  const total = usage.limits.totalPhotos;
+  const left = total > 0 ? Math.max(0, total - usage.photosUsed) : null;
+  return (
+    <p className="paper-card" style={{ margin: '4px 0 16px', fontSize: 13, color: 'var(--ink-soft)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+      <span><strong style={{ color: 'var(--ink)' }}>{usage.plan === 'PREMIUM' ? 'Premium' : 'Free'} plan</strong></span>
+      <span>{total > 0 ? `${usage.photosUsed} of ${total} photos used${left === 0 ? ' · limit reached' : ''}` : `${usage.photosUsed} photos · unlimited`}</span>
+    </p>
   );
 }
 

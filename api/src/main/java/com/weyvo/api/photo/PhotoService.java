@@ -1,6 +1,9 @@
 package com.weyvo.api.photo;
 
 import com.weyvo.api.common.ApiException;
+import com.weyvo.api.plan.PlanService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.weyvo.api.trip.StoryGate;
 import com.weyvo.api.trip.Trip;
 import com.weyvo.api.trip.TripRepository;
@@ -30,14 +33,19 @@ public class PhotoService {
     private final TripRepository trips;
     private final PhotoStorage storage;
     private final ImageProcessor processor;
-    private final StoryGate gate;
+    private static final Logger log = LoggerFactory.getLogger(PhotoService.class);
 
-    public PhotoService(TripPhotoRepository photos, TripRepository trips, PhotoStorage storage, ImageProcessor processor, StoryGate gate) {
+    private final StoryGate gate;
+    private final PlanService plans;
+
+    public PhotoService(TripPhotoRepository photos, TripRepository trips, PhotoStorage storage, ImageProcessor processor,
+                        StoryGate gate, PlanService plans) {
         this.photos = photos;
         this.trips = trips;
         this.storage = storage;
         this.processor = processor;
         this.gate = gate;
+        this.plans = plans;
     }
 
     // ---- writes (owner only) ----
@@ -53,12 +61,16 @@ public class PhotoService {
             throw ApiException.badRequest("Add the caption or section before its photo");
         }
 
+        var existing = photos.findByTripIdAndRoleAndPosition(tripId, role, position);
+        plans.recordUpload(ownerId, existing.isPresent());
+
         ImageProcessor.Processed img = processor.process(upload);
         String base = "trips/" + tripId + "/" + UUID.randomUUID();
         storage.put(base + "-large.jpg", img.large(), "image/jpeg");
         storage.put(base + "-thumb.jpg", img.thumb(), "image/jpeg");
+        log.info("Photo uploaded trip={} role={} position={} bytes={}", tripId, role, position, img.large().length + img.thumb().length);
 
-        photos.findByTripIdAndRoleAndPosition(tripId, role, position).ifPresent(old -> {
+        existing.ifPresent(old -> {
             photos.delete(old);
             photos.flush();
             deleteFilesAfterCommit(List.of(old));

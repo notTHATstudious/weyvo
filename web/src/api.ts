@@ -9,6 +9,8 @@ export interface Me { id: number; username: string; displayName: string; bio: st
 export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean }
 export interface FollowStats { followers: number; following: number; followedByMe: boolean }
 export type ReactionType = 'been' | 'want' | 'save';
+export interface PlanLimits { fullTripSections: number; shortStoryPhotos: number; totalPhotos: number; uploadsPerHour: number }
+export interface PlanUsage { plan: 'FREE' | 'PREMIUM'; limits: PlanLimits; photosUsed: number; uploadsLastHour: number }
 export interface Reactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean; savedByMe: boolean }
 export interface Author { username: string; displayName: string }
 export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
@@ -70,6 +72,7 @@ export const api = {
   user: (username: string) => request<PublicUser>('GET', `/users/${encodeURIComponent(username)}`),
   userTrips: (username: string) => request<TripCard[]>('GET', `/users/${encodeURIComponent(username)}/trips`),
   myTrips: () => request<TripCard[]>('GET', '/me/trips'),
+  myPlan: () => request<PlanUsage>('GET', '/me/plan'),
   followingFeed: () => request<TripCard[]>('GET', '/me/following'),
   myList: (type: 'save' | 'want') => request<TripCard[]>('GET', `/me/reactions/${type}`),
   react: (tripId: number, type: ReactionType, on: boolean) => request<Reactions>(on ? 'PUT' : 'DELETE', `/trips/${tripId}/reactions/${type}`),

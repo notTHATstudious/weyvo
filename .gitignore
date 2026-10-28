@@ -19,3 +19,6 @@ api/target/
 
 # Locally stored photo uploads
 api/data/
+
+# Local log files
+api/logs/

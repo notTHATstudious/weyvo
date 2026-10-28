@@ -56,6 +56,29 @@ Set these in every deployed environment (never commit real values):
 | `APP_STORAGE_PROVIDER` | `local` (default, files under `api/data/photos`) or `supabase` |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET` | Private Supabase Storage bucket for photos (server-side only) |
 
+## Plans and limits
+
+Every account starts on **Free**. Limits are configuration only (`app.plans.*` in `application.yml`), so they can be
+changed per environment without a code change. Current values are deliberately low for testing.
+
+| Variable | Free (now) | Premium (now) |
+| --- | --- | --- |
+| `PLAN_FREE_FULL_TRIP_SECTIONS` / `PLAN_PREMIUM_FULL_TRIP_SECTIONS` | 3 | 8 |
+| `PLAN_FREE_SHORT_STORY_PHOTOS` / `PLAN_PREMIUM_SHORT_STORY_PHOTOS` | 4 | 8 |
+| `PLAN_FREE_TOTAL_PHOTOS` / `PLAN_PREMIUM_TOTAL_PHOTOS` (0 = unlimited) | 20 | 0 |
+| `PLAN_FREE_UPLOADS_PER_HOUR` / `PLAN_PREMIUM_UPLOADS_PER_HOUR` (0 = unlimited) | 10 | 60 |
+
+`GET /api/me/plan` returns the signed-in user's plan, limits and usage. Premium with a past `plan_expires_at` falls
+back to Free.
+
+## Where local data lives
+
+| What | Where |
+| --- | --- |
+| Accounts, trips, reactions, follows | Postgres in Docker (`docker compose`), volume `weyvo-db` |
+| Uploaded photos | `api/data/photos/trips/{tripId}/` (git-ignored) |
+| API logs | Console and `api/logs/weyvo-api.log` (git-ignored; set `LOG_FILE=` to disable). IDs only, never emails or passwords |
+
 ## Photos
 
 Uploads are re-encoded on the server: format checked from the file bytes (JPEG/PNG), 40 MP cap checked before decoding,
