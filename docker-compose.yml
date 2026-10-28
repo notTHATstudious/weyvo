@@ -1,0 +1,15 @@
+# Local Postgres for development. Supabase replaces this when deployed.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: weyvo
+      POSTGRES_USER: weyvo
+      POSTGRES_PASSWORD: weyvo
+    ports:
+      - "5432:5432"
+    volumes:
+      - weyvo-db:/var/lib/postgresql/data
+
+volumes:
+  weyvo-db:

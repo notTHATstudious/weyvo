@@ -1,0 +1,18 @@
+# Dependencies and build output
+node_modules/
+web/dist/
+api/target/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.DS_Store
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+*.tsbuildinfo

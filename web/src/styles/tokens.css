@@ -1,0 +1,46 @@
+/* Design tokens: A's colours, B's type. Dark theme via [data-theme="dark"]. */
+:root {
+  --paper: #F3EEE5;
+  --card: #FBF8F2;
+  --ink: #1C1B18;
+  --ink-soft: #34312B;
+  --muted: #5E5A52;
+  --line: #DCD4C5;
+  --line-strong: #CFC5B3;
+  --green: #1F4D3A;
+  --green-dark: #133326;
+  --on-green: #FBF8F2;
+  --gold: #E3A23B;
+  --on-gold: #1C1B18;
+  --chip-gold-bg: #F1E3C4;
+  --chip-gold-fg: #6B4A12;
+  --nav-bg: #1C1B18;
+  --nav-fg: #CFC8BA;
+  --nav-active: #FBF8F2;
+
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --radius-sm: 6px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --pill: 999px;
+  --shadow: 0 18px 40px rgba(28, 27, 24, 0.14);
+}
+
+:root[data-theme='dark'] {
+  --paper: #121210;
+  --card: #1C1B18;
+  --ink: #F3EEE5;
+  --ink-soft: #D9D2C4;
+  --muted: #A8A193;
+  --line: #2E2C27;
+  --line-strong: #3D3A33;
+  --green: #4E9A76;
+  --green-dark: #3E8063;
+  --on-green: #0F1A14;
+  --chip-gold-bg: #3A2E17;
+  --chip-gold-fg: #F1D49A;
+  --nav-bg: #26241F;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
