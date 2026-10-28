@@ -1,0 +1,84 @@
+// Typed client for the Weyvo API. Requests go to same-origin /api (proxied to Spring Boot in development).
+import type { Scene } from './mocks/data';
+
+export type Kind = 'FULL' | 'SHORT';
+export type ShortTag = 'WEEKEND' | 'ONE_NIGHT' | 'LONG_DRIVE' | 'DAY_TRIP';
+export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+
+export interface Me { id: number; username: string; displayName: string; bio: string | null }
+export interface PublicUser { username: string; displayName: string; bio: string | null }
+export interface Author { username: string; displayName: string }
+export interface Section { heading: string | null; body: string; photoCaption: string | null }
+
+export interface TripCard {
+  id: number; slug: string; kind: Kind; shortTag: ShortTag | null; title: string; place: string;
+  author: Author; visibility: Visibility; status: 'DRAFT' | 'PUBLISHED'; publishedAt: string | null;
+}
+
+export interface TripView extends TripCard {
+  startDate: string | null; endDate: string | null; intro: string | null;
+  sections: Section[]; totalSections: number; moments: string[]; finalNote: string | null;
+  locked: boolean; owner: boolean;
+}
+
+export interface TripInput {
+  kind: Kind; shortTag?: ShortTag | null; title: string; place: string;
+  startDate?: string | null; endDate?: string | null; intro?: string | null; finalNote?: string | null;
+  visibility: Visibility; sections: { heading?: string | null; body: string; photoCaption?: string | null }[]; moments?: string[];
+}
+
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly fields: Record<string, string> = {}) {
+    super(message);
+  }
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      method,
+      credentials: 'same-origin',
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError("Can't reach Weyvo right now. Check your connection.", 0);
+  }
+  if (res.status === 204) return undefined as T;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(data.error ?? 'Something went wrong. Try again.', res.status, data.fields);
+  return data as T;
+}
+
+export const api = {
+  me: () => request<Me>('GET', '/auth/me'),
+  signup: (b: { email: string; password: string; username: string; displayName: string }) => request<Me>('POST', '/auth/signup', b),
+  login: (b: { email: string; password: string }) => request<Me>('POST', '/auth/login', b),
+  logout: () => request<void>('POST', '/auth/logout'),
+
+  feed: (kind?: Kind) => request<TripCard[]>('GET', `/trips${kind ? `?kind=${kind}` : ''}`),
+  trip: (slug: string) => request<TripView>('GET', `/trips/${encodeURIComponent(slug)}`),
+  user: (username: string) => request<PublicUser>('GET', `/users/${encodeURIComponent(username)}`),
+  userTrips: (username: string) => request<TripCard[]>('GET', `/users/${encodeURIComponent(username)}/trips`),
+  myTrips: () => request<TripCard[]>('GET', '/me/trips'),
+  createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),
+  publishTrip: (id: number) => request<TripView>('POST', `/trips/${id}/publish`),
+};
+
+export const TAG_LABEL: Record<ShortTag, string> = {
+  WEEKEND: 'Weekend', ONE_NIGHT: 'One night', LONG_DRIVE: 'Long drive', DAY_TRIP: 'Day trip',
+};
+
+const SCENES: Scene[] = ['mountain', 'sea', 'road', 'city', 'desert', 'forest'];
+
+/** Stable illustrated cover for a trip until photo uploads exist. */
+export const sceneFor = (id: number): Scene => SCENES[Math.abs(id) % SCENES.length];
+
+/** One letter and a stable colour for an avatar circle. */
+export function avatarOf(name: string) {
+  const colors = ['#7A4E3F', '#2F6573', '#8E9A5B', '#6E8F6A', '#4A4F73', '#9C5733'];
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return { initial: (name.trim()[0] ?? '?').toUpperCase(), color: colors[Math.abs(h) % colors.length] };
+}

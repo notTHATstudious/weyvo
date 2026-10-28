@@ -73,6 +73,17 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void publicProfileShowsNameButNeverEmail() throws Exception {
+        Cookie session = signup("profile");
+        String username = (String) session.getAttribute("username");
+        mvc.perform(get("/api/users/" + username.toUpperCase()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(username))
+                .andExpect(jsonPath("$.email").doesNotExist());
+        mvc.perform(get("/api/users/nobody_here_123")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void tamperedTokenIsTreatedAsSignedOut() throws Exception {
         mvc.perform(get("/api/auth/me").cookie(new Cookie("weyvo_session", "not.a.real-token")))
                 .andExpect(status().isUnauthorized());

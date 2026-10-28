@@ -12,6 +12,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select count(u) > 0 from User u where lower(u.email) = lower(?1)")
     boolean existsByEmailIgnoreCase(String email);
 
+    @Query("select u from User u where lower(u.username) = lower(?1)")
+    Optional<User> findByUsernameIgnoreCase(String username);
+
     @Query("select count(u) > 0 from User u where lower(u.username) = lower(?1)")
     boolean existsByUsernameIgnoreCase(String username);
 }

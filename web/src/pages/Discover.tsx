@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api, avatarOf, sceneFor, TAG_LABEL, type TripCard } from '../api';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { Reactions } from '../components/Reactions';
-import { people, places, shorts, trips } from '../mocks/data';
+import { Empty, ErrorNote, Loading } from '../components/States';
+import { places } from '../mocks/data';
+import { useApi } from '../useApi';
 
 const TABS = [
-  { id: 'following', label: 'Following' },
+  { id: 'latest', label: 'Latest' },
   { id: 'shorts', label: 'Short Stories' },
   { id: 'places', label: 'Destinations' },
   { id: 'issue', label: "This week's Issue" },
@@ -15,7 +18,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id'];
 
 export function Discover() {
-  const [tab, setTab] = useState<Tab>('following');
+  const [tab, setTab] = useState<Tab>('latest');
 
   return (
     <div className="app">
@@ -34,52 +37,10 @@ export function Discover() {
       </div>
 
       <div style={{ padding: '0 20px' }}>
-        {tab === 'following' && (
-          <>
-            <Link to={`/trips/${trips[2].slug}`} className="paper-card rise" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20, textDecoration: 'none', color: 'var(--ink)' }}>
-              <div style={{ flex: '0 0 64px', height: 64, borderRadius: 12, overflow: 'hidden' }}><Photo scene="forest" /></div>
-              <div><p className="eyebrow">On this day · 2024</p><p className="display" style={{ margin: '4px 0 0', fontSize: 20 }}>You were in Coorg. Relive it?</p></div>
-            </Link>
-            {trips.slice(0, 2).map((t) => {
-              const p = people[t.by];
-              return (
-                <article key={t.slug} className="rise" style={{ marginBottom: 28 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span style={{ width: 34, height: 34, borderRadius: '50%', background: p.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600 }}>{p.initial}</span>
-                    <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{p.name}</p><p style={{ margin: '1px 0 0', fontSize: 12, color: 'var(--muted)' }}>Full trip · {t.when}</p></div>
-                    <Link to={`/u/${p.handle}`} style={{ fontSize: 13, fontWeight: 500, padding: '12px 0 12px 8px' }}>View</Link>
-                  </div>
-                  <Link to={`/trips/${t.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>
-                    <Photo scene={t.scene} />
-                    <div className="cover-overlay">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Full trip</span><span>{t.issue}</span></div>
-                      <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{t.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{t.title}</p></div>
-                    </div>
-                  </Link>
-                  <div style={{ marginTop: 12 }}><Reactions been={t.been} want={t.want} /></div>
-                </article>
-              );
-            })}
-          </>
-        )}
+        {tab === 'latest' && <LatestTrips />}
+        {tab === 'shorts' && <LatestShorts />}
 
-        {tab === 'shorts' && (
-          <>
-            <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--muted)' }}>Weekends, one-night stays and long drives from people you follow.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-              {shorts.map((s) => (
-                <Link key={s.id} to={`/shorts?start=${s.id}`} className="cover rise" style={{ height: 250, borderRadius: 16 }}>
-                  <Photo scene={s.photos[0].scene} />
-                  <div className="cover-overlay" style={{ padding: 10 }}>
-                    <span className="tag" style={{ alignSelf: 'flex-start', fontSize: 10 }}>{s.tag}</span>
-                    <p className="display" style={{ margin: 0, fontSize: 19 }}>{s.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </>
-        )}
-
+        {/* Destinations and the weekly Issue use sample content until the places and editorial APIs exist. */}
         {tab === 'places' && places.map((p) => (
           <Link key={p.slug} to={`/places/${p.slug}`} className="rise" style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--ink)' }}>
             <div style={{ flex: '0 0 72px', height: 72, borderRadius: 12, overflow: 'hidden' }}><Photo scene={p.scene} /></div>
@@ -93,16 +54,80 @@ export function Discover() {
             <div className="cover" style={{ height: 420 }}>
               <Photo scene="sea" />
               <div className="cover-overlay">
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Weyvo · Weekly</span><span>No. 43</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Weyvo · Weekly</span><span>No. 1</span></div>
                 <p className="display" style={{ margin: 0, fontSize: 52 }}>Monsoon getaways</p>
               </div>
             </div>
-            <p style={{ margin: '14px 4px 4px', fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>Five stories, three short drives and one traveller to follow this week. Picked by the editors every Sunday.</p>
-            <Link to={`/trips/${trips[3].slug}`} className="btn btn-block" style={{ marginTop: 10, background: '#FBF8F2', color: '#1C1B18' }}>Open this week's Issue</Link>
+            <p style={{ margin: '14px 4px 4px', fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>
+              Stories picked by the editors every Sunday. The first real Issue goes out once there are stories to feature.
+            </p>
           </div>
         )}
       </div>
       <BottomNav />
     </div>
   );
+}
+
+function LatestTrips() {
+  const { data, error, loading } = useApi(() => api.feed('FULL'), []);
+  if (loading) return <Loading />;
+  if (error) return <ErrorNote message={error.message} />;
+  if (!data?.length) return <Empty title="No stories yet" body="Be the first to publish a trip on Weyvo." cta={{ to: '/create', label: 'Create your first issue' }} />;
+  return <>{data.map((t) => <TripFeedCard key={t.id} trip={t} />)}</>;
+}
+
+function TripFeedCard({ trip }: { trip: TripCard }) {
+  const a = avatarOf(trip.author.displayName);
+  return (
+    <article className="rise" style={{ marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <span style={{ width: 34, height: 34, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600 }}>{a.initial}</span>
+        <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{trip.author.displayName}</p><p style={{ margin: '1px 0 0', fontSize: 12, color: 'var(--muted)' }}>Full trip · {timeAgo(trip.publishedAt)}</p></div>
+        <Link to={`/u/${trip.author.username}`} style={{ fontSize: 13, fontWeight: 500, padding: '12px 0 12px 8px' }}>View</Link>
+      </div>
+      <Link to={`/trips/${trip.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>
+        <Photo scene={sceneFor(trip.id)} />
+        <div className="cover-overlay">
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Full trip</span><span>Weyvo</span></div>
+          <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{trip.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{trip.title}</p></div>
+        </div>
+      </Link>
+      <div style={{ marginTop: 12 }}><Reactions been={0} want={0} /></div>
+    </article>
+  );
+}
+
+function LatestShorts() {
+  const { data, error, loading } = useApi(() => api.feed('SHORT'), []);
+  if (loading) return <Loading />;
+  if (error) return <ErrorNote message={error.message} />;
+  if (!data?.length) return <Empty title="No short stories yet" body="A weekend, a one-night stay, a long drive. Post one in a minute." cta={{ to: '/create?type=short', label: 'Post a short story' }} />;
+  return (
+    <>
+      <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--muted)' }}>Weekends, one-night stays and long drives.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+        {data.map((s) => (
+          <Link key={s.id} to={`/shorts?start=${s.slug}`} className="cover rise" style={{ height: 250, borderRadius: 16 }}>
+            <Photo scene={sceneFor(s.id)} />
+            <div className="cover-overlay" style={{ padding: 10 }}>
+              {s.shortTag && <span className="tag" style={{ alignSelf: 'flex-start', fontSize: 10 }}>{TAG_LABEL[s.shortTag]}</span>}
+              <p className="display" style={{ margin: 0, fontSize: 19 }}>{s.title}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function timeAgo(iso: string | null) {
+  if (!iso) return 'Draft';
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} h ago`;
+  const days = Math.round(hrs / 24);
+  return days < 30 ? `${days} d ago` : new Date(iso).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }

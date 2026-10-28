@@ -44,7 +44,7 @@ export function Landing() {
         </div>
 
         <div style={{ flex: '1 1 400px', minWidth: 0, position: 'relative', height: 540 }}>
-          <Link to={`/trips/${hero.slug}`} className="cover lift rise" style={{ position: 'absolute', right: 20, top: 0, width: 'min(330px, 85%)', height: 460, background: 'var(--card)', padding: 12, boxShadow: 'var(--shadow)' }}>
+          <Link to="/discover" className="cover lift rise" style={{ position: 'absolute', right: 20, top: 0, width: 'min(330px, 85%)', height: 460, background: 'var(--card)', padding: 12, boxShadow: 'var(--shadow)' }}>
             <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
               <Photo scene={hero.scene} />
               <div className="cover-overlay">
@@ -87,7 +87,7 @@ export function Landing() {
         </div>
         <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 28 }}>
           {issue.map((t) => (
-            <Link key={t.slug} to={`/trips/${t.slug}`} className="lift" style={{ textDecoration: 'none', color: 'var(--ink)', background: 'var(--card)', padding: '12px 12px 18px', display: 'block' }}>
+            <Link key={t.slug} to="/discover" className="lift" style={{ textDecoration: 'none', color: 'var(--ink)', background: 'var(--card)', padding: '12px 12px 18px', display: 'block' }}>
               <div style={{ height: 300 }}><Photo scene={t.scene} /></div>
               <p className="eyebrow" style={{ margin: '14px 4px 0' }}>{t.place}</p>
               <p className="display" style={{ margin: '6px 4px 0', fontSize: 26 }}>{t.title}</p>

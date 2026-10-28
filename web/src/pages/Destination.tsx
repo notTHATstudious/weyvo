@@ -62,7 +62,7 @@ export function Destination() {
 
       <div style={{ padding: '8px 20px 0' }}>
         {show('full') && trips.map((t) => (
-          <Link key={t.slug} to={`/trips/${t.slug}`} className="rise" style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--ink)' }}>
+          <Link key={t.slug} to="/discover" className="rise" style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--ink)' }}>
             <div style={{ flex: '0 0 92px', height: 116, borderRadius: 4, overflow: 'hidden' }}><Photo scene={t.scene} /></div>
             <div style={{ minWidth: 0 }}>
               <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--green)' }}>Full trip</span>
@@ -72,7 +72,7 @@ export function Destination() {
           </Link>
         ))}
         {show('short') && shorts.slice(0, 3).map((s) => (
-          <Link key={s.id} to={`/shorts?start=${s.id}`} className="rise" style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--ink)' }}>
+          <Link key={s.id} to="/shorts" className="rise" style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--ink)' }}>
             <div style={{ flex: '0 0 92px', height: 116, borderRadius: 4, overflow: 'hidden' }}><Photo scene={s.photos[0].scene} /></div>
             <div style={{ minWidth: 0 }}>
               <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--chip-gold-fg)' }}>Short story · {s.tag}</span>

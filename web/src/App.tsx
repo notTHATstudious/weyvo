@@ -8,6 +8,7 @@ import { Profile } from './pages/Profile';
 import { Create } from './pages/Create';
 import { Destination } from './pages/Destination';
 import { Settings } from './pages/Settings';
+import { SignIn } from './pages/SignIn';
 
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
@@ -26,6 +27,7 @@ export function App() {
       <Route path="/create" element={<Create />} />
       <Route path="/places/:slug" element={<Destination />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/signin" element={<SignIn />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

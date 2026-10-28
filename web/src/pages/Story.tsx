@@ -1,95 +1,121 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { useAuth } from '../auth';
+import { Link, useParams } from 'react-router-dom';
+import { api, avatarOf, sceneFor, TAG_LABEL } from '../api';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { Reactions } from '../components/Reactions';
-import { people, tripBySlug } from '../mocks/data';
+import { Empty, Loading } from '../components/States';
+import { useApi } from '../useApi';
+import { useAuth } from '../auth';
 
-/** Share of a public story visible before sign-in. The server will enforce the same cut. */
-const FREE_SHARE = 0.6;
+const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
 export function Story() {
-  const { slug } = useParams();
-  const { signedIn, signIn } = useAuth();
-  const trip = tripBySlug(slug);
-  if (!trip) return <Navigate to="/discover" replace />;
+  const { slug = '' } = useParams();
+  const { user } = useAuth();
+  // Refetch when the signed-in user changes: the server decides how much of the story to return.
+  const { data: trip, error, loading } = useApi(() => api.trip(slug), [slug, user?.id]);
 
-  const by = people[trip.by];
-  const freeCount = Math.max(1, Math.ceil(trip.sections.length * FREE_SHARE));
-  const sections = signedIn ? trip.sections : trip.sections.slice(0, freeCount);
+  if (loading && !trip) return <div className="app" style={{ padding: 20 }}><Loading /></div>;
+  if (error || !trip) {
+    return (
+      <div className="app" style={{ padding: 20 }}>
+        <Empty title="This story isn't available" body="It may be private, still a draft, or the link is wrong." cta={{ to: '/discover', label: 'Back to Discover' }} />
+      </div>
+    );
+  }
+
+  const by = avatarOf(trip.author.displayName);
+  const next = encodeURIComponent(`/trips/${trip.slug}`);
+  const share = trip.locked ? Math.round((trip.sections.length / Math.max(1, trip.totalSections)) * 100) : 100;
+  const firstName = trip.author.displayName.split(' ')[0];
+  const meta = [trip.kind === 'SHORT' && trip.shortTag ? TAG_LABEL[trip.shortTag] : null, trip.place, dateRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ');
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 60 }}>
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 3, zIndex: 30, background: 'var(--line)' }}>
-        <span style={{ display: 'block', height: '100%', width: signedIn ? '100%' : '60%', background: 'var(--green)', transition: 'width .6s' }} />
+        <span style={{ display: 'block', height: '100%', width: `${share}%`, background: 'var(--green)', transition: 'width .6s' }} />
       </div>
 
       <div style={{ height: '72vh', minHeight: 480, maxHeight: 640, position: 'relative', color: '#fff' }}>
-        <Photo scene={trip.scene} />
+        <Photo scene={sceneFor(trip.id)} />
         <div style={{ position: 'absolute', top: 12, left: 10, right: 10, display: 'flex', justifyContent: 'space-between' }}>
           <Link to="/discover" className="icon-btn solid" aria-label="Back" style={{ color: 'var(--ink)' }}><Icon.back /></Link>
-          <button type="button" className="icon-btn solid" aria-label="Share" style={{ color: 'var(--ink)' }}><Icon.share /></button>
+          <button type="button" className="icon-btn solid" aria-label="Copy link" style={{ color: 'var(--ink)' }}
+            onClick={() => navigator.clipboard?.writeText(window.location.href)}><Icon.share /></button>
         </div>
         <div style={{ position: 'absolute', inset: 'auto 0 0 0', padding: 22, background: 'linear-gradient(to top, rgba(20,14,10,.75), rgba(20,14,10,0))' }}>
-          <p style={{ margin: 0, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>{trip.issue} · {trip.place} · {trip.days}</p>
+          {trip.status === 'DRAFT' && <span className="tag tag-gold" style={{ marginBottom: 10 }}>Draft · only you can see this</span>}
+          <p style={{ margin: 0, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>{meta}</p>
           <h1 className="display rise" style={{ margin: '8px 0 0', fontSize: 'clamp(44px, 8vw, 72px)' }}>{trip.title}</h1>
-          <Link to={`/u/${by.handle}`} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none' }}>
+          <Link to={`/u/${trip.author.username}`} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none' }}>
             <span style={{ width: 32, height: 32, borderRadius: '50%', background: by.color, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>{by.initial}</span>
-            <span style={{ fontSize: 13 }}>by <strong>{by.name}</strong> · {trip.when}</span>
+            <span style={{ fontSize: 13 }}>by <strong>{trip.author.displayName}</strong></span>
           </Link>
         </div>
       </div>
 
-      <div style={{ padding: '26px 22px 0' }}>
-        <p className="display" style={{ margin: 0, fontSize: 24, lineHeight: 1.25, fontWeight: 500, letterSpacing: '-.01em' }}>{trip.intro}</p>
-      </div>
+      {trip.intro && (
+        <div style={{ padding: '26px 22px 0' }}>
+          <p className="display" style={{ margin: 0, fontSize: 24, lineHeight: 1.25, fontWeight: 500, letterSpacing: '-.01em' }}>{trip.intro}</p>
+        </div>
+      )}
 
-      {sections.map((s, i) => (
-        <section key={s.heading} className="rise">
+      {trip.sections.map((s, i) => (
+        <section key={i} className="rise">
           <div style={{ padding: '0 22px' }}>
-            <h2 className="eyebrow" style={{ margin: '30px 0 8px', fontWeight: 600 }}>{['I', 'II', 'III', 'IV', 'V'][i]} · {s.heading}</h2>
+            {trip.kind === 'FULL' && (
+              <h2 className="eyebrow" style={{ margin: '30px 0 8px', fontWeight: 600 }}>{NUMERALS[i]}{s.heading ? ` · ${s.heading}` : ''}</h2>
+            )}
+            {trip.kind === 'SHORT' && <div style={{ height: 22 }} />}
+            {trip.kind === 'SHORT' && <div style={{ height: 320, borderRadius: 'var(--radius-sm)', overflow: 'hidden', marginBottom: 10 }}><Photo scene={sceneFor(trip.id + i + 1)} /></div>}
             <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'var(--ink-soft)' }}>{s.body}</p>
           </div>
-          {s.photo && (
+          {trip.kind === 'FULL' && s.photoCaption && (
             <figure style={{ margin: '22px 0 0' }}>
-              <div style={{ height: 320 }}><Photo scene={s.photo.scene} /></div>
-              <figcaption style={{ padding: '8px 22px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.photo.caption}</figcaption>
+              <div style={{ height: 320 }}><Photo scene={sceneFor(trip.id + i + 1)} /></div>
+              <figcaption style={{ padding: '8px 22px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.photoCaption}</figcaption>
             </figure>
           )}
         </section>
       ))}
 
-      {!signedIn ? (
+      {trip.locked ? (
         <>
           <div style={{ position: 'relative', marginTop: -110, height: 110, background: 'linear-gradient(to bottom, transparent, var(--paper))' }} />
           <div className="rise" style={{ margin: '0 16px', background: '#1C1B18', color: '#FBF8F2', borderRadius: 24, padding: '24px 22px' }}>
-            <p className="eyebrow" style={{ color: 'var(--gold)' }}>You've read 60% of this story</p>
+            <p className="eyebrow" style={{ color: 'var(--gold)' }}>You've read {share}% of this story</p>
             <p className="display" style={{ margin: '10px 0 0', fontSize: 30 }}>The best part is still to come.</p>
-            <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>Join free to finish it, save places to your map and ask {by.name.split(' ')[0]} anything.</p>
-            <button type="button" className="btn btn-block" onClick={signIn} style={{ marginTop: 18, background: '#FBF8F2', color: '#1C1B18', border: 0 }}>Continue with Google</button>
-            <button type="button" className="btn btn-block" onClick={signIn} style={{ marginTop: 10, background: 'transparent', color: '#FBF8F2', borderColor: '#5E5A52' }}>Sign up with email</button>
+            <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>Join free to finish it, save places to your map and ask {firstName} anything.</p>
+            <Link to={`/signin?mode=join&next=${next}`} className="btn btn-block" style={{ marginTop: 18, background: '#FBF8F2', color: '#1C1B18' }}>Join free</Link>
             <p style={{ margin: '14px 0 0', textAlign: 'center', fontSize: 13, color: '#CFC8BA' }}>
-              Already a member? <button type="button" onClick={signIn} style={{ border: 0, background: 'none', color: '#FBF8F2', fontWeight: 600, textDecoration: 'underline', padding: 6 }}>Sign in</button>
+              Already a member? <Link to={`/signin?next=${next}`} style={{ color: '#FBF8F2', fontWeight: 600 }}>Sign in</Link>
             </p>
           </div>
         </>
       ) : (
         <div className="rise" style={{ padding: '30px 22px 0' }}>
-          <h2 className="eyebrow" style={{ margin: '0 0 12px', fontWeight: 600 }}>Favourite moments</h2>
-          <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {trip.moments.map((m, i) => (
-              <li key={m} className="paper-card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <span className="display" style={{ fontSize: 28, color: 'var(--green)' }}>{i + 1}</span><span style={{ fontSize: 14 }}>{m}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>
-          <div style={{ marginTop: 26 }}><Reactions been={trip.been} want={trip.want} /></div>
-          <h2 className="eyebrow" style={{ margin: '32px 0 12px', fontWeight: 600 }}>Ask the traveller</h2>
-          <label htmlFor="ask" className="field-label" style={{ fontWeight: 400, color: 'var(--muted)' }}>Ask {by.name.split(' ')[0]} something</label>
-          <input id="ask" className="input" type="text" placeholder="Best month to go?" />
+          {trip.moments.length > 0 && (
+            <>
+              <h2 className="eyebrow" style={{ margin: '0 0 12px', fontWeight: 600 }}>Favourite moments</h2>
+              <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {trip.moments.map((m, i) => (
+                  <li key={i} className="paper-card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span className="display" style={{ fontSize: 28, color: 'var(--green)' }}>{i + 1}</span><span style={{ fontSize: 14 }}>{m}</span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+          {trip.finalNote && <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>}
+          {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions been={0} want={0} /></div>}
         </div>
       )}
     </div>
   );
+}
+
+function dateRange(start: string | null, end: string | null) {
+  const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  return start ? fmt(start) : null;
 }
