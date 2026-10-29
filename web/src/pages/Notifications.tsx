@@ -29,7 +29,7 @@ export function Notifications() {
       <div style={{ padding: '0 20px' }}>
         <h1 className="display" style={{ margin: '8px 0 18px', fontSize: 38 }}>What's new</h1>
         {loading ? <Loading /> : error ? <ErrorNote message={error.message} /> : !data?.length ? (
-          <Empty title="All quiet" body="When someone follows you, wants to go where you went, or asks about a trip, you'll see it here." />
+          <Empty title="All quiet" body="When someone follows you, reacts, comments, replies or asks about a trip, you'll see it here." />
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {data.map((n) => <Row key={n.id} n={n} />)}
@@ -66,6 +66,8 @@ function sentence(n: Notification) {
     case 'WANT': return `wants to go after reading ${title}`;
     case 'QUESTION': return `asked you a question on ${title}`;
     case 'ANSWER': return `answered your question on ${title}`;
+    case 'COMMENT': return `commented on ${title}`;
+    case 'REPLY': return `replied to your comment on ${title}`;
   }
 }
 

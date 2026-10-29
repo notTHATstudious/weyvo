@@ -25,10 +25,12 @@ public class CommunityController {
 
     private final QuestionService questions;
     private final NotificationService notifications;
+    private final CommentService comments;
 
-    public CommunityController(QuestionService questions, NotificationService notifications) {
+    public CommunityController(QuestionService questions, NotificationService notifications, CommentService comments) {
         this.questions = questions;
         this.notifications = notifications;
+        this.comments = comments;
     }
 
     // ---- Ask the traveller ----
@@ -67,6 +69,42 @@ public class CommunityController {
     @PostMapping("/api/questions/{questionId}/reports")
     public ResponseEntity<Void> report(@AuthenticationPrincipal CurrentUser user, @PathVariable long questionId, @RequestBody ReportBody body) {
         questions.report(user.id(), questionId, body.reason());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ---- Comments ----
+
+    public record CommentBody(String text, Long parentId) {}
+
+    @GetMapping("/api/trips/{tripId}/comments")
+    public CommentService.Comments comments(@PathVariable long tripId, @AuthenticationPrincipal CurrentUser user) {
+        return comments.list(tripId, user == null ? null : user.id());
+    }
+
+    @PostMapping("/api/trips/{tripId}/comments")
+    public ResponseEntity<CommentService.Comment> comment(@AuthenticationPrincipal CurrentUser user, @PathVariable long tripId, @RequestBody CommentBody body) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(comments.post(user.id(), tripId, body.text(), body.parentId()));
+    }
+
+    @PutMapping("/api/comments/{commentId}/hidden")
+    public CommentService.Comment hideComment(@AuthenticationPrincipal CurrentUser user, @PathVariable long commentId) {
+        return comments.setHidden(user.id(), commentId, true);
+    }
+
+    @DeleteMapping("/api/comments/{commentId}/hidden")
+    public CommentService.Comment unhideComment(@AuthenticationPrincipal CurrentUser user, @PathVariable long commentId) {
+        return comments.setHidden(user.id(), commentId, false);
+    }
+
+    @DeleteMapping("/api/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(@AuthenticationPrincipal CurrentUser user, @PathVariable long commentId) {
+        comments.delete(user.id(), commentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/api/comments/{commentId}/reports")
+    public ResponseEntity<Void> reportComment(@AuthenticationPrincipal CurrentUser user, @PathVariable long commentId, @RequestBody ReportBody body) {
+        comments.report(user.id(), commentId, body.reason());
         return ResponseEntity.noContent().build();
     }
 

@@ -20,7 +20,7 @@ public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Sign
     public record Auth(boolean requireVerifiedEmail, Duration codeTtl, int codeMaxAttempts, Duration codeResendCooldown,
                        int codesPerHour, int loginPerEmailPer15Min, int loginPerIpPer15Min, int signupsPerIpPerHour) {}
 
-    public record Community(int questionsPerHour, int reportsToHide) {}
+    public record Community(int questionsPerHour, int commentsPerHour, int reportsToHide) {}
 
     public record Jwt(String secret, Duration ttl) {}
 

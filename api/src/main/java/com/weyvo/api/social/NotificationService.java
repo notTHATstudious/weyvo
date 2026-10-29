@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class NotificationService {
 
-    public enum Type { FOLLOW, BEEN, WANT, QUESTION, ANSWER }
+    public enum Type { FOLLOW, BEEN, WANT, QUESTION, ANSWER, COMMENT, REPLY }
 
     public record Actor(String username, String displayName) {}
     public record TripLink(String slug, String title) {}
@@ -26,12 +26,17 @@ public class NotificationService {
     /** Records an event once. Self-actions and repeats of the same event are ignored. */
     @Transactional
     public void notify(long recipientId, long actorId, Type type, Long tripId, Long questionId) {
+        notify(recipientId, actorId, type, tripId, questionId, null);
+    }
+
+    @Transactional
+    public void notify(long recipientId, long actorId, Type type, Long tripId, Long questionId, Long commentId) {
         if (recipientId == actorId) return;
         jdbc.update("""
-                INSERT INTO notifications (recipient_id, actor_id, type, trip_id, question_id)
-                VALUES (:r, :a, :type, :trip, :q) ON CONFLICT DO NOTHING""",
+                INSERT INTO notifications (recipient_id, actor_id, type, trip_id, question_id, comment_id)
+                VALUES (:r, :a, :type, :trip, :q, :c) ON CONFLICT DO NOTHING""",
                 new MapSqlParameterSource().addValue("r", recipientId).addValue("a", actorId)
-                        .addValue("type", type.name()).addValue("trip", tripId).addValue("q", questionId));
+                        .addValue("type", type.name()).addValue("trip", tripId).addValue("q", questionId).addValue("c", commentId));
     }
 
     /**

@@ -76,6 +76,7 @@ app:
     year-price-paise: ${PREMIUM_YEAR_PRICE_PAISE:99900}
   community:
     questions-per-hour: ${COMMUNITY_QUESTIONS_PER_HOUR:10}
+    comments-per-hour: ${COMMUNITY_COMMENTS_PER_HOUR:20}
     # A question is hidden automatically once this many different people report it.
     reports-to-hide: ${COMMUNITY_REPORTS_TO_HIDE:3}
   plans:

@@ -17,7 +17,12 @@ export interface Question {
 }
 export interface Questions { locked: boolean; count: number; items: Question[] }
 export type ReportReason = 'SPAM' | 'ABUSE' | 'OFF_TOPIC' | 'OTHER';
-export type NotificationType = 'FOLLOW' | 'BEEN' | 'WANT' | 'QUESTION' | 'ANSWER';
+export type NotificationType = 'FOLLOW' | 'BEEN' | 'WANT' | 'QUESTION' | 'ANSWER' | 'COMMENT' | 'REPLY';
+export interface Comment {
+  id: number; parentId: number | null; body: string; author: Author; createdAt: string;
+  /** Only filled in for the story's author. */
+  status: QuestionStatus | null; mine: boolean; replies: Comment[];
+}
 export interface Notification {
   id: number; type: NotificationType; actor: Author; trip: { slug: string; title: string } | null; read: boolean; createdAt: string;
 }
@@ -106,6 +111,11 @@ export const api = {
   setHidden: (questionId: number, hidden: boolean) => request<Question>(hidden ? 'PUT' : 'DELETE', `/questions/${questionId}/hidden`),
   deleteQuestion: (questionId: number) => request<void>('DELETE', `/questions/${questionId}`),
   report: (questionId: number, reason: ReportReason) => request<void>('POST', `/questions/${questionId}/reports`, { reason }),
+  comments: (tripId: number) => request<{ locked: boolean; count: number; items: Comment[] }>('GET', `/trips/${tripId}/comments`),
+  postComment: (tripId: number, text: string, parentId?: number) => request<Comment>('POST', `/trips/${tripId}/comments`, { text, parentId: parentId ?? null }),
+  setCommentHidden: (id: number, hidden: boolean) => request<Comment>(hidden ? 'PUT' : 'DELETE', `/comments/${id}/hidden`),
+  deleteComment: (id: number) => request<void>('DELETE', `/comments/${id}`),
+  reportComment: (id: number, reason: ReportReason) => request<void>('POST', `/comments/${id}/reports`, { reason }),
   notifications: () => request<Notification[]>('GET', '/me/notifications'),
   unreadCount: () => request<{ count: number }>('GET', '/me/notifications/unread-count'),
   markNotificationsRead: () => request<void>('POST', '/me/notifications/read'),
