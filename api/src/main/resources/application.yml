@@ -37,8 +37,9 @@ server:
 app:
   # Set APP_ENV=production when deployed: the API then refuses to start with development defaults.
   env: ${APP_ENV:development}
-  # Header the host's proxy sets with the visitor's IP (see ClientIpFilter). Empty locally.
+  # Where the visitor's IP is behind the host's proxies (see ClientIpFilter). Empty locally.
   client-ip-header: ${APP_CLIENT_IP_HEADER:}
+  client-ip-trusted-hops: ${APP_CLIENT_IP_TRUSTED_HOPS:0}
   jwt:
     # Local development only. Set APP_JWT_SECRET (32+ random bytes, base64) in every deployed environment.
     secret: ${APP_JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1iZWZvcmUtZGVwbG95aW5nLTEyMzQ1Ng==}

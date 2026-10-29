@@ -32,8 +32,9 @@ Tables are created by the API itself on first start.
 1. Sign up on the live site, then in Supabase → SQL Editor:
    `UPDATE users SET is_admin = true WHERE username = '<you>';`
 2. Open `https://weyvo-web.onrender.com/api/admin/request-info`. `clientIp` must be your own public IP
-   (compare with any "what is my IP" site). If it isn't, set `APP_CLIENT_IP_HEADER` on weyvo-api to the
-   header that shows your IP.
+   (compare with any "what is my IP" site). It's read from `X-Forwarded-For`, skipping
+   `APP_CLIENT_IP_TRUSTED_HOPS` (3) addresses Render's proxies add on the right. If Render changes its
+   proxies and the IP is wrong, adjust that number.
 3. Razorpay (test mode) → Webhooks → `https://weyvo-web.onrender.com/api/billing/webhook`, the same secret,
    event `payment.captured`.
 4. cron-job.org: open `https://weyvo-web.onrender.com/api/places` every 10 minutes (keeps the free API awake

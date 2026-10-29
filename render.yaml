@@ -34,9 +34,12 @@ services:
       # Random 256-bit session key, made by Render once and kept.
       - key: APP_JWT_SECRET
         generateValue: true
-      # Which proxy header carries the visitor's IP; confirm at /api/admin/request-info after the first deploy.
+      # Visitor IP for rate limits: X-Forwarded-For, skipping the 3 addresses Render's proxies append on the
+      # right (web forwarding /api adds hops). Confirm at /api/admin/request-info: clientIp must be your own IP.
       - key: APP_CLIENT_IP_HEADER
-        value: True-Client-IP
+        value: X-Forwarded-For
+      - key: APP_CLIENT_IP_TRUSTED_HOPS
+        value: "3"
       # Secrets and per-account values: Render asks for these on the first deploy.
       - key: DATABASE_URL
         sync: false
