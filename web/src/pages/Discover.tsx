@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, avatarOf, sceneFor, TAG_LABEL, type TripCard } from '../api';
+import { api, sceneFor, TAG_LABEL, type TripCard } from '../api';
+import { Avatar } from '../components/Avatar';
+import { Footer } from '../components/Footer';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
@@ -103,9 +105,7 @@ function Rail() {
           </Link>
         ))}
       </div>
-      <p style={{ margin: '4px 6px', fontSize: 12, lineHeight: 1.6, color: 'var(--muted)' }}>
-        About · Community guidelines · Privacy · Terms<br />© {new Date().getFullYear()} Weyvo
-      </p>
+      <Footer compact />
     </aside>
   );
 }
@@ -147,14 +147,15 @@ function LatestTrips() {
 }
 
 function TripFeedCard({ trip }: { trip: TripCard }) {
-  const a = avatarOf(trip.author.displayName);
   return (
     <article className="rise" style={{ marginBottom: 28 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <span style={{ width: 34, height: 34, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600 }}>{a.initial}</span>
-        <div style={{ flex: 1 }}><p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{trip.author.displayName}</p><p style={{ margin: '1px 0 0', fontSize: 12, color: 'var(--muted)' }}>Full trip · {timeAgo(trip.publishedAt)}</p></div>
-        <Link to={`/u/${trip.author.username}`} style={{ fontSize: 13, fontWeight: 500, padding: '12px 0 12px 8px' }}>View</Link>
-      </div>
+      <Link to={`/u/${trip.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, padding: '4px 0', textDecoration: 'none', color: 'var(--ink)' }}>
+        <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} />
+        <span style={{ flex: 1 }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{trip.author.displayName}</span>
+          <span style={{ display: 'block', marginTop: 1, fontSize: 12, color: 'var(--muted)' }}>@{trip.author.username} · {timeAgo(trip.publishedAt)}</span>
+        </span>
+      </Link>
       <Link to={`/trips/${trip.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>
         <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} />
         <div className="cover-overlay">

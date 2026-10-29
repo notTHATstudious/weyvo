@@ -50,6 +50,9 @@ public class User {
     @Column(name = "session_version", nullable = false)
     private int sessionVersion;
 
+    @Column(name = "avatar_version", insertable = false, updatable = false)
+    private Integer avatarVersion;
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -75,6 +78,7 @@ public class User {
     public Instant getPlanExpiresAt() { return planExpiresAt; }
     public void markEmailVerified(Instant at) { if (emailVerifiedAt == null) emailVerifiedAt = at; }
     public int getSessionVersion() { return sessionVersion; }
+    public String getAvatarUrl() { return Avatars.url(username, avatarVersion); }
 
     /** Every existing session, on any device, stops working. */
     public void revokeSessions() {

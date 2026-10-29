@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, ApiError } from '../api';
+import { api, ApiError, photoProblem } from '../api';
+import { Avatar } from './Avatar';
 import { useAuth } from '../auth';
 
 /** Profile, password, data export and account deletion for the signed-in user. */
@@ -75,6 +76,7 @@ function ProfileCard() {
 
   return (
     <Card title="Profile">
+      <PictureEditor />
       <form onSubmit={submit}>
         <label htmlFor="pname" className="field-label">Name</label>
         <input id="pname" className="input" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} style={{ marginBottom: 12 }} />
@@ -84,6 +86,37 @@ function ProfileCard() {
         {status}
       </form>
     </Card>
+  );
+}
+
+/** Profile picture: JPEG or PNG, cropped square on the server with location data removed. */
+function PictureEditor() {
+  const { user, refresh } = useAuth();
+  const { busy, run, status } = useAction();
+  if (!user) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+      <Avatar name={user.displayName} url={user.avatarUrl} size={64} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <label className="btn btn-outline" style={{ minHeight: 40, cursor: busy ? 'default' : 'pointer' }}>
+          {busy ? 'Saving…' : user.avatarUrl ? 'Change photo' : 'Add photo'}
+          <input type="file" accept="image/jpeg,image/png" disabled={busy} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              const problem = photoProblem(f);
+              if (problem) return run(async () => { throw new ApiError(problem, 400); }, '');
+              run(async () => { await api.uploadAvatar(f); await refresh(); }, 'Photo updated');
+            }} />
+        </label>
+        {user.avatarUrl && (
+          <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} disabled={busy}
+            onClick={() => run(async () => { await api.removeAvatar(); await refresh(); }, 'Photo removed')}>Remove</button>
+        )}
+        <div style={{ flexBasis: '100%' }}>{status}</div>
+      </div>
+    </div>
   );
 }
 

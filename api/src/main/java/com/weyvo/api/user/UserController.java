@@ -14,7 +14,7 @@ public class UserController {
 
     /** Public profile fields only; email and account status never leave the server. */
     public record PublicUser(String username, String displayName, String bio, int followers, int following, boolean followedByMe,
-                             boolean premium) {}
+                             boolean premium, String avatarUrl) {}
 
     private final UserRepository users;
     private final FollowService follows;
@@ -30,6 +30,6 @@ public class UserController {
         User u = users.findByUsernameIgnoreCase(username).filter(User::isActive).orElseThrow(ApiException::notFound);
         var stats = follows.stats(u.getId(), viewer == null ? null : viewer.id());
         return new PublicUser(u.getUsername(), u.getDisplayName(), u.getBio(), stats.followers(), stats.following(), stats.followedByMe(),
-                u.effectivePlan(java.time.Instant.now()) == User.Plan.PREMIUM);
+                u.effectivePlan(java.time.Instant.now()) == User.Plan.PREMIUM, u.getAvatarUrl());
     }
 }

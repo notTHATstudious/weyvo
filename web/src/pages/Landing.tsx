@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Photo } from '../components/Photo';
 import { Icon } from '../components/Icons';
+import { Footer } from '../components/Footer';
 import { people, shorts, trips } from '../mocks/data';
 
 const pillars = [
@@ -122,10 +123,7 @@ export function Landing() {
         </div>
       </section>
 
-      <footer className="app-wide" style={{ padding: '28px 24px 40px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12, fontSize: 13, color: 'var(--muted)' }}>
-        <span className="display" style={{ fontSize: 18, color: 'var(--ink)' }}>weyvo.</span>
-        <span>About · Community guidelines · Privacy · Terms</span>
-      </footer>
+      <div className="app-wide"><Footer /></div>
     </div>
   );
 }

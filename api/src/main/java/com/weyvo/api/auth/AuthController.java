@@ -50,9 +50,9 @@ public class AuthController {
             @NotBlank String code,
             @NotBlank @Size(min = 10, max = 72, message = "Use 10 to 72 characters") String password) {}
 
-    public record MeResponse(long id, String username, String displayName, String bio, boolean emailVerified) {
+    public record MeResponse(long id, String username, String displayName, String bio, boolean emailVerified, String avatarUrl) {
         static MeResponse of(User u) {
-            return new MeResponse(u.getId(), u.getUsername(), u.getDisplayName(), u.getBio(), u.isEmailVerified());
+            return new MeResponse(u.getId(), u.getUsername(), u.getDisplayName(), u.getBio(), u.isEmailVerified(), u.getAvatarUrl());
         }
     }
 

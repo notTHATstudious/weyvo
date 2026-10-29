@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { api, avatarOf, type Notification } from '../api';
+import { api, type Notification } from '../api';
+import { Avatar } from '../components/Avatar';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
@@ -42,12 +43,11 @@ export function Notifications() {
 }
 
 function Row({ n }: { n: Notification }) {
-  const a = avatarOf(n.actor.displayName);
   const target = n.type === 'FOLLOW' || !n.trip ? `/u/${n.actor.username}` : `/trips/${n.trip.slug}`;
   return (
     <li style={{ borderBottom: '1px solid var(--line)' }}>
       <Link to={target} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px 0', textDecoration: 'none', color: 'var(--ink)' }}>
-        <span aria-hidden="true" style={{ flex: '0 0 40px', height: 40, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>{a.initial}</span>
+        <Avatar name={n.actor.displayName} url={n.actor.avatarUrl} size={40} />
         <span style={{ flex: 1, fontSize: 14, lineHeight: 1.45 }}>
           <strong>{n.actor.displayName}</strong> {sentence(n)}
           <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{ago(n.createdAt)}</span>

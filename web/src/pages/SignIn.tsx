@@ -85,6 +85,11 @@ export function SignIn() {
           )}
           {error && <p role="alert" style={{ margin: '4px 0 14px', fontSize: 14, color: '#B3261E' }}>{error}</p>}
 
+          {joining && (
+            <p style={{ margin: '0 0 12px', fontSize: 12, lineHeight: 1.5, color: 'var(--muted)' }}>
+              By joining, you agree to the <Link to="/legal/terms">Terms</Link> and <Link to="/legal/privacy">Privacy Policy</Link>, and confirm you're 18 or older.
+            </p>
+          )}
           <button type="submit" className="btn btn-primary btn-block" disabled={busy} style={{ marginTop: 6, opacity: busy ? 0.7 : 1 }}>
             {busy ? 'One moment…' : joining ? 'Create account' : 'Sign in'}
           </button>

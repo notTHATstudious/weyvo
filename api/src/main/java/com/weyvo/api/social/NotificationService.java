@@ -13,7 +13,7 @@ public class NotificationService {
 
     public enum Type { FOLLOW, BEEN, WANT, QUESTION, ANSWER, COMMENT, REPLY }
 
-    public record Actor(String username, String displayName) {}
+    public record Actor(String username, String displayName, String avatarUrl) {}
     public record TripLink(String slug, String title) {}
     public record Item(long id, Type type, Actor actor, TripLink trip, boolean read, Instant createdAt) {}
 
@@ -46,7 +46,7 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<Item> inbox(long userId, int limit) {
         return jdbc.query("""
-                SELECT n.id, n.type, n.read_at, n.created_at, a.username, a.display_name,
+                SELECT n.id, n.type, n.read_at, n.created_at, a.username, a.display_name, a.avatar_version,
                        CASE WHEN t.owner_id = :u OR (t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE')
                             THEN t.slug END AS slug,
                        CASE WHEN t.owner_id = :u OR (t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE')
@@ -59,7 +59,7 @@ public class NotificationService {
                 LIMIT :n""",
                 new MapSqlParameterSource().addValue("u", userId).addValue("n", limit),
                 (rs, i) -> new Item(rs.getLong("id"), Type.valueOf(rs.getString("type")),
-                        new Actor(rs.getString("username"), rs.getString("display_name")),
+                        new Actor(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))),
                         rs.getString("slug") == null ? null : new TripLink(rs.getString("slug"), rs.getString("title")),
                         rs.getTimestamp("read_at") != null, rs.getTimestamp("created_at").toInstant()));
     }

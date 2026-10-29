@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, avatarOf, sceneFor, TAG_LABEL, type ShortTag } from '../api';
+import { api, sceneFor, TAG_LABEL, type ShortTag } from '../api';
+import { Avatar } from '../components/Avatar';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
@@ -58,7 +59,6 @@ export function ShortStories() {
     );
   }
 
-  const by = avatarOf(card.author.displayName);
   const hidden = story ? pi >= story.sections.length : false;
   const caption = story && !hidden ? story.sections[pi]?.body : '';
   const isWanted = wanted[card.id] ?? card.reactions.wantByMe;
@@ -92,7 +92,7 @@ export function ShortStories() {
 
       <div style={{ position: 'absolute', top: 26, left: 14, right: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
         <Link to={`/u/${card.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none', flex: 1, minWidth: 0 }}>
-          <span style={{ width: 36, height: 36, borderRadius: '50%', background: by.color, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600 }}>{by.initial}</span>
+          <Avatar name={card.author.displayName} url={card.author.avatarUrl} size={36} ring="#fff" />
           <span><span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{card.author.displayName}</span><span style={{ display: 'block', fontSize: 12, opacity: 0.85 }}>{total} photo{total === 1 ? '' : 's'}</span></span>
         </Link>
         <Link to="/discover" className="icon-btn" aria-label="Close" style={{ color: '#fff' }}><Icon.close /></Link>

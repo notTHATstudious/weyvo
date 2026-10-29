@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { AccountSettings } from '../components/AccountSettings';
+import { Footer } from '../components/Footer';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
 import { useTheme } from '../theme';
@@ -45,6 +46,7 @@ export function Settings() {
           )}
         </div>
         <AccountSettings />
+        <Footer />
       </div>
       <BottomNav />
     </div>

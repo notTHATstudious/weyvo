@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, avatarOf, sceneFor, type FollowStats } from '../api';
+import { api, sceneFor, type FollowStats } from '../api';
+import { Avatar } from '../components/Avatar';
+import { shareLink } from '../share';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
@@ -15,6 +17,7 @@ export function Profile() {
   const navigate = useNavigate();
   const [follow, setFollow] = useState<FollowStats | null>(null);
   const [busy, setBusy] = useState(false);
+  const [shared, setShared] = useState<string | null>(null);
   const isMe = user?.username.toLowerCase() === handle.toLowerCase();
 
   const person = useApi(() => api.user(handle), [handle, user?.id]);
@@ -28,7 +31,6 @@ export function Profile() {
 
   const p = person.data;
   const f = follow ?? { followers: p.followers, following: p.following, followedByMe: p.followedByMe };
-  const a = avatarOf(p.displayName);
   const all = trips.data ?? [];
   const full = all.filter((t) => t.kind === 'FULL');
   const shorts = all.filter((t) => t.kind === 'SHORT');
@@ -51,16 +53,22 @@ export function Profile() {
   return (
     <div className="app">
       <div className="topbar">
-        <span className="eyebrow">@{p.username}</span>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>@{p.username}</span>
         <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
       </div>
 
       <div style={{ padding: '4px 20px 0', display: 'flex', gap: 16, alignItems: 'center' }}>
-        <span className="display" style={{ width: 76, height: 76, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, border: '3px solid var(--card)', flexShrink: 0 }}>{a.initial}</span>
-        <div>
-          <h1 className="display" style={{ margin: 0, fontSize: 32 }}>{p.displayName}</h1>
-          {p.premium && <span className="tag tag-gold" style={{ marginTop: 6, fontSize: 10, letterSpacing: '.08em' }}>★ PREMIUM</span>}
-          {p.bio && <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--ink-soft)' }}>{p.bio}</p>}
+        {isMe
+          ? <Link to="/settings" aria-label="Change profile picture" style={{ borderRadius: '50%' }}><Avatar name={p.displayName} url={p.avatarUrl} size={80} ring="var(--card)" /></Link>
+          : <Avatar name={p.displayName} url={p.avatarUrl} size={80} ring="var(--card)" />}
+        <div style={{ minWidth: 0 }}>
+          <h1 className="display" style={{ margin: 0, fontSize: 30 }}>{p.displayName}</h1>
+          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--muted)' }}>@{p.username}
+            {p.premium && <span className="tag tag-gold" style={{ marginLeft: 8, fontSize: 10, letterSpacing: '.08em' }}>★ PREMIUM</span>}
+          </p>
+          {p.bio
+            ? <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.45, color: 'var(--ink-soft)' }}>{p.bio}</p>
+            : isMe && <Link to="/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: 13, fontWeight: 600 }}>Add a short bio</Link>}
         </div>
       </div>
 
@@ -74,7 +82,9 @@ export function Profile() {
           </button>
         )}
         <button type="button" className="btn btn-outline" style={{ minHeight: 44, borderColor: 'var(--line-strong)' }}
-          onClick={() => navigator.clipboard?.writeText(window.location.href)}>Share profile</button>
+          onClick={async () => setShared(await shareLink(`/u/${p.username}`, `${p.displayName} on Weyvo`))}>
+          {shared === 'copied' ? 'Link copied' : 'Share profile'}
+        </button>
       </div>
 
       {/* Sample pins until trips carry real place data. */}

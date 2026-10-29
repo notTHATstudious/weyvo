@@ -241,7 +241,7 @@ public class TripService {
     }
 
     private static Author author(User u) {
-        return new Author(u.getUsername(), u.getDisplayName());
+        return new Author(u.getUsername(), u.getDisplayName(), u.getAvatarUrl());
     }
 
     private static String blankToNull(String s) {

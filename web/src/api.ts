@@ -5,8 +5,8 @@ export type Kind = 'FULL' | 'SHORT';
 export type ShortTag = 'WEEKEND' | 'ONE_NIGHT' | 'LONG_DRIVE' | 'DAY_TRIP';
 export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
-export interface Me { id: number; username: string; displayName: string; bio: string | null; emailVerified: boolean }
-export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean; premium: boolean }
+export interface Me { id: number; username: string; displayName: string; bio: string | null; emailVerified: boolean; avatarUrl: string | null }
+export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean; premium: boolean; avatarUrl: string | null }
 export interface FollowStats { followers: number; following: number; followedByMe: boolean }
 export type ReactionType = 'been' | 'want' | 'save';
 export type QuestionStatus = 'VISIBLE' | 'HIDDEN_BY_AUTHOR' | 'HIDDEN_BY_REPORTS';
@@ -36,7 +36,7 @@ export interface BillingPlans {
 }
 export interface PaymentOrder { orderId: string; amountPaise: number; currency: string; keyId: string; period: Period }
 export interface Reactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean; savedByMe: boolean }
-export interface Author { username: string; displayName: string }
+export interface Author { username: string; displayName: string; avatarUrl: string | null }
 export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
 export interface Section { heading: string | null; body: string; photoCaption: string | null; photo: PhotoRef | null }
 
@@ -127,6 +127,12 @@ export const api = {
   updateTrip: (id: number, b: TripInput) => request<TripView>('PUT', `/trips/${id}`, b),
   deleteTrip: (id: number) => request<void>('DELETE', `/trips/${id}`),
   deletePhoto: (tripId: number, photoId: number) => request<void>('DELETE', `/trips/${tripId}/photos/${photoId}`),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<{ avatarUrl: string }>('PUT', '/me/avatar', form);
+  },
+  removeAvatar: () => request<void>('DELETE', '/me/avatar'),
   updateProfile: (displayName: string, bio: string) => request<{ username: string; displayName: string; bio: string | null }>('PUT', '/me/profile', { displayName, bio }),
   changePassword: (currentPassword: string, newPassword: string) => request<void>('POST', '/auth/password/change', { currentPassword, newPassword }),
   deleteAccount: (password: string) => request<void>('DELETE', '/me', { password }),

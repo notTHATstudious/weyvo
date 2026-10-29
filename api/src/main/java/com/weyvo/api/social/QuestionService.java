@@ -23,7 +23,7 @@ public class QuestionService {
 
     public enum Reason { SPAM, ABUSE, OFF_TOPIC, OTHER }
 
-    public record Asker(String username, String displayName) {}
+    public record Asker(String username, String displayName, String avatarUrl) {}
 
     /** status is filled in only for the trip's author; everyone else sees visible questions only. */
     public record Question(long id, String body, Asker asker, String answer, Instant answeredAt, Instant createdAt,
@@ -58,10 +58,10 @@ public class QuestionService {
             return new Questions(true, n == null ? 0 : n, List.of());
         }
         List<Question> items = jdbc.query("""
-                SELECT q.id, q.body, q.answer, q.answered_at, q.created_at, q.status, q.asker_id, u.username, u.display_name
+                SELECT q.id, q.body, q.answer, q.answered_at, q.created_at, q.status, q.asker_id, u.username, u.display_name, u.avatar_version
                 FROM trip_questions q JOIN users u ON u.id = q.asker_id
                 WHERE """ + " " + filter + " ORDER BY q.created_at", params, (rs, i) -> new Question(
-                rs.getLong("id"), rs.getString("body"), new Asker(rs.getString("username"), rs.getString("display_name")),
+                rs.getLong("id"), rs.getString("body"), new Asker(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))),
                 rs.getString("answer"),
                 rs.getTimestamp("answered_at") == null ? null : rs.getTimestamp("answered_at").toInstant(),
                 rs.getTimestamp("created_at").toInstant(),
@@ -158,10 +158,10 @@ public class QuestionService {
 
     private Question one(long questionId, long viewerId, boolean owner) {
         return jdbc.query("""
-                SELECT q.id, q.body, q.answer, q.answered_at, q.created_at, q.status, q.asker_id, u.username, u.display_name
+                SELECT q.id, q.body, q.answer, q.answered_at, q.created_at, q.status, q.asker_id, u.username, u.display_name, u.avatar_version
                 FROM trip_questions q JOIN users u ON u.id = q.asker_id WHERE q.id = :id""",
                 new MapSqlParameterSource("id", questionId), (rs, i) -> new Question(
-                        rs.getLong("id"), rs.getString("body"), new Asker(rs.getString("username"), rs.getString("display_name")),
+                        rs.getLong("id"), rs.getString("body"), new Asker(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))),
                         rs.getString("answer"),
                         rs.getTimestamp("answered_at") == null ? null : rs.getTimestamp("answered_at").toInstant(),
                         rs.getTimestamp("created_at").toInstant(),

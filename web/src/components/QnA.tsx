@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { api, ApiError, avatarOf, type Question, type ReportReason } from '../api';
+import { api, ApiError, type Question, type ReportReason } from '../api';
+import { Avatar } from './Avatar';
 import { useAuth } from '../auth';
 
 const REASONS: { value: ReportReason; label: string }[] = [
@@ -88,7 +89,6 @@ function QuestionCard({ q, isOwner, signedIn, authorName, onChange, onRemove }: 
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [error, setError] = useState('');
-  const a = avatarOf(q.asker.displayName);
   const hidden = q.status && q.status !== 'VISIBLE';
 
   async function run(action: () => Promise<void>) {
@@ -103,7 +103,7 @@ function QuestionCard({ q, isOwner, signedIn, authorName, onChange, onRemove }: 
   return (
     <article className="paper-card" style={{ opacity: hidden ? 0.6 : 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>{a.initial}</span>
+        <Avatar name={q.asker.displayName} url={q.asker.avatarUrl} size={26} />
         <Link to={`/u/${q.asker.username}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{q.asker.displayName}</Link>
         {hidden && <span className="tag" style={{ fontSize: 10, background: 'var(--line)' }}>{q.status === 'HIDDEN_BY_REPORTS' ? 'Hidden after reports' : 'Hidden'}</span>}
       </div>

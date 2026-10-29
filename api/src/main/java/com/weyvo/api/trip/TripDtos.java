@@ -34,7 +34,7 @@ public final class TripDtos {
             @Size(max = 20) List<@Valid SectionInput> sections,
             @Size(max = 3) List<@NotBlank @Size(max = 120) String> moments) {}
 
-    public record Author(String username, String displayName) {}
+    public record Author(String username, String displayName, String avatarUrl) {}
 
     public record Section(String heading, String body, String photoCaption, PhotoRef photo) {}
 

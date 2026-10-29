@@ -53,9 +53,12 @@ public class AccountController {
     private final RateLimiter limits;
     private final PhotoService photos;
     private final NamedParameterJdbcTemplate jdbc;
+    private final com.weyvo.api.photo.PhotoStorage photoStorage;
 
     public AccountController(UserRepository users, PasswordEncoder passwords, JwtService jwt, SessionCookie cookie,
-                             RateLimiter limits, PhotoService photos, NamedParameterJdbcTemplate jdbc) {
+                             RateLimiter limits, PhotoService photos, NamedParameterJdbcTemplate jdbc,
+                             com.weyvo.api.photo.PhotoStorage photoStorage) {
+        this.photoStorage = photoStorage;
         this.users = users;
         this.passwords = passwords;
         this.jwt = jwt;
@@ -137,6 +140,8 @@ public class AccountController {
         checkPassword(user, req.password());
         List<Long> tripIds = jdbc.queryForList("SELECT id FROM trips WHERE owner_id = :u", new MapSqlParameterSource("u", user.getId()), Long.class);
         tripIds.forEach(photos::deleteAllFor); // files are removed after commit; rows go with the cascade
+        String avatarKey = jdbc.queryForObject("SELECT avatar_key FROM users WHERE id = :u", new MapSqlParameterSource("u", user.getId()), String.class);
+        if (avatarKey != null) photoStorage.delete(avatarKey);
         users.delete(user);
         log.info("Account deleted userId={} trips={}", user.getId(), tripIds.size());
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.clear().toString()).build();

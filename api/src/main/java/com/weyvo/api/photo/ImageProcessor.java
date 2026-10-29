@@ -51,6 +51,17 @@ public class ImageProcessor {
         return new Processed(jpeg(large, 0.85f), jpeg(thumb, 0.8f), large.getWidth(), large.getHeight());
     }
 
+    /** A square profile picture: same checks and metadata stripping as trip photos, center-cropped. */
+    public byte[] avatar(byte[] upload, int size) {
+        Format format = sniff(upload);
+        if (format != Format.JPEG && format != Format.PNG) throw ApiException.badRequest("Use a JPEG or PNG photo");
+        checkDimensionsBeforeDecoding(upload);
+        BufferedImage image = upright(toRgb(decode(upload)), format == Format.JPEG ? orientation(upload) : 1);
+        int side = Math.min(image.getWidth(), image.getHeight());
+        BufferedImage square = image.getSubimage((image.getWidth() - side) / 2, (image.getHeight() - side) / 2, side, side);
+        return jpeg(scaleToFit(square, size), 0.85f);
+    }
+
     // ---- validation ----
 
     enum Format { JPEG, PNG, WEBP, HEIC, UNKNOWN }

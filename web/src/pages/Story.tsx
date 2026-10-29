@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, ApiError, avatarOf, sceneFor, TAG_LABEL } from '../api';
+import { api, ApiError, sceneFor, TAG_LABEL } from '../api';
+import { Avatar } from '../components/Avatar';
+import { shareLink } from '../share';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { Comments } from '../components/Comments';
@@ -15,6 +17,7 @@ const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 export function Story() {
   const { slug = '' } = useParams();
   const { user } = useAuth();
+  const [shared, setShared] = useState<string | null>(null);
   // Refetch when the signed-in user changes: the server decides how much of the story to return.
   const { data: trip, error, loading } = useApi(() => api.trip(slug), [slug, user?.id]);
 
@@ -27,7 +30,6 @@ export function Story() {
     );
   }
 
-  const by = avatarOf(trip.author.displayName);
   const next = encodeURIComponent(`/trips/${trip.slug}`);
   const share = trip.locked ? Math.round((trip.sections.length / Math.max(1, trip.totalSections)) * 100) : 100;
   const firstName = trip.author.displayName.split(' ')[0];
@@ -43,15 +45,18 @@ export function Story() {
         <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} alt={`Cover photo: ${trip.title}`} />
         <div style={{ position: 'absolute', top: 12, left: 10, right: 10, display: 'flex', justifyContent: 'space-between' }}>
           <Link to="/discover" className="icon-btn solid" aria-label="Back" style={{ color: 'var(--ink)' }}><Icon.back /></Link>
-          <button type="button" className="icon-btn solid" aria-label="Copy link" style={{ color: 'var(--ink)' }}
-            onClick={() => navigator.clipboard?.writeText(window.location.href)}><Icon.share /></button>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {shared === 'copied' && <span role="status" className="tag">Link copied</span>}
+            <button type="button" className="icon-btn solid" aria-label="Share story" style={{ color: 'var(--ink)' }}
+              onClick={async () => setShared(await shareLink(`/trips/${trip.slug}`, trip.title))}><Icon.share /></button>
+          </span>
         </div>
         <div style={{ position: 'absolute', inset: 'auto 0 0 0', padding: 22, background: 'linear-gradient(to top, rgba(20,14,10,.75), rgba(20,14,10,0))' }}>
           {trip.status === 'DRAFT' && <span className="tag tag-gold" style={{ marginBottom: 10 }}>Draft · only you can see this</span>}
           <p style={{ margin: 0, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>{meta}</p>
           <h1 className="display rise" style={{ margin: '8px 0 0', fontSize: 'clamp(44px, 8vw, 72px)' }}>{trip.title}</h1>
           <Link to={`/u/${trip.author.username}`} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none' }}>
-            <span style={{ width: 32, height: 32, borderRadius: '50%', background: by.color, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 }}>{by.initial}</span>
+            <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} size={32} ring="#fff" />
             <span style={{ fontSize: 13 }}>by <strong>{trip.author.displayName}</strong></span>
           </Link>
         </div>

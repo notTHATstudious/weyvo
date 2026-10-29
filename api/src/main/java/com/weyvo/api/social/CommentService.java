@@ -23,7 +23,7 @@ public class CommentService {
 
     static final int MAX_COMMENT = 500;
 
-    public record Author(String username, String displayName) {}
+    public record Author(String username, String displayName, String avatarUrl) {}
 
     /** status is filled in only for the trip's author; everyone else sees visible comments only. */
     public record Comment(long id, Long parentId, String body, Author author, Instant createdAt, String status, boolean mine,
@@ -58,11 +58,11 @@ public class CommentService {
             return new Comments(true, n == null ? 0 : n, List.of());
         }
         List<Comment> flat = jdbc.query("""
-                SELECT c.id, c.parent_id, c.body, c.created_at, c.status, c.author_id, u.username, u.display_name
+                SELECT c.id, c.parent_id, c.body, c.created_at, c.status, c.author_id, u.username, u.display_name, u.avatar_version
                 FROM trip_comments c JOIN users u ON u.id = c.author_id
                 WHERE """ + " " + filter + " ORDER BY c.created_at", params,
                 (rs, i) -> new Comment(rs.getLong("id"), (Long) rs.getObject("parent_id"), rs.getString("body"),
-                        new Author(rs.getString("username"), rs.getString("display_name")), rs.getTimestamp("created_at").toInstant(),
+                        new Author(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))), rs.getTimestamp("created_at").toInstant(),
                         owner ? rs.getString("status") : null, viewerId != null && rs.getLong("author_id") == viewerId, new ArrayList<>()));
         // Thread replies under their parent; a reply whose parent is hidden from this viewer is dropped with it.
         Map<Long, Comment> top = new LinkedHashMap<>();
@@ -158,11 +158,11 @@ public class CommentService {
 
     private Comment one(long commentId, long viewerId, boolean owner) {
         return jdbc.query("""
-                SELECT c.id, c.parent_id, c.body, c.created_at, c.status, c.author_id, u.username, u.display_name
+                SELECT c.id, c.parent_id, c.body, c.created_at, c.status, c.author_id, u.username, u.display_name, u.avatar_version
                 FROM trip_comments c JOIN users u ON u.id = c.author_id WHERE c.id = :id""",
                 new MapSqlParameterSource("id", commentId),
                 (rs, i) -> new Comment(rs.getLong("id"), (Long) rs.getObject("parent_id"), rs.getString("body"),
-                        new Author(rs.getString("username"), rs.getString("display_name")), rs.getTimestamp("created_at").toInstant(),
+                        new Author(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))), rs.getTimestamp("created_at").toInstant(),
                         owner ? rs.getString("status") : null, rs.getLong("author_id") == viewerId, new ArrayList<>())).get(0);
     }
 

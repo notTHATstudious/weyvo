@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/billing/plans").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").permitAll()
                         // Reads of public content; the service decides how much of each trip to return.
-                        .requestMatchers(HttpMethod.GET, "/api/trips", "/api/trips/*", "/api/users/*", "/api/users/*/trips", "/api/photos/*/*", "/api/trips/*/questions", "/api/trips/*/comments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/trips", "/api/trips/*", "/api/users/*", "/api/users/*/trips", "/api/users/*/avatar", "/api/photos/*/*", "/api/trips/*/questions", "/api/trips/*/comments").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtCookieFilter, UsernamePasswordAuthenticationFilter.class);

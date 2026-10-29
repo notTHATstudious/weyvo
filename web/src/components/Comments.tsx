@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { api, ApiError, avatarOf, type Comment, type ReportReason } from '../api';
+import { api, ApiError, type Comment, type ReportReason } from '../api';
+import { Avatar } from './Avatar';
 import { useAuth } from '../auth';
 
 const REASONS: { value: ReportReason; label: string }[] = [
@@ -98,7 +99,6 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply }: {
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [error, setError] = useState('');
-  const a = avatarOf(c.author.displayName);
   const hidden = c.status && c.status !== 'VISIBLE';
 
   async function run(action: () => Promise<unknown>) {
@@ -113,7 +113,7 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply }: {
 
   return (
     <article style={{ display: 'flex', gap: 10, opacity: hidden ? 0.6 : 1 }}>
-      <span aria-hidden="true" style={{ flex: '0 0 26px', height: 26, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>{a.initial}</span>
+      <Link to={`/u/${c.author.username}`} aria-label={c.author.displayName}><Avatar name={c.author.displayName} url={c.author.avatarUrl} size={28} /></Link>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
           <Link to={`/u/${c.author.username}`} style={{ fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{c.author.displayName}</Link>{' '}
