@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api, avatarOf, sceneFor, TAG_LABEL } from '../api';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
+import { QnA } from '../components/QnA';
 import { Reactions } from '../components/Reactions';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
@@ -112,6 +113,7 @@ export function Story() {
           )}
           {trip.finalNote && <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>}
           {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} /></div>}
+          {trip.status === 'PUBLISHED' && <QnA tripId={trip.id} isOwner={trip.owner} authorName={trip.author.displayName} />}
         </div>
       )}
     </div>

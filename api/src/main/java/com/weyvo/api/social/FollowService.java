@@ -16,10 +16,12 @@ public class FollowService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final UserRepository users;
+    private final NotificationService notifications;
 
-    public FollowService(NamedParameterJdbcTemplate jdbc, UserRepository users) {
+    public FollowService(NamedParameterJdbcTemplate jdbc, UserRepository users, NotificationService notifications) {
         this.jdbc = jdbc;
         this.users = users;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -29,6 +31,7 @@ public class FollowService {
         var params = new MapSqlParameterSource().addValue("a", followerId).addValue("b", target.getId());
         if (on) {
             jdbc.update("INSERT INTO follows (follower_id, followee_id) VALUES (:a, :b) ON CONFLICT DO NOTHING", params);
+            notifications.notify(target.getId(), followerId, NotificationService.Type.FOLLOW, null, null);
         } else {
             jdbc.update("DELETE FROM follows WHERE follower_id = :a AND followee_id = :b", params);
         }

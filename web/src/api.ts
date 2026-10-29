@@ -9,6 +9,18 @@ export interface Me { id: number; username: string; displayName: string; bio: st
 export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean }
 export interface FollowStats { followers: number; following: number; followedByMe: boolean }
 export type ReactionType = 'been' | 'want' | 'save';
+export type QuestionStatus = 'VISIBLE' | 'HIDDEN_BY_AUTHOR' | 'HIDDEN_BY_REPORTS';
+export interface Question {
+  id: number; body: string; asker: Author; answer: string | null; answeredAt: string | null; createdAt: string;
+  /** Only filled in for the story's author. */
+  status: QuestionStatus | null; mine: boolean;
+}
+export interface Questions { locked: boolean; count: number; items: Question[] }
+export type ReportReason = 'SPAM' | 'ABUSE' | 'OFF_TOPIC' | 'OTHER';
+export type NotificationType = 'FOLLOW' | 'BEEN' | 'WANT' | 'QUESTION' | 'ANSWER';
+export interface Notification {
+  id: number; type: NotificationType; actor: Author; trip: { slug: string; title: string } | null; read: boolean; createdAt: string;
+}
 export interface PlanLimits { fullTripSections: number; shortStoryPhotos: number; totalPhotos: number; uploadsPerHour: number }
 export interface PlanUsage { plan: 'FREE' | 'PREMIUM'; limits: PlanLimits; photosUsed: number; uploadsLastHour: number }
 export interface Reactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean; savedByMe: boolean }
@@ -73,6 +85,15 @@ export const api = {
   userTrips: (username: string) => request<TripCard[]>('GET', `/users/${encodeURIComponent(username)}/trips`),
   myTrips: () => request<TripCard[]>('GET', '/me/trips'),
   myPlan: () => request<PlanUsage>('GET', '/me/plan'),
+  questions: (tripId: number) => request<Questions>('GET', `/trips/${tripId}/questions`),
+  ask: (tripId: number, text: string) => request<Question>('POST', `/trips/${tripId}/questions`, { text }),
+  answer: (questionId: number, text: string) => request<Question>('PUT', `/questions/${questionId}/answer`, { text }),
+  setHidden: (questionId: number, hidden: boolean) => request<Question>(hidden ? 'PUT' : 'DELETE', `/questions/${questionId}/hidden`),
+  deleteQuestion: (questionId: number) => request<void>('DELETE', `/questions/${questionId}`),
+  report: (questionId: number, reason: ReportReason) => request<void>('POST', `/questions/${questionId}/reports`, { reason }),
+  notifications: () => request<Notification[]>('GET', '/me/notifications'),
+  unreadCount: () => request<{ count: number }>('GET', '/me/notifications/unread-count'),
+  markNotificationsRead: () => request<void>('POST', '/me/notifications/read'),
   followingFeed: () => request<TripCard[]>('GET', '/me/following'),
   myList: (type: 'save' | 'want') => request<TripCard[]>('GET', `/me/reactions/${type}`),
   react: (tripId: number, type: ReactionType, on: boolean) => request<Reactions>(on ? 'PUT' : 'DELETE', `/trips/${tripId}/reactions/${type}`),

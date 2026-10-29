@@ -5,7 +5,10 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Signup signup, Storage storage, Plans plans) {
+public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Signup signup, Storage storage, Plans plans,
+                            Community community) {
+
+    public record Community(int questionsPerHour, int reportsToHide) {}
 
     public record Jwt(String secret, Duration ttl) {}
 

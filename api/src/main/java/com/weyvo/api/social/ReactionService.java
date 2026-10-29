@@ -25,10 +25,12 @@ public class ReactionService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final TripRepository trips;
+    private final NotificationService notifications;
 
-    public ReactionService(NamedParameterJdbcTemplate jdbc, TripRepository trips) {
+    public ReactionService(NamedParameterJdbcTemplate jdbc, TripRepository trips, NotificationService notifications) {
         this.jdbc = jdbc;
         this.trips = trips;
+        this.notifications = notifications;
     }
 
     /** Adds or removes a reaction. Only published trips the reader can see accept reactions. */
@@ -40,6 +42,10 @@ public class ReactionService {
         var params = new MapSqlParameterSource().addValue("u", userId).addValue("t", trip.getId()).addValue("type", type.name());
         if (on) {
             jdbc.update("INSERT INTO trip_reactions (user_id, trip_id, type) VALUES (:u, :t, :type) ON CONFLICT DO NOTHING", params);
+            // Save is a private bookmark, so it never notifies the author.
+            if (type != Type.SAVE) {
+                notifications.notify(trip.getOwner().getId(), userId, NotificationService.Type.valueOf(type.name()), trip.getId(), null);
+            }
         } else {
             jdbc.update("DELETE FROM trip_reactions WHERE user_id = :u AND trip_id = :t AND type = :type", params);
         }

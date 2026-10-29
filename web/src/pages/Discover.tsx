@@ -33,6 +33,7 @@ export function Discover() {
         <span className="display" style={{ fontSize: 26 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
         <div style={{ display: 'flex' }}>
           <Link to="/places/kyoto" className="icon-btn" aria-label="Search places"><Icon.search /></Link>
+          {signedIn && <NotificationBell />}
           <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
         </div>
       </div>
@@ -74,6 +75,18 @@ export function Discover() {
       </div>
       <BottomNav />
     </div>
+  );
+}
+
+/** Bell with an unread dot. Checked when Discover opens; no background polling. */
+function NotificationBell() {
+  const { data } = useApi(() => api.unreadCount(), []);
+  const unread = data?.count ?? 0;
+  return (
+    <Link to="/notifications" className="icon-btn" aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'} style={{ position: 'relative' }}>
+      <Icon.bell />
+      {unread > 0 && <span aria-hidden="true" style={{ position: 'absolute', top: 9, right: 9, width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)' }} />}
+    </Link>
   );
 }
 

@@ -1,6 +1,12 @@
 spring:
   application:
     name: weyvo-api
+  config:
+    # Local secrets: the git-ignored .env at the project root (run from api/ or the root). Optional, so
+    # deployed environments rely on real environment variables instead.
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/weyvo}
     username: ${DATABASE_USER:weyvo}
@@ -44,6 +50,10 @@ app:
   signup:
     # Reject email domains with no mail server (DNS MX/A lookup). Throwaway inboxes are always rejected.
     check-mail-domain: ${APP_SIGNUP_CHECK_MAIL_DOMAIN:true}
+  community:
+    questions-per-hour: ${COMMUNITY_QUESTIONS_PER_HOUR:10}
+    # A question is hidden automatically once this many different people report it.
+    reports-to-hide: ${COMMUNITY_REPORTS_TO_HIDE:3}
   plans:
     # Low values for testing. Raise with environment variables for launch (no code change needed).
     # For total-photos and uploads-per-hour, 0 means unlimited.
