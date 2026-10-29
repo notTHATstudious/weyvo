@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { TripView } from '../api';
+import { api, type TripView } from '../api';
 import { renderShareCard, shareCardImage, type CardFormat } from '../shareCard';
 import { shareLink } from '../share';
 
@@ -37,11 +37,13 @@ export function ShareSheet({ trip, onClose }: { trip: TripView; onClose: () => v
   async function shareImage() {
     if (!card) return;
     const result = await shareCardImage(card.blob, trip.slug, trip.title);
+    if (result !== 'cancelled') api.recordShare(trip.id, 'IMAGE').catch(() => undefined);
     setNote(result === 'saved' ? 'Image saved. Post it from your photos.' : result === 'shared' ? 'Shared' : '');
   }
 
   async function copyLink() {
     const result = await shareLink(`/trips/${trip.slug}`, trip.title);
+    if (result === 'copied' || result === 'shared') api.recordShare(trip.id, 'LINK').catch(() => undefined);
     setNote(result === 'copied' ? 'Link copied' : result === 'shared' ? 'Shared' : result === 'failed' ? "Couldn't copy the link" : '');
   }
 

@@ -56,6 +56,20 @@ export interface TripCard {
   reactions: Reactions;
 }
 
+export interface AdminStats {
+  users: { total: number; verified: number; premium: number; suspended: number };
+  active: { now: number; today: number; week: number; month: number };
+  signups: { today: number; week: number; month: number };
+  stories: { published: number; full: number; shorts: number; drafts: number };
+  engagement: { storiesPublished: number; comments: number; questions: number; reactions: number; saves: number; follows: number; shares: number };
+  retention: { days: number; cohort: number; returned: number }[];
+  daily: { day: string; signups: number; active: number; stories: number }[];
+  openReports: number; generatedAt: string;
+}
+export interface AdminUser {
+  username: string; displayName: string; email: string; status: 'ACTIVE' | 'SUSPENDED'; premium: boolean; admin: boolean;
+  verified: boolean; joinedAt: string; lastSeenAt: string | null; stories: number;
+}
 export interface BlockedUser { username: string; displayName: string; avatarUrl: string | null }
 export interface AdminReport {
   kind: 'TRIP' | 'COMMENT' | 'QUESTION'; id: number; text: string | null; author: string; tripSlug: string; tripTitle: string;
@@ -147,6 +161,10 @@ export const api = {
   reportTrip: (tripId: number, reason: ReportReason) => request<void>('POST', `/trips/${tripId}/reports`, { reason }),
   adminReports: () => request<AdminReport[]>('GET', '/admin/reports'),
   adminDecide: (kind: AdminReport['kind'], id: number, decision: 'hide' | 'keep') => request<void>('POST', `/admin/reports/${kind.toLowerCase()}/${id}/${decision}`),
+  adminStats: () => request<AdminStats>('GET', '/admin/stats'),
+  adminUsers: (q: string) => request<AdminUser[]>('GET', `/admin/users?q=${encodeURIComponent(q)}`),
+  adminRestore: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/restore`),
+  recordShare: (tripId: number, kind: 'LINK' | 'IMAGE') => request<void>('POST', `/trips/${tripId}/shares`, { kind }),
   adminSuspend: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/suspend`),
   follow: (username: string, on: boolean) => request<FollowStats>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/follow`),
   createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),

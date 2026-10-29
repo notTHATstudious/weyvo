@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** The report queue. SecurityConfig already limits /api/admin/** to admins; each handler checks again. */
@@ -18,9 +19,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
     private final ModerationService moderation;
+    private final AdminStatsService stats;
 
-    public AdminController(ModerationService moderation) {
+    public AdminController(ModerationService moderation, AdminStatsService stats) {
         this.moderation = moderation;
+        this.stats = stats;
+    }
+
+    @GetMapping("/api/admin/stats")
+    public AdminStatsService.Stats stats(@AuthenticationPrincipal CurrentUser user) {
+        requireAdmin(user);
+        return stats.stats();
+    }
+
+    @GetMapping("/api/admin/users")
+    public List<AdminStatsService.UserRow> users(@AuthenticationPrincipal CurrentUser user, @RequestParam(defaultValue = "") String q) {
+        requireAdmin(user);
+        return stats.users(q);
+    }
+
+    @PostMapping("/api/admin/users/{username}/restore")
+    public ResponseEntity<Void> restore(@AuthenticationPrincipal CurrentUser user, @PathVariable String username) {
+        requireAdmin(user);
+        moderation.restore(username);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/api/admin/reports")

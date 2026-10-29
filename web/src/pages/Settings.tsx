@@ -48,7 +48,7 @@ export function Settings() {
         </div>
         {user?.admin && (
           <Link to="/admin" className="paper-card" style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', color: 'var(--ink)', textDecoration: 'none' }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>Admin · reports</span><Icon.chevronRight />
+            <span style={{ fontSize: 15, fontWeight: 600 }}>Admin dashboard</span><Icon.chevronRight />
           </Link>
         )}
         <AccountSettings />

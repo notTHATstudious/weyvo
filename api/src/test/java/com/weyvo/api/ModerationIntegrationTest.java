@@ -116,6 +116,43 @@ class ModerationIntegrationTest {
         mvc.perform(get("/api/trips")).andExpect(jsonPath("$[*].slug", not(hasItem(story.slug()))));
     }
 
+    @Test
+    void dashboardCountsActivityAndFindsUsers() throws Exception {
+        Account writer = signup("dash");
+        Account admin = signup("boss");
+        db.update("UPDATE users SET is_admin = true WHERE username = ?", admin.username());
+        Story story = publish(writer);
+
+        // Shares count from anyone who can see the story, signed in or not.
+        mvc.perform(post("/api/trips/" + story.id() + "/shares").contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"IMAGE\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/trips/" + story.id() + "/shares").contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"FAX\"}"))
+                .andExpect(status().isBadRequest());
+
+        mvc.perform(get("/api/admin/stats").cookie(writer.cookie())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/users").cookie(writer.cookie())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/stats").cookie(admin.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.users.total").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.active.now").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.active.today").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.signups.today").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.engagement.shares").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.daily", hasSize(30)))
+                .andExpect(jsonPath("$.retention", hasSize(2)));
+
+        mvc.perform(get("/api/admin/users").param("q", writer.username()).cookie(admin.cookie()))
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].email").value(writer.username() + "@example.com"))
+                .andExpect(jsonPath("$[0].stories").value(1));
+        // LIKE wildcards in the search are taken literally.
+        mvc.perform(get("/api/admin/users").param("q", "%").cookie(admin.cookie())).andExpect(jsonPath("$", hasSize(0)));
+
+        mvc.perform(post("/api/admin/users/" + writer.username() + "/suspend").cookie(admin.cookie())).andExpect(status().isNoContent());
+        mvc.perform(post("/api/admin/users/" + writer.username() + "/restore").cookie(admin.cookie())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/trips/" + story.slug())).andExpect(status().isOk());
+    }
+
     private org.springframework.test.web.servlet.ResultActions comment(Account a, long tripId, String text) throws Exception {
         return mvc.perform(post("/api/trips/" + tripId + "/comments").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"" + text + "\"}"));

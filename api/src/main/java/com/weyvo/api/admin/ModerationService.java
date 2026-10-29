@@ -98,6 +98,14 @@ public class ModerationService {
         jdbc.update(reports + " AND reviewed_at IS NULL", p);
     }
 
+    /** Lifts a suspension. The person signs in again as normal. */
+    @Transactional
+    public void restore(String username) {
+        int n = jdbc.update("UPDATE users SET status = 'ACTIVE' WHERE lower(username) = lower(:n) AND status = 'SUSPENDED'",
+                new MapSqlParameterSource("n", username));
+        if (n == 0) throw ApiException.notFound();
+    }
+
     /** Suspends an account and ends its sessions at once. Admins can't be suspended from the app. */
     @Transactional
     public void suspend(long adminId, String username) {

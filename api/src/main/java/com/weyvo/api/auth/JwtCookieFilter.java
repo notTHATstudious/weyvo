@@ -22,6 +22,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtCookieFilter extends OncePerRequestFilter {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtCookieFilter.class);
+
     private final SessionCookie cookie;
     private final JwtService jwt;
     private final NamedParameterJdbcTemplate jdbc;
@@ -39,8 +41,27 @@ public class JwtCookieFilter extends OncePerRequestFilter {
             var authorities = user.admin() ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.<SimpleGrantedAuthority>of();
             var auth = new UsernamePasswordAuthenticationToken(user, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
+            seen(user.id());
         });
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Records that this account is active: last seen at most once a minute, plus the day (India time) for
+     * daily/weekly/monthly counts. Failing to record never fails the request.
+     */
+    private void seen(long userId) {
+        try {
+            var p = new MapSqlParameterSource("id", userId);
+            int updated = jdbc.update("UPDATE users SET last_seen_at = now() WHERE id = :id"
+                    + " AND (last_seen_at IS NULL OR last_seen_at < now() - interval '1 minute')", p);
+            if (updated > 0) {
+                jdbc.update("INSERT INTO user_activity_days (user_id, day) VALUES (:id, (now() AT TIME ZONE 'Asia/Kolkata')::date)"
+                        + " ON CONFLICT DO NOTHING", p);
+            }
+        } catch (RuntimeException e) {
+            log.warn("Could not record activity: {}", e.getClass().getSimpleName());
+        }
     }
 
     private Optional<CurrentUser> load(JwtService.Claims claims) {
