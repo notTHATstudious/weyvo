@@ -40,6 +40,10 @@ public class ProductionSafetyCheck implements InitializingBean {
             out.add("APP_CORS_ORIGINS must be your https web address, not localhost");
         }
         if (!p.auth().requireVerifiedEmail()) out.add("AUTH_REQUIRE_VERIFIED_EMAIL must stay true");
+        // Hosts like Render wipe the local disk on every deploy, so photos must live in Supabase.
+        if (p.storage() != null && !"supabase".equalsIgnoreCase(p.storage().provider())) {
+            out.add("APP_STORAGE_PROVIDER must be supabase (the server's disk is not kept)");
+        }
         return out;
     }
 }

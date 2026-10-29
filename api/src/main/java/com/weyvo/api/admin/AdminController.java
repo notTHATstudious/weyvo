@@ -26,6 +26,21 @@ public class AdminController {
         this.stats = stats;
     }
 
+    /**
+     * The admin's own address as the API sees it, and the proxy headers that carried it. Used once after
+     * deploying to pick APP_CLIENT_IP_HEADER; shows nothing about anyone else.
+     */
+    @GetMapping("/api/admin/request-info")
+    public java.util.Map<String, String> requestInfo(@AuthenticationPrincipal CurrentUser user, jakarta.servlet.http.HttpServletRequest http) {
+        requireAdmin(user);
+        var out = new java.util.LinkedHashMap<String, String>();
+        out.put("clientIp", http.getRemoteAddr());
+        for (String h : List.of("X-Forwarded-For", "True-Client-IP", "CF-Connecting-IP", "X-Real-IP", "Forwarded")) {
+            out.put(h, String.valueOf(http.getHeader(h)));
+        }
+        return out;
+    }
+
     @GetMapping("/api/admin/stats")
     public AdminStatsService.Stats stats(@AuthenticationPrincipal CurrentUser user) {
         requireAdmin(user);
