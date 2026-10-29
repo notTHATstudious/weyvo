@@ -91,12 +91,12 @@ app:
     free:
       full-trip-sections: ${PLAN_FREE_FULL_TRIP_SECTIONS:3}   # each section can hold one photo, plus the cover
       short-story-photos: ${PLAN_FREE_SHORT_STORY_PHOTOS:4}
-      total-photos: ${PLAN_FREE_TOTAL_PHOTOS:20}
+      total-photos: ${PLAN_FREE_TOTAL_PHOTOS:15}
       uploads-per-hour: ${PLAN_FREE_UPLOADS_PER_HOUR:10}
     premium:
       full-trip-sections: ${PLAN_PREMIUM_FULL_TRIP_SECTIONS:8}
       short-story-photos: ${PLAN_PREMIUM_SHORT_STORY_PHOTOS:8}
-      total-photos: ${PLAN_PREMIUM_TOTAL_PHOTOS:0}
+      total-photos: ${PLAN_PREMIUM_TOTAL_PHOTOS:20}
       uploads-per-hour: ${PLAN_PREMIUM_UPLOADS_PER_HOUR:60}
   storage:
     # local: files under local-dir (development). supabase: private Supabase Storage bucket.
