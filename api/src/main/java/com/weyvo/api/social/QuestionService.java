@@ -38,13 +38,16 @@ public class QuestionService {
     private final NotificationService notifications;
     private final AppProperties.Community rules;
 
+    private final BlockService blocks;
+
     public QuestionService(NamedParameterJdbcTemplate jdbc, TripRepository trips, StoryGate gate,
-                           NotificationService notifications, AppProperties props) {
+                           NotificationService notifications, AppProperties props, BlockService blocks) {
         this.jdbc = jdbc;
         this.trips = trips;
         this.gate = gate;
         this.notifications = notifications;
         this.rules = props.community();
+        this.blocks = blocks;
     }
 
     @Transactional(readOnly = true)
@@ -52,14 +55,15 @@ public class QuestionService {
         Trip trip = visibleTrip(tripId, viewerId);
         boolean owner = trip.isOwnedBy(viewerId);
         var params = new MapSqlParameterSource().addValue("t", tripId).addValue("v", viewerId).addValue("owner", owner);
-        String filter = "q.trip_id = :t AND (:owner OR q.status = 'VISIBLE')";
+        // Questions from people the viewer blocked, or who blocked the viewer, are left out.
+        String filter = "q.trip_id = :t AND (:owner OR q.status = 'VISIBLE') AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = CAST(:v AS BIGINT) AND b.blocked_id = q.asker_id) OR (b.blocker_id = q.asker_id AND b.blocked_id = CAST(:v AS BIGINT)))";
         if (gate.locked(trip, viewerId)) {
             Integer n = jdbc.queryForObject("SELECT count(*) FROM trip_questions q WHERE " + filter, params, Integer.class);
             return new Questions(true, n == null ? 0 : n, List.of());
         }
         List<Question> items = jdbc.query("""
                 SELECT q.id, q.body, q.answer, q.answered_at, q.created_at, q.status, q.asker_id, u.username, u.display_name, u.avatar_version
-                FROM trip_questions q JOIN users u ON u.id = q.asker_id
+                FROM trip_questions q JOIN users u ON u.id = q.asker_id AND u.status = 'ACTIVE'
                 WHERE """ + " " + filter + " ORDER BY q.created_at", params, (rs, i) -> new Question(
                 rs.getLong("id"), rs.getString("body"), new Asker(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))),
                 rs.getString("answer"),
@@ -133,7 +137,7 @@ public class QuestionService {
         jdbc.update("""
                 UPDATE trip_questions SET status = 'HIDDEN_BY_REPORTS'
                 WHERE id = :q AND status = 'VISIBLE'
-                  AND (SELECT count(*) FROM question_reports WHERE question_id = :q) >= :n""", params);
+                  AND (SELECT count(*) FROM question_reports WHERE question_id = :q AND reviewed_at IS NULL) >= :n""", params);
     }
 
     // ---- helpers ----
@@ -153,7 +157,8 @@ public class QuestionService {
     }
 
     private Trip visibleTrip(long tripId, Long viewerId) {
-        return trips.findById(tripId).filter(t -> t.isVisibleTo(viewerId)).orElseThrow(ApiException::notFound);
+        return trips.findById(tripId).filter(t -> t.isVisibleTo(viewerId) && !blocks.between(viewerId, t.getOwner().getId()))
+                .orElseThrow(ApiException::notFound);
     }
 
     private Question one(long questionId, long viewerId, boolean owner) {

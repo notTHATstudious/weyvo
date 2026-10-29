@@ -45,6 +45,7 @@ public class SecurityConfig {
                         // Reads of public content; the service decides how much of each trip to return.
                         .requestMatchers(HttpMethod.GET, "/api/trips", "/api/trips/*", "/api/users/*", "/api/users/*/trips", "/api/users/*/avatar", "/api/photos/*/*", "/api/trips/*/questions", "/api/trips/*/comments",
                                 "/api/places", "/api/places/*", "/api/users/*/map").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtCookieFilter, UsernamePasswordAuthenticationFilter.class);

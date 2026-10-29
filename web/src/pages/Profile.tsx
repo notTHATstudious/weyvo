@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, sceneFor, type FollowStats } from '../api';
+import { api, ApiError, sceneFor, type FollowStats } from '../api';
 import { Avatar } from '../components/Avatar';
 import { shareLink } from '../share';
 import { useAuth } from '../auth';
@@ -18,11 +18,12 @@ export function Profile() {
   const [follow, setFollow] = useState<FollowStats | null>(null);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
   const isMe = user?.username.toLowerCase() === handle.toLowerCase();
 
-  const person = useApi(() => api.user(handle), [handle, user?.id]);
+  const person = useApi(() => api.user(handle), [handle, user?.id, version]);
   // Your own profile includes drafts and private trips; anyone else's shows public ones only.
-  const trips = useApi(() => (isMe ? api.myTrips() : api.userTrips(handle)), [handle, isMe]);
+  const trips = useApi(() => (isMe ? api.myTrips() : api.userTrips(handle)), [handle, isMe, version]);
 
   if (person.loading) return <div className="app" style={{ padding: 20 }}><Loading /></div>;
   if (!person.data) {
@@ -30,6 +31,25 @@ export function Profile() {
   }
 
   const p = person.data;
+  if (p.blockedByMe) {
+    return (
+      <div className="app">
+        <div className="topbar"><span style={{ fontSize: 15, fontWeight: 700 }}>@{p.username}</span><span /></div>
+        <div style={{ padding: '4px 20px 0', display: 'flex', gap: 16, alignItems: 'center' }}>
+          <Avatar name={p.displayName} url={p.avatarUrl} size={80} ring="var(--card)" />
+          <h1 className="display" style={{ margin: 0, fontSize: 30 }}>{p.displayName}</h1>
+        </div>
+        <div className="paper-card" style={{ margin: '20px 20px 0', padding: '16px 18px' }}>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>You blocked {p.username}</p>
+          <p style={{ margin: '6px 0 14px', fontSize: 14, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+            They can't see your stories or profile, follow you, comment or ask. You won't see theirs.
+          </p>
+          <BlockButton username={p.username} blocked onChange={() => setVersion((v) => v + 1)} />
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
   const f = follow ?? { followers: p.followers, following: p.following, followedByMe: p.followedByMe };
   const all = trips.data ?? [];
   const full = all.filter((t) => t.kind === 'FULL');
@@ -87,6 +107,8 @@ export function Profile() {
         </button>
       </div>
 
+      {user && !isMe && <div style={{ padding: '6px 20px 0', textAlign: 'right' }}><BlockButton username={p.username} blocked={false} onChange={() => { setFollow(null); setVersion((v) => v + 1); }} /></div>}
+
       <div style={{ margin: '20px 20px 0' }}><TravelMap username={p.username} /></div>
 
       <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', textAlign: 'center' }}>
@@ -138,6 +160,50 @@ export function Profile() {
       {isMe && <MyList type="want" title="Want to go" empty="Tap Want to go on any story to plan your next trip." />}
       {isMe && <MyList type="save" title="Saved" empty="Bookmark stories to read later. Only you see this list." />}
       <BottomNav />
+    </div>
+  );
+}
+
+/** Block asks once before acting; unblock is immediate. */
+function BlockButton({ username, blocked, onChange }: { username: string; blocked: boolean; onChange: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState('');
+
+  async function run(on: boolean) {
+    setError('');
+    try {
+      await api.block(username, on);
+      setConfirming(false);
+      onChange();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
+    }
+  }
+
+  if (blocked) {
+    return (
+      <>
+        <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={() => run(false)}>Unblock</button>
+        {error && <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
+      </>
+    );
+  }
+  if (!confirming) {
+    return (
+      <button type="button" onClick={() => setConfirming(true)}
+        style={{ border: 0, background: 'none', color: 'var(--muted)', fontSize: 12, fontWeight: 600, minHeight: 32, padding: '6px 0' }}>Block</button>
+    );
+  }
+  return (
+    <div className="paper-card" style={{ textAlign: 'left', padding: '12px 14px' }}>
+      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.45 }}>
+        Block <strong>{username}</strong>? They won't see your stories or be able to follow, comment or ask. You won't see theirs.
+      </p>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <button type="button" className="btn" style={{ minHeight: 38, background: '#B3261E', color: '#fff' }} onClick={() => run(true)}>Block</button>
+        <button type="button" className="btn btn-outline" style={{ minHeight: 38 }} onClick={() => setConfirming(false)}>Cancel</button>
+      </div>
+      {error && <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
   );
 }

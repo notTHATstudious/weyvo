@@ -4,7 +4,7 @@ import { api, ApiError, type Comment, type ReportReason } from '../api';
 import { Avatar } from './Avatar';
 import { useAuth } from '../auth';
 
-const REASONS: { value: ReportReason; label: string }[] = [
+export const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'SPAM', label: 'Spam' },
   { value: 'ABUSE', label: 'Abusive' },
   { value: 'OFF_TOPIC', label: 'Off topic' },

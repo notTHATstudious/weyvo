@@ -47,6 +47,10 @@ public class User {
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
 
+    /** Set by hand in the database; the app never grants it. */
+    @Column(name = "is_admin", insertable = false, updatable = false)
+    private boolean admin;
+
     @Column(name = "session_version", nullable = false)
     private int sessionVersion;
 
@@ -63,6 +67,10 @@ public class User {
         this.passwordHash = passwordHash;
         this.username = username;
         this.displayName = displayName;
+    }
+
+    public boolean isAdmin() {
+        return admin;
     }
 
     public boolean isActive() {

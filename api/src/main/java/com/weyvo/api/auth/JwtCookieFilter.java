@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -35,7 +36,8 @@ public class JwtCookieFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         cookie.read(request).flatMap(jwt::verify).flatMap(this::load).ifPresent(user -> {
-            var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
+            var authorities = user.admin() ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.<SimpleGrantedAuthority>of();
+            var auth = new UsernamePasswordAuthenticationToken(user, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
         });
         chain.doFilter(request, response);
@@ -43,10 +45,10 @@ public class JwtCookieFilter extends OncePerRequestFilter {
 
     private Optional<CurrentUser> load(JwtService.Claims claims) {
         return jdbc.query("""
-                SELECT id, username, email_verified_at IS NOT NULL AS verified FROM users
+                SELECT id, username, email_verified_at IS NOT NULL AS verified, is_admin FROM users
                 WHERE id = :id AND status = 'ACTIVE' AND session_version = :sv""",
                 new MapSqlParameterSource().addValue("id", claims.userId()).addValue("sv", claims.sessionVersion()),
-                (rs, i) -> new CurrentUser(rs.getLong("id"), rs.getString("username"), rs.getBoolean("verified")))
+                (rs, i) -> new CurrentUser(rs.getLong("id"), rs.getString("username"), rs.getBoolean("verified"), rs.getBoolean("is_admin")))
                 .stream().findFirst();
     }
 }

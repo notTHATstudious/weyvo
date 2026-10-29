@@ -5,8 +5,8 @@ export type Kind = 'FULL' | 'SHORT';
 export type ShortTag = 'WEEKEND' | 'ONE_NIGHT' | 'LONG_DRIVE' | 'DAY_TRIP';
 export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
-export interface Me { id: number; username: string; displayName: string; bio: string | null; emailVerified: boolean; avatarUrl: string | null }
-export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean; premium: boolean; avatarUrl: string | null }
+export interface Me { id: number; username: string; displayName: string; bio: string | null; emailVerified: boolean; avatarUrl: string | null; admin: boolean }
+export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean; premium: boolean; avatarUrl: string | null; blockedByMe: boolean }
 export interface FollowStats { followers: number; following: number; followedByMe: boolean }
 export type ReactionType = 'been' | 'want' | 'save';
 export type QuestionStatus = 'VISIBLE' | 'HIDDEN_BY_AUTHOR' | 'HIDDEN_BY_REPORTS';
@@ -29,7 +29,7 @@ export interface Notification {
 export interface MapPin { placeSlug: string; name: string; country: string | null; lat: number; lng: number; trips: { slug: string; title: string }[] }
 /** want is null unless it's your own map. */
 export interface TravelMapData { been: MapPin[]; want: MapPin[] | null; countries: number; places: number }
-export interface PlaceSummary { slug: string; name: string; country: string | null; stories: number; shorts: number }
+export interface PlaceSummary { slug: string; name: string; country: string | null; lat: number; lng: number; stories: number; shorts: number }
 export interface PlaceDetail {
   slug: string; name: string; country: string | null; lat: number; lng: number;
   stories: number; shorts: number; wantToGo: number; months: number[]; trips: TripCard[]; reactions: PlaceReactions;
@@ -54,6 +54,12 @@ export interface TripCard {
   author: Author; visibility: Visibility; status: 'DRAFT' | 'PUBLISHED'; publishedAt: string | null;
   cover: PhotoRef | null;
   reactions: Reactions;
+}
+
+export interface BlockedUser { username: string; displayName: string; avatarUrl: string | null }
+export interface AdminReport {
+  kind: 'TRIP' | 'COMMENT' | 'QUESTION'; id: number; text: string | null; author: string; tripSlug: string; tripTitle: string;
+  hidden: boolean; reports: number; reasons: ReportReason[]; lastReportedAt: string;
 }
 
 export interface TripView extends TripCard {
@@ -136,6 +142,12 @@ export const api = {
   followingFeed: () => request<TripCard[]>('GET', '/me/following'),
   myList: (type: 'save' | 'want') => request<TripCard[]>('GET', `/me/reactions/${type}`),
   react: (tripId: number, type: ReactionType, on: boolean) => request<Reactions>(on ? 'PUT' : 'DELETE', `/trips/${tripId}/reactions/${type}`),
+  block: (username: string, on: boolean) => request<void>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/block`),
+  blocked: () => request<BlockedUser[]>('GET', '/me/blocked'),
+  reportTrip: (tripId: number, reason: ReportReason) => request<void>('POST', `/trips/${tripId}/reports`, { reason }),
+  adminReports: () => request<AdminReport[]>('GET', '/admin/reports'),
+  adminDecide: (kind: AdminReport['kind'], id: number, decision: 'hide' | 'keep') => request<void>('POST', `/admin/reports/${kind.toLowerCase()}/${id}/${decision}`),
+  adminSuspend: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/suspend`),
   follow: (username: string, on: boolean) => request<FollowStats>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/follow`),
   createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),
   updateTrip: (id: number, b: TripInput) => request<TripView>('PUT', `/trips/${id}`, b),

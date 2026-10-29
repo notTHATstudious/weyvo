@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { AccountSettings } from '../components/AccountSettings';
+import { BlockedList } from '../components/BlockedList';
 import { Footer } from '../components/Footer';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
@@ -45,7 +46,13 @@ export function Settings() {
             </>
           )}
         </div>
+        {user?.admin && (
+          <Link to="/admin" className="paper-card" style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', color: 'var(--ink)', textDecoration: 'none' }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>Admin · reports</span><Icon.chevronRight />
+          </Link>
+        )}
         <AccountSettings />
+        {user && <BlockedList />}
         <Footer />
       </div>
       <BottomNav />

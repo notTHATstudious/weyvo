@@ -27,7 +27,9 @@ public class VerifiedEmailGuard implements WebMvcConfigurer, HandlerInterceptor 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // Own-account actions (edit profile, delete account) stay open: privacy rights don't wait for verification.
-        registry.addInterceptor(this).addPathPatterns("/api/**").excludePathPatterns("/api/auth/**", "/api/me", "/api/me/profile");
+        registry.addInterceptor(this).addPathPatterns("/api/**").excludePathPatterns("/api/auth/**", "/api/me", "/api/me/profile",
+                // Anyone signed in can protect themselves, verified or not.
+                "/api/users/*/block");
     }
 
     @Override

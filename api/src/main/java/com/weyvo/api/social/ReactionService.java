@@ -26,8 +26,10 @@ public class ReactionService {
     private final NamedParameterJdbcTemplate jdbc;
     private final TripRepository trips;
     private final NotificationService notifications;
+    private final BlockService blocks;
 
-    public ReactionService(NamedParameterJdbcTemplate jdbc, TripRepository trips, NotificationService notifications) {
+    public ReactionService(NamedParameterJdbcTemplate jdbc, TripRepository trips, NotificationService notifications, BlockService blocks) {
+        this.blocks = blocks;
         this.jdbc = jdbc;
         this.trips = trips;
         this.notifications = notifications;
@@ -37,7 +39,7 @@ public class ReactionService {
     @Transactional
     public Reactions set(long userId, long tripId, Type type, boolean on) {
         Trip trip = trips.findById(tripId)
-                .filter(t -> t.isVisibleTo(userId) && t.getStatus() == Trip.Status.PUBLISHED)
+                .filter(t -> t.isVisibleTo(userId) && t.getStatus() == Trip.Status.PUBLISHED && !blocks.between(userId, t.getOwner().getId()))
                 .orElseThrow(ApiException::notFound);
         var params = new MapSqlParameterSource().addValue("u", userId).addValue("t", trip.getId()).addValue("type", type.name());
         if (on) {

@@ -17,8 +17,10 @@ public class FollowService {
     private final NamedParameterJdbcTemplate jdbc;
     private final UserRepository users;
     private final NotificationService notifications;
+    private final BlockService blocks;
 
-    public FollowService(NamedParameterJdbcTemplate jdbc, UserRepository users, NotificationService notifications) {
+    public FollowService(NamedParameterJdbcTemplate jdbc, UserRepository users, NotificationService notifications, BlockService blocks) {
+        this.blocks = blocks;
         this.jdbc = jdbc;
         this.users = users;
         this.notifications = notifications;
@@ -28,6 +30,7 @@ public class FollowService {
     public FollowStats set(long followerId, String username, boolean on) {
         User target = users.findByUsernameIgnoreCase(username).filter(User::isActive).orElseThrow(ApiException::notFound);
         if (target.getId() == followerId) throw ApiException.badRequest("You can't follow yourself");
+        if (on && blocks.between(followerId, target.getId())) throw ApiException.notFound();
         var params = new MapSqlParameterSource().addValue("a", followerId).addValue("b", target.getId());
         if (on) {
             jdbc.update("INSERT INTO follows (follower_id, followee_id) VALUES (:a, :b) ON CONFLICT DO NOTHING", params);

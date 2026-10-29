@@ -28,7 +28,7 @@ public class PlaceController {
     /** want is null unless the viewer is looking at their own map: Want to go is a private list. */
     public record TravelMap(List<Pin> been, List<Pin> want, int countries, int places) {}
 
-    public record PlaceSummary(String slug, String name, String country, int stories, int shorts) {}
+    public record PlaceSummary(String slug, String name, String country, double lat, double lng, int stories, int shorts) {}
 
     public record PlaceDetail(String slug, String name, String country, double lat, double lng,
                               int stories, int shorts, int wantToGo, int[] months, List<TripCard> trips, PlaceReactions reactions) {}
@@ -38,10 +38,12 @@ public class PlaceController {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final TripService trips;
+    private final com.weyvo.api.social.BlockService blocks;
 
-    public PlaceController(NamedParameterJdbcTemplate jdbc, TripService trips) {
+    public PlaceController(NamedParameterJdbcTemplate jdbc, TripService trips, com.weyvo.api.social.BlockService blocks) {
         this.jdbc = jdbc;
         this.trips = trips;
+        this.blocks = blocks;
     }
 
     @GetMapping("/api/users/{username}/map")
@@ -49,6 +51,7 @@ public class PlaceController {
     public TravelMap map(@PathVariable String username, @AuthenticationPrincipal CurrentUser viewer) {
         Long ownerId = jdbc.query("SELECT id FROM users WHERE lower(username) = lower(:n) AND status = 'ACTIVE'",
                 new MapSqlParameterSource("n", username), (rs, i) -> rs.getLong(1)).stream().findFirst().orElseThrow(ApiException::notFound);
+        if (blocks.between(viewer == null ? null : viewer.id(), ownerId)) throw ApiException.notFound();
         boolean self = viewer != null && viewer.id() == ownerId;
         var p = new MapSqlParameterSource().addValue("u", ownerId).addValue("self", self);
 
@@ -56,7 +59,7 @@ public class PlaceController {
         List<Pin> been = pins("""
                 SELECT p.slug, p.name, p.country, p.lat, p.lng, t.slug AS trip_slug, t.title, t.created_at AS at
                 FROM trips t JOIN places p ON p.id = t.place_id
-                WHERE t.owner_id = :u AND (:self OR (t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC'))
+                WHERE t.owner_id = :u AND (:self OR (t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL))
                 UNION ALL
                 SELECT p.slug, p.name, p.country, p.lat, p.lng, NULL, NULL, r.created_at
                 FROM place_reactions r JOIN places p ON p.id = r.place_id
@@ -66,7 +69,7 @@ public class PlaceController {
         List<Pin> want = self ? pins("""
                 SELECT p.slug, p.name, p.country, p.lat, p.lng, t.slug AS trip_slug, t.title, r.created_at AS at
                 FROM trip_reactions r JOIN trips t ON t.id = r.trip_id JOIN places p ON p.id = t.place_id
-                WHERE r.user_id = :u AND r.type = 'WANT' AND t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE'
+                WHERE r.user_id = :u AND r.type = 'WANT' AND t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE' AND t.removed_at IS NULL
                 UNION ALL
                 SELECT p.slug, p.name, p.country, p.lat, p.lng, NULL, NULL, r.created_at
                 FROM place_reactions r JOIN places p ON p.id = r.place_id
@@ -80,11 +83,13 @@ public class PlaceController {
     @Transactional(readOnly = true)
     public List<PlaceSummary> popular() {
         return jdbc.query("""
-                SELECT p.slug, p.name, p.country,
+                SELECT p.slug, p.name, p.country, p.lat, p.lng,
                        count(*) FILTER (WHERE t.kind = 'FULL') AS stories, count(*) FILTER (WHERE t.kind = 'SHORT') AS shorts
-                FROM places p JOIN trips t ON t.place_id = p.id AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC'
+                FROM places p JOIN trips t ON t.place_id = p.id AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL
+                JOIN users o ON o.id = t.owner_id AND o.status = 'ACTIVE'
                 WHERE p.found GROUP BY p.id ORDER BY count(*) DESC, p.name LIMIT 20""", new MapSqlParameterSource(),
-                (rs, i) -> new PlaceSummary(rs.getString("slug"), rs.getString("name"), rs.getString("country"), rs.getInt("stories"), rs.getInt("shorts")));
+                (rs, i) -> new PlaceSummary(rs.getString("slug"), rs.getString("name"), rs.getString("country"), rs.getDouble("lat"), rs.getDouble("lng"),
+                        rs.getInt("stories"), rs.getInt("shorts")));
     }
 
     @GetMapping("/api/places/{slug}")
@@ -95,7 +100,8 @@ public class PlaceController {
                         rs.getString("country"), rs.getDouble("lat"), rs.getDouble("lng")}).stream().findFirst().orElseThrow(ApiException::notFound);
         long id = (long) row[0];
         var p = new MapSqlParameterSource("id", id);
-        String visible = "t.place_id = :id AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC'";
+        String visible = "t.place_id = :id AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL"
+                + " AND EXISTS (SELECT 1 FROM users o WHERE o.id = t.owner_id AND o.status = 'ACTIVE')";
         Map<String, Object> counts = jdbc.queryForMap("SELECT count(*) FILTER (WHERE kind = 'FULL') AS stories, count(*) FILTER (WHERE kind = 'SHORT') AS shorts FROM trips t WHERE " + visible, p);
         Integer want = jdbc.queryForObject("SELECT count(*) FROM trip_reactions r JOIN trips t ON t.id = r.trip_id WHERE r.type = 'WANT' AND " + visible, p, Integer.class);
         int[] months = new int[12];

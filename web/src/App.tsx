@@ -8,6 +8,7 @@ import { Profile } from './pages/Profile';
 import { Create } from './pages/Create';
 import { Destination } from './pages/Destination';
 import { Settings } from './pages/Settings';
+import { Admin } from './pages/Admin';
 import { SignIn } from './pages/SignIn';
 import { Notifications } from './pages/Notifications';
 import { VerifyEmail } from './pages/VerifyEmail';
@@ -39,6 +40,7 @@ export function App() {
       <Route path="/places" element={<Places />} />
       <Route path="/places/:slug" element={<Destination />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="/signin" element={<SignIn />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/verify" element={<VerifyEmail />} />

@@ -5,6 +5,7 @@ import com.weyvo.api.config.AppProperties.PlanLimits;
 import com.weyvo.api.photo.PhotoService;
 import com.weyvo.api.plan.PlanService;
 import com.weyvo.api.photo.PhotoService.PhotoRef;
+import com.weyvo.api.social.BlockService;
 import com.weyvo.api.social.FollowService;
 import com.weyvo.api.social.ReactionService;
 import com.weyvo.api.trip.TripDtos.Author;
@@ -39,9 +40,11 @@ public class TripService {
     private final ReactionService reactions;
     private final FollowService follows;
     private final PlanService plans;
+    private final BlockService blocks;
 
     public TripService(TripRepository trips, UserRepository users, StoryGate gate, PhotoService photos,
-                       ReactionService reactions, FollowService follows, PlanService plans) {
+                       ReactionService reactions, FollowService follows, PlanService plans, BlockService blocks) {
+        this.blocks = blocks;
         this.plans = plans;
         this.trips = trips;
         this.users = users;
@@ -60,7 +63,7 @@ public class TripService {
     @Transactional(readOnly = true)
     public TripView view(String slug, Long viewerId) {
         Trip trip = trips.findBySlug(slug).orElseThrow(ApiException::notFound);
-        if (!trip.isVisibleTo(viewerId)) throw ApiException.notFound();
+        if (!trip.isVisibleTo(viewerId) || blocks.between(viewerId, trip.getOwner().getId())) throw ApiException.notFound();
 
         boolean locked = gate.locked(trip, viewerId);
         PhotoService.TripPhotos pics = photos.forTrip(trip);
@@ -236,7 +239,10 @@ public class TripService {
         return slug;
     }
 
-    private List<TripCard> cards(List<Trip> list, Long viewerId) {
+    /** Stories by people the viewer blocked, or who blocked the viewer, never appear in a list. */
+    private List<TripCard> cards(List<Trip> all, Long viewerId) {
+        java.util.Set<Long> hidden = blocks.hiddenFor(viewerId);
+        List<Trip> list = hidden.isEmpty() ? all : all.stream().filter(t -> !hidden.contains(t.getOwner().getId())).toList();
         Map<Long, PhotoRef> covers = photos.coversFor(list);
         Map<Long, ReactionService.Reactions> counts = reactions.forTrips(list.stream().map(Trip::getId).toList(), viewerId);
         return list.stream()

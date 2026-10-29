@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, ApiError, sceneFor, TAG_LABEL } from '../api';
+import { api, ApiError, sceneFor, TAG_LABEL, type ReportReason } from '../api';
 import { Avatar } from '../components/Avatar';
-import { shareLink } from '../share';
+import { ShareSheet } from '../components/ShareSheet';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
-import { Comments } from '../components/Comments';
+import { Comments, REASONS } from '../components/Comments';
 import { QnA } from '../components/QnA';
 import { Reactions } from '../components/Reactions';
 import { Empty, Loading } from '../components/States';
@@ -17,7 +17,7 @@ const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 export function Story() {
   const { slug = '' } = useParams();
   const { user } = useAuth();
-  const [shared, setShared] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   // Refetch when the signed-in user changes: the server decides how much of the story to return.
   const { data: trip, error, loading } = useApi(() => api.trip(slug), [slug, user?.id]);
 
@@ -46,9 +46,8 @@ export function Story() {
         <div style={{ position: 'absolute', top: 12, left: 10, right: 10, display: 'flex', justifyContent: 'space-between' }}>
           <Link to="/discover" className="icon-btn solid" aria-label="Back" style={{ color: 'var(--ink)' }}><Icon.back /></Link>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {shared === 'copied' && <span role="status" className="tag">Link copied</span>}
             <button type="button" className="icon-btn solid" aria-label="Share story" style={{ color: 'var(--ink)' }}
-              onClick={async () => setShared(await shareLink(`/trips/${trip.slug}`, trip.title))}><Icon.share /></button>
+              onClick={() => setSharing(true)}><Icon.share /></button>
           </span>
         </div>
         <div style={{ position: 'absolute', inset: 'auto 0 0 0', padding: 22, background: 'linear-gradient(to top, rgba(20,14,10,.75), rgba(20,14,10,0))' }}>
@@ -124,8 +123,49 @@ export function Story() {
           {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} /></div>}
           {trip.status === 'PUBLISHED' && <QnA tripId={trip.id} isOwner={trip.owner} authorName={trip.author.displayName} />}
           {trip.status === 'PUBLISHED' && <Comments tripId={trip.id} isOwner={trip.owner} />}
+          {trip.status === 'PUBLISHED' && user && !trip.owner && <ReportStory tripId={trip.id} />}
         </div>
       )}
+      {sharing && <ShareSheet trip={trip} onClose={() => setSharing(false)} />}
+    </div>
+  );
+}
+
+/** Readers can flag a story for the Weyvo team; only admins see reports. */
+function ReportStory({ tripId }: { tripId: number }) {
+  const [open, setOpen] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
+
+  async function send(reason: ReportReason) {
+    setError('');
+    try {
+      await api.reportTrip(tripId, reason);
+      setDone(true);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 30, paddingTop: 14, borderTop: '1px solid var(--line)', textAlign: 'center' }}>
+      {done ? (
+        <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Thanks for telling us. We'll take a look.</p>
+      ) : (
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
+          style={{ border: 0, background: 'none', color: 'var(--muted)', fontSize: 13, fontWeight: 600, minHeight: 36 }}>
+          {open ? 'Cancel' : 'Report this story'}
+        </button>
+      )}
+      {open && (
+        <div role="group" aria-label="Report reason" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 6 }}>
+          {REASONS.map((r) => (
+            <button key={r.value} type="button" className="pill" style={{ minHeight: 34, fontSize: 12 }} onClick={() => send(r.value)}>{r.label}</button>
+          ))}
+        </div>
+      )}
+      {error && <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
   );
 }

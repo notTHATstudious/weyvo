@@ -32,9 +32,12 @@ public class NotificationService {
     @Transactional
     public void notify(long recipientId, long actorId, Type type, Long tripId, Long questionId, Long commentId) {
         if (recipientId == actorId) return;
+        // Nothing passes between two people when either has blocked the other.
         jdbc.update("""
                 INSERT INTO notifications (recipient_id, actor_id, type, trip_id, question_id, comment_id)
-                VALUES (:r, :a, :type, :trip, :q, :c) ON CONFLICT DO NOTHING""",
+                SELECT :r, :a, :type, :trip, :q, :c
+                WHERE NOT EXISTS (SELECT 1 FROM user_blocks WHERE (blocker_id = :r AND blocked_id = :a) OR (blocker_id = :a AND blocked_id = :r))
+                ON CONFLICT DO NOTHING""",
                 new MapSqlParameterSource().addValue("r", recipientId).addValue("a", actorId)
                         .addValue("type", type.name()).addValue("trip", tripId).addValue("q", questionId).addValue("c", commentId));
     }
@@ -47,9 +50,9 @@ public class NotificationService {
     public List<Item> inbox(long userId, int limit) {
         return jdbc.query("""
                 SELECT n.id, n.type, n.read_at, n.created_at, a.username, a.display_name, a.avatar_version,
-                       CASE WHEN t.owner_id = :u OR (t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE')
+                       CASE WHEN t.owner_id = :u OR (t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE' AND t.removed_at IS NULL)
                             THEN t.slug END AS slug,
-                       CASE WHEN t.owner_id = :u OR (t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE')
+                       CASE WHEN t.owner_id = :u OR (t.status = 'PUBLISHED' AND t.visibility <> 'PRIVATE' AND t.removed_at IS NULL)
                             THEN t.title END AS title
                 FROM notifications n
                 JOIN users a ON a.id = n.actor_id AND a.status = 'ACTIVE'

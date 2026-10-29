@@ -37,9 +37,11 @@ public class CommentService {
     private final StoryGate gate;
     private final NotificationService notifications;
     private final AppProperties.Community rules;
+    private final BlockService blocks;
 
     public CommentService(NamedParameterJdbcTemplate jdbc, TripRepository trips, StoryGate gate,
-                          NotificationService notifications, AppProperties props) {
+                          NotificationService notifications, AppProperties props, BlockService blocks) {
+        this.blocks = blocks;
         this.jdbc = jdbc;
         this.trips = trips;
         this.gate = gate;
@@ -51,15 +53,16 @@ public class CommentService {
     public Comments list(long tripId, Long viewerId) {
         Trip trip = visibleTrip(tripId, viewerId);
         boolean owner = trip.isOwnedBy(viewerId);
-        var params = new MapSqlParameterSource().addValue("t", tripId).addValue("owner", owner);
-        String filter = "c.trip_id = :t AND (:owner OR c.status = 'VISIBLE')";
+        var params = new MapSqlParameterSource().addValue("t", tripId).addValue("v", viewerId).addValue("owner", owner);
+        // Comments from people the viewer blocked, or who blocked the viewer, are left out.
+        String filter = "c.trip_id = :t AND (:owner OR c.status = 'VISIBLE') AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = CAST(:v AS BIGINT) AND b.blocked_id = c.author_id) OR (b.blocker_id = c.author_id AND b.blocked_id = CAST(:v AS BIGINT)))";
         if (gate.locked(trip, viewerId)) {
             Integer n = jdbc.queryForObject("SELECT count(*) FROM trip_comments c WHERE " + filter, params, Integer.class);
             return new Comments(true, n == null ? 0 : n, List.of());
         }
         List<Comment> flat = jdbc.query("""
                 SELECT c.id, c.parent_id, c.body, c.created_at, c.status, c.author_id, u.username, u.display_name, u.avatar_version
-                FROM trip_comments c JOIN users u ON u.id = c.author_id
+                FROM trip_comments c JOIN users u ON u.id = c.author_id AND u.status = 'ACTIVE'
                 WHERE """ + " " + filter + " ORDER BY c.created_at", params,
                 (rs, i) -> new Comment(rs.getLong("id"), (Long) rs.getObject("parent_id"), rs.getString("body"),
                         new Author(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))), rs.getTimestamp("created_at").toInstant(),
@@ -90,6 +93,7 @@ public class CommentService {
                 throw ApiException.badRequest("You can only reply to a comment on this story");
             }
             parentAuthor = parent.authorId();
+            if (blocks.between(userId, parentAuthor)) throw ApiException.notFound();
         }
         Long id = jdbc.queryForObject("INSERT INTO trip_comments (trip_id, author_id, parent_id, body) VALUES (:t, :u, :p, :b) RETURNING id",
                 new MapSqlParameterSource().addValue("t", tripId).addValue("u", userId).addValue("p", parentId).addValue("b", text), Long.class);
@@ -133,7 +137,7 @@ public class CommentService {
         jdbc.update("""
                 UPDATE trip_comments SET status = 'HIDDEN_BY_REPORTS'
                 WHERE id = :c AND status = 'VISIBLE'
-                  AND (SELECT count(*) FROM comment_reports WHERE comment_id = :c) >= :n""", params);
+                  AND (SELECT count(*) FROM comment_reports WHERE comment_id = :c AND reviewed_at IS NULL) >= :n""", params);
     }
 
     // ---- helpers ----
@@ -153,7 +157,8 @@ public class CommentService {
     }
 
     private Trip visibleTrip(long tripId, Long viewerId) {
-        return trips.findById(tripId).filter(t -> t.isVisibleTo(viewerId)).orElseThrow(ApiException::notFound);
+        return trips.findById(tripId).filter(t -> t.isVisibleTo(viewerId) && !blocks.between(viewerId, t.getOwner().getId()))
+                .orElseThrow(ApiException::notFound);
     }
 
     private Comment one(long commentId, long viewerId, boolean owner) {

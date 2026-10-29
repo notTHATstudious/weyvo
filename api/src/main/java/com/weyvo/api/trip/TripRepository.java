@@ -19,6 +19,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             select t from Trip t
             where t.status = com.weyvo.api.trip.Trip.Status.PUBLISHED
               and t.visibility = com.weyvo.api.trip.Trip.Visibility.PUBLIC
+              and t.removedAt is null
+              and t.owner.status = 'ACTIVE'
               and (?1 is null or t.kind = ?1)
             order by t.publishedAt desc""")
     List<Trip> findPublicFeed(Trip.Kind kind, Pageable page);
@@ -29,6 +31,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             where lower(t.owner.username) = lower(?1)
               and t.status = com.weyvo.api.trip.Trip.Status.PUBLISHED
               and t.visibility = com.weyvo.api.trip.Trip.Visibility.PUBLIC
+              and t.removedAt is null
+              and t.owner.status = 'ACTIVE'
             order by t.publishedAt desc""")
     List<Trip> findPublicByUsername(String username, Pageable page);
 
@@ -38,13 +42,16 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             where t.owner.id in ?1
               and t.status = com.weyvo.api.trip.Trip.Status.PUBLISHED
               and t.visibility = com.weyvo.api.trip.Trip.Visibility.PUBLIC
+              and t.removedAt is null
+              and t.owner.status = 'ACTIVE'
             order by t.publishedAt desc""")
     List<Trip> findPublicByOwnerIds(java.util.Collection<Long> ownerIds, Pageable page);
 
     // Native query: entity graphs aren't supported here; authors load lazily inside the read transaction.
     @Query(value = """
             SELECT t.* FROM trips t
-            WHERE t.place_id = ?1 AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC'
+            WHERE t.place_id = ?1 AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL
+              AND EXISTS (SELECT 1 FROM users u WHERE u.id = t.owner_id AND u.status = 'ACTIVE')
             ORDER BY t.published_at DESC LIMIT 50""", nativeQuery = true)
     List<Trip> findPublicByPlace(long placeId);
 

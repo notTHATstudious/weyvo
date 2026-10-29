@@ -85,6 +85,10 @@ public class Trip {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    /** Set when an admin takes the story down after reports. Only its author still sees it. */
+    @Column(name = "removed_at", insertable = false, updatable = false)
+    private Instant removedAt;
+
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<TripSection> sections = new ArrayList<>();
@@ -107,10 +111,15 @@ public class Trip {
         return userId != null && owner.getId().equals(userId);
     }
 
-    /** Drafts and private trips exist only for their owner; published public and unlisted trips for anyone. */
+    /**
+     * Drafts, private and removed trips exist only for their owner; published public and unlisted trips for anyone,
+     * unless the author's account is suspended.
+     */
     public boolean isVisibleTo(Long userId) {
-        return isOwnedBy(userId) || (status == Status.PUBLISHED && visibility != Visibility.PRIVATE);
+        return isOwnedBy(userId) || (status == Status.PUBLISHED && visibility != Visibility.PRIVATE && removedAt == null && owner.isActive());
     }
+
+    public boolean isRemoved() { return removedAt != null; }
 
     public void replaceSections(List<TripSection> next) {
         sections.clear();

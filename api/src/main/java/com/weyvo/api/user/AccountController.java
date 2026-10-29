@@ -126,6 +126,9 @@ public class AccountController {
         data.put("reactions", jdbc.queryForList("SELECT trip_id, type, created_at FROM trip_reactions WHERE user_id = :u ORDER BY created_at", p));
         data.put("following", jdbc.queryForList("""
                 SELECT u.username, f.created_at FROM follows f JOIN users u ON u.id = f.followee_id WHERE f.follower_id = :u""", p));
+        data.put("blocked", jdbc.queryForList("""
+                SELECT u.username, b.created_at FROM user_blocks b JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = :u""", p));
+        data.put("reportsMade", jdbc.queryForList("SELECT trip_id, reason, created_at FROM trip_reports WHERE reporter_id = :u", p));
         log.info("Data export userId={}", user.getId());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"weyvo-export.json\"")
