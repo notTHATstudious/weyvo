@@ -10,6 +10,8 @@ interface Auth {
   signup: (b: { email: string; password: string; username: string; displayName: string }) => Promise<void>;
   logout: () => Promise<void>;
   verifyEmail: (code: string) => Promise<void>;
+  /** Re-reads the signed-in user, e.g. after editing the profile. Signs out locally if the session is gone. */
+  refresh: () => Promise<void>;
   resetPassword: (email: string, code: string, password: string) => Promise<void>;
 }
 
@@ -30,10 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
   const verifyEmail = useCallback(async (code: string) => setUser(await api.verifyEmail(code)), []);
+  const refresh = useCallback(async () => {
+    try {
+      setUser(await api.me());
+    } catch {
+      setUser(null);
+    }
+  }, []);
   const resetPassword = useCallback(async (email: string, code: string, password: string) => setUser(await api.resetPassword(email, code, password)), []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signedIn: user !== null, login, signup, logout, verifyEmail, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, signedIn: user !== null, login, signup, logout, verifyEmail, resetPassword, refresh }}>
       {children}
     </AuthContext.Provider>
   );

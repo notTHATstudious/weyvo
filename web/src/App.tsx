@@ -13,6 +13,7 @@ import { Notifications } from './pages/Notifications';
 import { VerifyEmail } from './pages/VerifyEmail';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { VerifyBanner } from './components/VerifyBanner';
+import { EditTrip } from './pages/EditTrip';
 
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
@@ -29,6 +30,7 @@ export function App() {
       <Route path="/discover" element={<Discover />} />
       <Route path="/shorts" element={<ShortStories />} />
       <Route path="/trips/:slug" element={<Story />} />
+      <Route path="/trips/:slug/edit" element={<EditTrip />} />
       <Route path="/u/:handle" element={<Profile />} />
       <Route path="/create" element={<Create />} />
       <Route path="/places/:slug" element={<Destination />} />

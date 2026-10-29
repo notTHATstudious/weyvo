@@ -103,6 +103,12 @@ export const api = {
   react: (tripId: number, type: ReactionType, on: boolean) => request<Reactions>(on ? 'PUT' : 'DELETE', `/trips/${tripId}/reactions/${type}`),
   follow: (username: string, on: boolean) => request<FollowStats>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/follow`),
   createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),
+  updateTrip: (id: number, b: TripInput) => request<TripView>('PUT', `/trips/${id}`, b),
+  deleteTrip: (id: number) => request<void>('DELETE', `/trips/${id}`),
+  deletePhoto: (tripId: number, photoId: number) => request<void>('DELETE', `/trips/${tripId}/photos/${photoId}`),
+  updateProfile: (displayName: string, bio: string) => request<{ username: string; displayName: string; bio: string | null }>('PUT', '/me/profile', { displayName, bio }),
+  changePassword: (currentPassword: string, newPassword: string) => request<void>('POST', '/auth/password/change', { currentPassword, newPassword }),
+  deleteAccount: (password: string) => request<void>('DELETE', '/me', { password }),
   publishTrip: (id: number) => request<TripView>('POST', `/trips/${id}/publish`),
   uploadPhoto: (tripId: number, file: File, role: 'COVER' | 'SECTION', position = 0) => {
     const form = new FormData();

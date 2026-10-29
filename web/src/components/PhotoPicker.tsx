@@ -2,20 +2,24 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { photoProblem } from '../api';
 import { Icon } from './Icons';
 
-/** Tap-to-choose photo slot with an instant local preview. Nothing uploads until the story is saved. */
-export function PhotoPicker({ file, onChange, label, height = 96, children }: {
-  file: File | null; onChange: (f: File | null) => void; label: string; height?: number; children?: ReactNode;
+/**
+ * Tap-to-choose photo slot with an instant local preview. Nothing uploads until the story is saved.
+ * When editing, `existingUrl` shows the photo already on the story until it's replaced or removed.
+ */
+export function PhotoPicker({ file, existingUrl, onChange, label, height = 96, children }: {
+  file: File | null; existingUrl?: string | null; onChange: (f: File | null) => void; label: string; height?: number; children?: ReactNode;
 }) {
   const id = useId();
-  const [preview, setPreview] = useState<string | null>(null);
+  const [local, setLocal] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!file) return setPreview(null);
+    if (!file) return setLocal(null);
     const url = URL.createObjectURL(file);
-    setPreview(url);
+    setLocal(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+  const preview = local ?? existingUrl ?? null;
 
   return (
     <div style={{ position: 'relative' }}>
@@ -38,7 +42,7 @@ export function PhotoPicker({ file, onChange, label, height = 96, children }: {
           setError(problem ?? '');
           if (!problem) onChange(f);
         }} />
-      {file && (
+      {preview && (
         <button type="button" aria-label={`Remove ${label}`} onClick={() => onChange(null)}
           style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, borderRadius: '50%', border: 0, background: 'rgba(0,0,0,.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon.close size={14} />

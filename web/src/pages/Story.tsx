@@ -1,5 +1,6 @@
-import { Link, useParams } from 'react-router-dom';
-import { api, avatarOf, sceneFor, TAG_LABEL } from '../api';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { api, ApiError, avatarOf, sceneFor, TAG_LABEL } from '../api';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { QnA } from '../components/QnA';
@@ -54,6 +55,8 @@ export function Story() {
           </Link>
         </div>
       </div>
+
+      {trip.owner && <OwnerBar id={trip.id} slug={trip.slug} status={trip.status} visibility={trip.visibility} />}
 
       {trip.intro && (
         <div style={{ padding: '26px 22px 0' }}>
@@ -116,6 +119,43 @@ export function Story() {
           {trip.status === 'PUBLISHED' && <QnA tripId={trip.id} isOwner={trip.owner} authorName={trip.author.displayName} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Only the author sees this: status, Edit, and Delete with a confirmation step. */
+function OwnerBar({ id, slug, status, visibility }: { id: number; slug: string; status: string; visibility: string }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState('');
+  const label = status === 'DRAFT' ? 'Draft · only you can see it' : visibility === 'PUBLIC' ? 'Published · public' : visibility === 'UNLISTED' ? 'Published · unlisted' : 'Published · private';
+
+  async function remove() {
+    try {
+      await api.deleteTrip(id);
+      navigate(user ? `/u/${user.username}` : '/discover', { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
+    }
+  }
+
+  return (
+    <div className="paper-card" style={{ margin: '16px 16px 0', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+      <span style={{ flex: '1 1 160px', fontSize: 13, color: 'var(--ink-soft)' }}>{label}</span>
+      {!confirming ? (
+        <>
+          <Link to={`/trips/${slug}/edit`} className="btn btn-primary" style={{ minHeight: 40 }}>Edit</Link>
+          <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={() => setConfirming(true)}>Delete</button>
+        </>
+      ) : (
+        <>
+          <span style={{ flex: '1 1 100%', fontSize: 14, fontWeight: 600 }}>Delete this story and its photos? This can't be undone.</span>
+          <button type="button" className="btn" style={{ minHeight: 40, background: '#B3261E', color: '#fff' }} onClick={remove}>Delete for good</button>
+          <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={() => setConfirming(false)}>Keep it</button>
+        </>
+      )}
+      {error && <p role="alert" style={{ flex: '1 1 100%', margin: 0, fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, ApiError, TAG_LABEL, type PlanUsage, type ShortTag, type TripInput, type Visibility } from '../api';
+import { api, ApiError, TAG_LABEL, type PhotoRef, type PlanUsage, type ShortTag, type TripInput, type TripView, type Visibility } from '../api';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
@@ -68,42 +68,53 @@ export function Create() {
 }
 
 /**
- * Creates the trip, uploads its photos one by one, then publishes. If something fails the trip stays a
- * private draft, and trying again reuses it and uploads only what's still missing.
+ * Saves a story. New: create, upload photos one by one, then publish; if something fails the story stays a
+ * private draft and trying again reuses it. Editing: update the text, delete removed photos, upload new ones.
  */
-function useSave() {
+function useSave(existing?: TripView) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [fields, setFields] = useState<Record<string, string>>({});
-  const created = useRef<{ id: number; slug: string } | null>(null);
+  const created = useRef<{ id: number; slug: string } | null>(existing ? { id: existing.id, slug: existing.slug } : null);
   const uploaded = useRef(new Set<File>());
+  const deleted = useRef(new Set<number>());
 
-  async function save(input: TripInput, uploads: Upload[], publish: boolean) {
+  async function save(input: TripInput, uploads: Upload[], removals: number[], publish: boolean) {
     setBusy(true);
     setError('');
     setFields({});
     try {
-      if (!created.current) {
+      if (existing) {
+        setProgress('Saving…');
+        await api.updateTrip(existing.id, input);
+      } else if (!created.current) {
         setProgress('Saving…');
         const trip = await api.createTrip(input);
         created.current = { id: trip.id, slug: trip.slug };
       }
+      const id = created.current!.id;
+      for (const photoId of removals.filter((p) => !deleted.current.has(p))) {
+        // Removing a section's text already removes its photo on the server; "not found" is fine here.
+        await api.deletePhoto(id, photoId).catch((err) => { if (!(err instanceof ApiError && err.status === 404)) throw err; });
+        deleted.current.add(photoId);
+      }
       const todo = uploads.filter((u) => !uploaded.current.has(u.file));
       for (const [i, u] of todo.entries()) {
         setProgress(`Uploading photo ${i + 1} of ${todo.length}…`);
-        await api.uploadPhoto(created.current.id, u.file, u.role, u.position);
+        await api.uploadPhoto(id, u.file, u.role, u.position);
         uploaded.current.add(u.file);
       }
-      if (publish) {
+      if (publish && existing?.status !== 'PUBLISHED') {
         setProgress('Publishing…');
-        await api.publishTrip(created.current.id);
+        await api.publishTrip(id);
       }
-      navigate(`/trips/${created.current.slug}`);
+      navigate(`/trips/${created.current!.slug}`);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Something went wrong. Try again.';
-      setError(created.current ? `${msg}. Your story is saved as a private draft; press the button again to retry.` : msg);
+      const draftNote = !existing && created.current ? '. Your story is saved as a private draft; press the button again to retry.' : '';
+      setError(msg + draftNote);
       if (err instanceof ApiError) setFields(err.fields);
     } finally {
       setBusy(false);
@@ -113,29 +124,42 @@ function useSave() {
   return { save, busy, progress, error, setError, fields };
 }
 
-function ShortForm({ maxPhotos }: { maxPhotos: number }) {
-  const [tag, setTag] = useState<ShortTag>('LONG_DRIVE');
-  const [title, setTitle] = useState('');
-  const [place, setPlace] = useState('');
-  const [items, setItems] = useState<{ caption: string; file: File | null }[]>([{ caption: '', file: null }]);
-  const [visibility, setVisibility] = useState<Visibility>('PUBLIC');
-  const { save, busy, progress, error, setError, fields } = useSave();
+/** A photo slot: a new file to upload, or the photo already on the story (editing). */
+interface Slot { file: File | null; existing: PhotoRef | null }
+const emptySlot = (): Slot => ({ file: null, existing: null });
+/** Clearing a slot drops both; choosing a file replaces the existing photo on save. */
+const pick = (file: File | null): Partial<Slot> => (file ? { file } : { file: null, existing: null });
+/** Existing photos whose slot was cleared (and not replaced) are deleted on save. */
+function removedPhotos(original: (PhotoRef | null)[], now: Slot[]) {
+  const kept = new Set(now.map((s) => (s.file ? null : s.existing?.id)).filter(Boolean));
+  return original.filter((p): p is PhotoRef => !!p && !kept.has(p.id) && !now.some((s) => s.file && s.existing?.id === p.id)).map((p) => p.id);
+}
+
+export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing?: TripView }) {
+  const [tag, setTag] = useState<ShortTag>(existing?.shortTag ?? 'LONG_DRIVE');
+  const [title, setTitle] = useState(existing?.title ?? '');
+  const [place, setPlace] = useState(existing?.place ?? '');
+  const original = existing?.sections.map((s) => s.photo) ?? [];
+  const [items, setItems] = useState<({ caption: string } & Slot)[]>(
+    existing?.sections.length ? existing.sections.map((s) => ({ caption: s.body, file: null, existing: s.photo })) : [{ caption: '', ...emptySlot() }]);
+  const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
+  const { save, busy, progress, error, setError, fields } = useSave(existing);
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
-    if (items.some((it) => it.file && !it.caption.trim())) return setError('Add a line for each photo');
-    const kept = items.filter((it) => it.caption.trim());
-    const input: TripInput = { kind: 'SHORT', shortTag: tag, title, place, visibility, sections: kept.map((it) => ({ body: it.caption })) };
-    const uploads = kept.flatMap((it, position) => (it.file ? [{ file: it.file, role: 'SECTION' as const, position }] : []));
-    save(input, uploads, publish);
+    const blank = items.findIndex((it) => !it.caption.trim());
+    if (blank >= 0 && (items.length > 1 || items[blank].file || items[blank].existing)) return setError(`Add a line for photo ${blank + 1}, or remove it`);
+    const input: TripInput = { kind: 'SHORT', shortTag: tag, title, place, visibility, sections: items.filter((it) => it.caption.trim()).map((it) => ({ body: it.caption })) };
+    const uploads = items.flatMap((it, position) => (it.file ? [{ file: it.file, role: 'SECTION' as const, position }] : []));
+    save(input, uploads, removedPhotos(original, items), publish);
   }
 
-  const update = (i: number, patch: Partial<{ caption: string; file: File | null }>) =>
+  const update = (i: number, patch: Partial<{ caption: string } & Slot>) =>
     setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   return (
     <form onSubmit={submit}>
-      <h1 className="display rise" style={{ margin: '6px 0 18px', fontSize: 36 }}>New short story</h1>
+      <h1 className="display rise" style={{ margin: '6px 0 18px', fontSize: 36 }}>{existing ? 'Edit short story' : 'New short story'}</h1>
       <p className="field-label">What kind of escape?</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
         {TAGS.map((t) => (
@@ -149,49 +173,61 @@ function ShortForm({ maxPhotos }: { maxPhotos: number }) {
       {items.map((it, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
           <div style={{ flex: '0 0 88px' }}>
-            <PhotoPicker file={it.file} onChange={(file) => update(i, { file })} label={`photo ${i + 1}`} height={88} />
+            <PhotoPicker file={it.file} existingUrl={it.existing?.thumbUrl} onChange={(file) => update(i, pick(file))} label={`photo ${i + 1}`} height={88} />
           </div>
           <label htmlFor={`cap${i}`} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Line for photo {i + 1}</label>
           <textarea id={`cap${i}`} className="input" rows={3} maxLength={140} value={it.caption} placeholder={i === 0 ? 'Left at 5 am, chai at every bend' : 'Another moment'}
             onChange={(e) => update(i, { caption: e.target.value })} style={{ flex: 1 }} />
         </div>
       ))}
-      {items.length < maxPhotos && (
-        <button type="button" className="pill" onClick={() => setItems((xs) => [...xs, { caption: '', file: null }])} style={{ marginBottom: 18 }}><Icon.plus size={16} /> Add a photo</button>
-      )}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        {items.length < maxPhotos && (
+          <button type="button" className="pill" onClick={() => setItems((xs) => [...xs, { caption: '', ...emptySlot() }])}><Icon.plus size={16} /> Add a photo</button>
+        )}
+        {items.length > 1 && (
+          <button type="button" className="pill" onClick={() => setItems((xs) => xs.slice(0, -1))}>Remove last</button>
+        )}
+      </div>
 
       <VisibilityPicker value={visibility} onChange={setVisibility} />
       {error && <p role="alert" style={{ margin: '14px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
-      <FooterBar busy={busy} progress={progress} primary="Post short story" onDraft={(e) => submit(e, false)} />
+      <FooterBar busy={busy} progress={progress} existing={existing} primary="Post short story" onDraft={(e) => submit(e, false)} />
     </form>
   );
 }
 
-function FullForm({ maxSections }: { maxSections: number }) {
-  const [f, setF] = useState({ title: '', place: '', startDate: '', endDate: '', intro: '', finalNote: '' });
-  const [cover, setCover] = useState<File | null>(null);
-  const [sections, setSections] = useState([{ heading: '', body: '', photoCaption: '', file: null as File | null }]);
-  const [moments, setMoments] = useState(['', '', '']);
-  const [visibility, setVisibility] = useState<Visibility>('PUBLIC');
-  const { save, busy, progress, error, setError, fields } = useSave();
+export function FullForm({ maxSections, existing }: { maxSections: number; existing?: TripView }) {
+  const [f, setF] = useState({
+    title: existing?.title ?? '', place: existing?.place ?? '', startDate: existing?.startDate ?? '', endDate: existing?.endDate ?? '',
+    intro: existing?.intro ?? '', finalNote: existing?.finalNote ?? '' });
+  const [cover, setCover] = useState<Slot>({ file: null, existing: existing?.cover ?? null });
+  const original = [existing?.cover ?? null, ...(existing?.sections.map((s) => s.photo) ?? [])];
+  const [sections, setSections] = useState<({ heading: string; body: string; photoCaption: string } & Slot)[]>(
+    existing?.sections.length
+      ? existing.sections.map((s) => ({ heading: s.heading ?? '', body: s.body, photoCaption: s.photoCaption ?? '', file: null, existing: s.photo }))
+      : [{ heading: '', body: '', photoCaption: '', ...emptySlot() }]);
+  const [moments, setMoments] = useState(() => [...(existing?.moments ?? []), '', '', ''].slice(0, 3));
+  const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
+  const { save, busy, progress, error, setError, fields } = useSave(existing);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
-    const orphan = sections.findIndex((s) => s.file && !s.body.trim());
-    if (orphan >= 0) return setError(`Write the story for section ${orphan + 1}, or remove its photo`);
-    const kept = sections.filter((s) => s.body.trim());
+    const blank = sections.findIndex((s) => !s.body.trim());
+    if (blank >= 0 && (sections.length > 1 || sections[blank].file || sections[blank].existing)) {
+      return setError(`Write the story for section ${blank + 1}, or remove it`);
+    }
     const input: TripInput = {
       kind: 'FULL', title: f.title, place: f.place, visibility,
       startDate: f.startDate || null, endDate: f.endDate || null, intro: f.intro || null, finalNote: f.finalNote || null,
-      sections: kept.map((s) => ({ heading: s.heading || null, body: s.body, photoCaption: s.photoCaption || null })),
+      sections: sections.filter((s) => s.body.trim()).map((s) => ({ heading: s.heading || null, body: s.body, photoCaption: s.photoCaption || null })),
       moments: moments.map((m) => m.trim()).filter(Boolean),
     };
     const uploads: Upload[] = [
-      ...(cover ? [{ file: cover, role: 'COVER' as const, position: 0 }] : []),
-      ...kept.flatMap((s, position) => (s.file ? [{ file: s.file, role: 'SECTION' as const, position }] : [])),
+      ...(cover.file ? [{ file: cover.file, role: 'COVER' as const, position: 0 }] : []),
+      ...sections.flatMap((s, position) => (s.file ? [{ file: s.file, role: 'SECTION' as const, position }] : [])),
     ];
-    save(input, uploads, publish);
+    save(input, uploads, removedPhotos(original, [cover, ...sections]), publish);
   }
 
   const updateSection = (i: number, patch: Partial<(typeof sections)[number]>) =>
@@ -199,10 +235,10 @@ function FullForm({ maxSections }: { maxSections: number }) {
 
   return (
     <form onSubmit={submit}>
-      <h1 className="display rise" style={{ margin: '6px 0 4px', fontSize: 36 }}>Your next issue</h1>
+      <h1 className="display rise" style={{ margin: '6px 0 4px', fontSize: 36 }}>{existing ? 'Edit your issue' : 'Your next issue'}</h1>
       <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--ink-soft)' }}>Tap the cover to choose a photo. This is how it appears in feeds and on your shelf.</p>
       <div style={{ marginBottom: 16 }}>
-        <PhotoPicker file={cover} onChange={setCover} label="cover photo" height={240}>
+        <PhotoPicker file={cover.file} existingUrl={cover.existing?.url} onChange={(file) => setCover((c) => ({ ...c, ...pick(file) }))} label="cover photo" height={240}>
           <div className="cover-overlay" style={{ padding: 16, color: '#fff', pointerEvents: 'none' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Weyvo</span><span>{f.place || 'Destination'}</span></div>
             <p className="display" style={{ margin: 0, fontSize: 30 }}>{f.title || 'Your trip title'}</p>
@@ -225,13 +261,16 @@ function FullForm({ maxSections }: { maxSections: number }) {
           <TextField id={`b${i}`} label="Story · 500 characters" value={s.body} onChange={(v) => updateSection(i, { body: v })} max={500} placeholder="What happened, what it felt like" multiline />
           <p className="field-label">Photo <span>· optional</span></p>
           <div style={{ marginBottom: 10 }}>
-            <PhotoPicker file={s.file} onChange={(file) => updateSection(i, { file })} label={`section ${i + 1} photo`} height={160} />
+            <PhotoPicker file={s.file} existingUrl={s.existing?.url} onChange={(file) => updateSection(i, pick(file))} label={`section ${i + 1} photo`} height={160} />
           </div>
           <TextField id={`c${i}`} label="Photo caption (optional)" value={s.photoCaption} onChange={(v) => updateSection(i, { photoCaption: v })} max={120} placeholder="Chandratal at dawn" />
+          {i === sections.length - 1 && sections.length > 1 && (
+            <button type="button" className="pill" onClick={() => setSections((ss) => ss.slice(0, -1))}>Remove this section</button>
+          )}
         </div>
       ))}
       {sections.length < maxSections && (
-        <button type="button" className="pill" onClick={() => setSections((ss) => [...ss, { heading: '', body: '', photoCaption: '', file: null }])} style={{ marginBottom: 18 }}><Icon.plus size={16} /> Add a section</button>
+        <button type="button" className="pill" onClick={() => setSections((ss) => [...ss, { heading: '', body: '', photoCaption: '', ...emptySlot() }])} style={{ marginBottom: 18 }}><Icon.plus size={16} /> Add a section</button>
       )}
 
       <p className="eyebrow" style={{ margin: '8px 0 10px', fontWeight: 600 }}>Favourite moments · up to 3</p>
@@ -242,7 +281,7 @@ function FullForm({ maxSections }: { maxSections: number }) {
 
       <VisibilityPicker value={visibility} onChange={setVisibility} />
       {error && <p role="alert" style={{ margin: '14px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
-      <FooterBar busy={busy} progress={progress} primary="Publish" onDraft={(e) => submit(e, false)} />
+      <FooterBar busy={busy} progress={progress} existing={existing} primary="Publish" onDraft={(e) => submit(e, false)} />
     </form>
   );
 }
@@ -292,12 +331,17 @@ function VisibilityPicker({ value, onChange }: { value: Visibility; onChange: (v
   );
 }
 
-function FooterBar({ primary, busy, progress, onDraft }: { primary: string; busy: boolean; progress: string; onDraft: (e: FormEvent) => void }) {
+function FooterBar({ primary, busy, progress, existing, onDraft }: {
+  primary: string; busy: boolean; progress: string; existing?: TripView; onDraft: (e: FormEvent) => void;
+}) {
+  const published = existing?.status === 'PUBLISHED';
   return (
     <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--paper)', borderTop: '1px solid var(--line)', zIndex: 10 }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '12px 20px 20px', display: 'flex', gap: 10 }}>
-        <button type="button" className="btn btn-outline" disabled={busy} onClick={onDraft}>Save draft</button>
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 1, opacity: busy ? 0.7 : 1 }} aria-live="polite">{busy ? progress || 'Saving…' : primary}</button>
+        {!published && <button type="button" className="btn btn-outline" disabled={busy} onClick={onDraft}>Save draft</button>}
+        <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 1, opacity: busy ? 0.7 : 1 }} aria-live="polite">
+          {busy ? progress || 'Saving…' : published ? 'Save changes' : primary}
+        </button>
       </div>
     </div>
   );

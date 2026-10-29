@@ -29,10 +29,12 @@ Each milestone ends with: all tests green, a security pass against the checklist
    login, sign-up and reset rate limits. Later: weekly digest. Before deploy: trust the proxy's client-IP header safely.
 4. **Premium with Razorpay**: upgrade page, checkout, server-side signature check, webhook for renewals and
    cancellations, `plan_expires_at`; receipts by email.
-5. **Edit and manage**: edit story screen, delete story, account settings, delete account (with data export).
+5. ✅ **Edit and manage**: edit story screen, delete story, account settings, delete account (with data export).
 6. **Short stories feed rules**: feed window (7 days), pagination everywhere, indexes checked with `EXPLAIN`.
 7. **Legal and compliance** (see below) and footer.
 8. **Supabase + deploy** to free hosting; Sentry and PostHog wired; seed a few real stories.
+   ⏰ Reminder: Supabase is added only at this step, together with the Render deploy (database + photo
+   bucket + keys in Render's environment). Local development keeps using Docker Postgres until then.
 9. **User testing**: you test with real people, report back; fix list.
 10. **Final security review** (full checklist), raise plan limits, launch.
 
