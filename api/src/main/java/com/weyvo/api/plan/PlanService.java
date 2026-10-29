@@ -17,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PlanService {
 
-    public record Usage(User.Plan plan, PlanLimits limits, int photosUsed, int uploadsLastHour) {}
+    /** premiumUntil is null for Free, or for Premium without an end date. */
+    public record Usage(User.Plan plan, PlanLimits limits, int photosUsed, int uploadsLastHour, Instant premiumUntil) {}
 
     private final AppProperties.Plans plans;
     private final UserRepository users;
@@ -43,7 +44,8 @@ public class PlanService {
     @Transactional(readOnly = true)
     public Usage usage(long userId) {
         User u = user(userId);
-        return new Usage(u.effectivePlan(Instant.now(clock)), limitsFor(u), photosUsed(userId), uploadsLastHour(userId));
+        User.Plan plan = u.effectivePlan(Instant.now(clock));
+        return new Usage(plan, limitsFor(u), photosUsed(userId), uploadsLastHour(userId), plan == User.Plan.PREMIUM ? u.getPlanExpiresAt() : null);
     }
 
     /**

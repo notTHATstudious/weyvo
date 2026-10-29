@@ -6,7 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Signup signup, Storage storage, Plans plans,
-                            Community community, Mail mail, Auth auth) {
+                            Community community, Mail mail, Auth auth, Payments payments) {
+
+    public record Payments(String razorpayKeyId, String razorpayKeySecret, String razorpayWebhookSecret,
+                           int monthPricePaise, int yearPricePaise) {
+        public boolean configured() {
+            return razorpayKeyId != null && !razorpayKeyId.isBlank() && razorpayKeySecret != null && !razorpayKeySecret.isBlank();
+        }
+    }
 
     public record Mail(String resendApiKey, String from, String appUrl) {}
 

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 
@@ -9,6 +9,10 @@ export function AccountSettings() {
   if (!user) return null;
   return (
     <>
+      <Card title="Plan">
+        <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--ink-soft)' }}>See your limits, or get more room with Premium.</p>
+        <Link to="/premium" className="btn btn-primary" style={{ minHeight: 44 }}>View plans</Link>
+      </Card>
       <ProfileCard />
       <PasswordCard />
       <Card title="Your data">

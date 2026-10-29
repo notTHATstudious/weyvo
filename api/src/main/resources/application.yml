@@ -65,6 +65,13 @@ app:
     login-per-email-per-15-min: ${AUTH_LOGIN_PER_EMAIL:8}
     login-per-ip-per-15-min: ${AUTH_LOGIN_PER_IP:20}
     signups-per-ip-per-hour: ${AUTH_SIGNUPS_PER_IP:5}
+  payments:
+    razorpay-key-id: ${RAZORPAY_KEY_ID:}
+    razorpay-key-secret: ${RAZORPAY_KEY_SECRET:}
+    razorpay-webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+    # Prices in paise (₹1 = 100 paise). Placeholders until pricing is decided.
+    month-price-paise: ${PREMIUM_MONTH_PRICE_PAISE:9900}
+    year-price-paise: ${PREMIUM_YEAR_PRICE_PAISE:99900}
   community:
     questions-per-hour: ${COMMUNITY_QUESTIONS_PER_HOUR:10}
     # A question is hidden automatically once this many different people report it.

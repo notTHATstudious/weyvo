@@ -35,7 +35,8 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
-                                "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
+                                "/api/auth/password/forgot", "/api/auth/password/reset", "/api/billing/webhook").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/billing/plans").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").permitAll()
                         // Reads of public content; the service decides how much of each trip to return.
                         .requestMatchers(HttpMethod.GET, "/api/trips", "/api/trips/*", "/api/users/*", "/api/users/*/trips", "/api/photos/*/*", "/api/trips/*/questions").permitAll()

@@ -14,6 +14,7 @@ import { VerifyEmail } from './pages/VerifyEmail';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { VerifyBanner } from './components/VerifyBanner';
 import { EditTrip } from './pages/EditTrip';
+import { Premium } from './pages/Premium';
 
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
@@ -39,6 +40,7 @@ export function App() {
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/verify" element={<VerifyEmail />} />
       <Route path="/forgot" element={<ForgotPassword />} />
+      <Route path="/premium" element={<Premium />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>

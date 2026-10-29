@@ -22,7 +22,14 @@ export interface Notification {
   id: number; type: NotificationType; actor: Author; trip: { slug: string; title: string } | null; read: boolean; createdAt: string;
 }
 export interface PlanLimits { fullTripSections: number; shortStoryPhotos: number; totalPhotos: number; uploadsPerHour: number }
-export interface PlanUsage { plan: 'FREE' | 'PREMIUM'; limits: PlanLimits; photosUsed: number; uploadsLastHour: number }
+export interface PlanUsage { plan: 'FREE' | 'PREMIUM'; limits: PlanLimits; photosUsed: number; uploadsLastHour: number; premiumUntil: string | null }
+export type Period = 'MONTH' | 'YEAR';
+export interface BillingPlans {
+  keyId: string | null; available: boolean;
+  options: { period: Period; amountPaise: number; currency: string; label: string }[];
+  free: PlanLimits; premium: PlanLimits;
+}
+export interface PaymentOrder { orderId: string; amountPaise: number; currency: string; keyId: string; period: Period }
 export interface Reactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean; savedByMe: boolean }
 export interface Author { username: string; displayName: string }
 export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
@@ -89,6 +96,9 @@ export const api = {
   userTrips: (username: string) => request<TripCard[]>('GET', `/users/${encodeURIComponent(username)}/trips`),
   myTrips: () => request<TripCard[]>('GET', '/me/trips'),
   myPlan: () => request<PlanUsage>('GET', '/me/plan'),
+  billingPlans: () => request<BillingPlans>('GET', '/billing/plans'),
+  createOrder: (period: Period) => request<PaymentOrder>('POST', '/billing/orders', { period }),
+  verifyPayment: (orderId: string, paymentId: string, signature: string) => request<PlanUsage>('POST', '/billing/verify', { orderId, paymentId, signature }),
   questions: (tripId: number) => request<Questions>('GET', `/trips/${tripId}/questions`),
   ask: (tripId: number, text: string) => request<Question>('POST', `/trips/${tripId}/questions`, { text }),
   answer: (questionId: number, text: string) => request<Question>('PUT', `/questions/${questionId}/answer`, { text }),

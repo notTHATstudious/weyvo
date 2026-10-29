@@ -293,7 +293,10 @@ function PlanNote({ usage }: { usage: PlanUsage }) {
   return (
     <p className="paper-card" style={{ margin: '4px 0 16px', fontSize: 13, color: 'var(--ink-soft)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
       <span><strong style={{ color: 'var(--ink)' }}>{usage.plan === 'PREMIUM' ? 'Premium' : 'Free'} plan</strong></span>
-      <span>{total > 0 ? `${usage.photosUsed} of ${total} photos used${left === 0 ? ' · limit reached' : ''}` : `${usage.photosUsed} photos · unlimited`}</span>
+      <span>
+        {total > 0 ? `${usage.photosUsed} of ${total} photos used${left === 0 ? ' · limit reached' : ''}` : `${usage.photosUsed} photos · unlimited`}
+        {usage.plan === 'FREE' && <> · <Link to="/premium" style={{ fontWeight: 600 }}>Go Premium</Link></>}
+      </span>
     </p>
   );
 }

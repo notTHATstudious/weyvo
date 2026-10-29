@@ -72,6 +72,7 @@ public class User {
     }
 
     public boolean isEmailVerified() { return emailVerifiedAt != null; }
+    public Instant getPlanExpiresAt() { return planExpiresAt; }
     public void markEmailVerified(Instant at) { if (emailVerifiedAt == null) emailVerifiedAt = at; }
     public int getSessionVersion() { return sessionVersion; }
 
