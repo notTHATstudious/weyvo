@@ -36,8 +36,27 @@ export function ShortStories() {
   const story = detail.data && card && detail.data.id === card.id ? detail.data : null;
 
   const total = story ? story.totalSections : 1;
-  const nextStory = () => { setSi((i) => (i + 1) % Math.max(1, list.length)); setPi(0); };
-  const prevStory = () => { setSi((i) => (i - 1 + list.length) % Math.max(1, list.length)); setPi(0); };
+  const n = Math.max(1, list.length);
+  const authorAt = (i: number) => list[((i % n) + n) % n]?.author.username;
+  const nextStory = () => { setSi((i) => (i + 1) % n); setPi(0); };
+  // The buttons move between people: skip the rest of this person's stories, or go back to the start of the previous person's.
+  const nextPerson = () => {
+    setSi((i) => {
+      for (let step = 1; step < n; step++) if (authorAt(i + step) !== authorAt(i)) return (i + step) % n;
+      return (i + 1) % n;
+    });
+    setPi(0);
+  };
+  const prevPerson = () => {
+    setSi((i) => {
+      let j = i;
+      for (let step = 1; step < n; step++) if (authorAt(i - step) !== authorAt(i)) { j = i - step; break; }
+      if (j === i) return (i - 1 + n) % n;
+      while (j - 1 > i - n && authorAt(j - 1) === authorAt(j)) j--;
+      return ((j % n) + n) % n;
+    });
+    setPi(0);
+  };
   const nextPhoto = () => (pi < total - 1 ? setPi(pi + 1) : nextStory());
   const prevPhoto = () => pi > 0 && setPi(pi - 1);
 
@@ -136,8 +155,8 @@ export function ShortStories() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" onClick={prevStory} aria-label="Previous short story" style={{ width: 56, height: 56, borderRadius: 18, border: '1px solid rgba(255,255,255,.4)', background: 'rgba(255,255,255,.08)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.chevronUp /></button>
-          <button type="button" onClick={nextStory} style={{ flex: 1, height: 56, borderRadius: 18, border: 0, background: '#FBF8F2', color: '#1C1B18', fontWeight: 600, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>Next short story <Icon.chevronDown /></button>
+          <button type="button" onClick={prevPerson} aria-label="Previous person" style={{ width: 56, height: 56, borderRadius: 18, border: '1px solid rgba(255,255,255,.4)', background: 'rgba(255,255,255,.08)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.chevronUp /></button>
+          <button type="button" onClick={nextPerson} style={{ flex: 1, height: 56, borderRadius: 18, border: 0, background: '#FBF8F2', color: '#1C1B18', fontWeight: 600, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>Next short story <Icon.chevronDown /></button>
         </div>
       </div>
     </>,
