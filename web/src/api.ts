@@ -26,6 +26,15 @@ export interface Comment {
 export interface Notification {
   id: number; type: NotificationType; actor: Author; trip: { slug: string; title: string } | null; read: boolean; createdAt: string;
 }
+export interface MapPin { placeSlug: string; name: string; country: string | null; lat: number; lng: number; trips: { slug: string; title: string }[] }
+/** want is null unless it's your own map. */
+export interface TravelMapData { been: MapPin[]; want: MapPin[] | null; countries: number; places: number }
+export interface PlaceSummary { slug: string; name: string; country: string | null; stories: number; shorts: number }
+export interface PlaceDetail {
+  slug: string; name: string; country: string | null; lat: number; lng: number;
+  stories: number; shorts: number; wantToGo: number; months: number[]; trips: TripCard[]; reactions: PlaceReactions;
+}
+export interface PlaceReactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean }
 export interface PlanLimits { fullTripSections: number; shortStoryPhotos: number; totalPhotos: number; uploadsPerHour: number }
 export interface PlanUsage { plan: 'FREE' | 'PREMIUM'; limits: PlanLimits; photosUsed: number; uploadsLastHour: number; premiumUntil: string | null }
 export type Period = 'MONTH' | 'YEAR';
@@ -102,6 +111,11 @@ export const api = {
   userTrips: (username: string) => request<TripCard[]>('GET', `/users/${encodeURIComponent(username)}/trips`),
   myTrips: () => request<TripCard[]>('GET', '/me/trips'),
   myPlan: () => request<PlanUsage>('GET', '/me/plan'),
+  travelMap: (username: string) => request<TravelMapData>('GET', `/users/${encodeURIComponent(username)}/map`),
+  places: () => request<PlaceSummary[]>('GET', '/places'),
+  place: (slug: string) => request<PlaceDetail>('GET', `/places/${encodeURIComponent(slug)}`),
+  markPlace: (slug: string, type: 'been' | 'want') => request<PlaceReactions>('PUT', `/places/${encodeURIComponent(slug)}/reactions/${type}`),
+  unmarkPlace: (slug: string, type: 'been' | 'want') => request<PlaceReactions>('DELETE', `/places/${encodeURIComponent(slug)}/reactions/${type}`),
   billingPlans: () => request<BillingPlans>('GET', '/billing/plans'),
   createOrder: (period: Period) => request<PaymentOrder>('POST', '/billing/orders', { period }),
   verifyPayment: (orderId: string, paymentId: string, signature: string) => request<PlanUsage>('POST', '/billing/verify', { orderId, paymentId, signature }),

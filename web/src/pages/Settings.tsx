@@ -35,7 +35,7 @@ export function Settings() {
         <div className="paper-card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px' }}>
           {user ? (
             <>
-              <span style={{ fontSize: 15, minWidth: 0 }}>Signed in as <strong>@{user.username}</strong></span>
+              <span style={{ fontSize: 15, minWidth: 0 }}>Signed in as <strong>{user.username}</strong></span>
               <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={async () => { await logout(); navigate('/discover'); }}>Sign out</button>
             </>
           ) : (

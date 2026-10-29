@@ -116,7 +116,7 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply }: {
       <Link to={`/u/${c.author.username}`} aria-label={c.author.displayName}><Avatar name={c.author.displayName} url={c.author.avatarUrl} size={28} /></Link>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
-          <Link to={`/u/${c.author.username}`} style={{ fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{c.author.displayName}</Link>{' '}
+          <Link to={`/u/${c.author.username}`} style={{ fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{c.author.username}</Link>{' '}
           {hidden && <span className="tag" style={{ fontSize: 10, background: 'var(--line)' }}>{c.status === 'HIDDEN_BY_REPORTS' ? 'Hidden after reports' : 'Hidden'}</span>}{' '}
           <span style={{ color: 'var(--ink-soft)', overflowWrap: 'anywhere' }}>{c.body}</span>
         </p>

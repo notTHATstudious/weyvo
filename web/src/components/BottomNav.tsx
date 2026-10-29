@@ -12,7 +12,7 @@ export function BottomNav() {
     { to: '/discover', label: 'Discover', icon: <Icon.compass /> },
     { to: '/shorts', label: 'Short Stories', icon: <Icon.play /> },
     { to: '/create', label: 'Create', icon: <Icon.plus />, create: true },
-    { to: '/places/kyoto', label: 'Destinations', icon: <Icon.pin /> },
+    { to: '/places', label: 'Destinations', icon: <Icon.pin /> },
     { to: user ? `/u/${user.username}` : '/signin?next=/discover', label: 'Your magazine', icon: <Icon.user /> },
   ];
 

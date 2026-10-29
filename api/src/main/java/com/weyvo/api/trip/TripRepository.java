@@ -41,6 +41,13 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             order by t.publishedAt desc""")
     List<Trip> findPublicByOwnerIds(java.util.Collection<Long> ownerIds, Pageable page);
 
+    // Native query: entity graphs aren't supported here; authors load lazily inside the read transaction.
+    @Query(value = """
+            SELECT t.* FROM trips t
+            WHERE t.place_id = ?1 AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC'
+            ORDER BY t.published_at DESC LIMIT 50""", nativeQuery = true)
+    List<Trip> findPublicByPlace(long placeId);
+
     @EntityGraph(attributePaths = "owner")
     @Query("select t from Trip t where t.id in ?1")
     List<Trip> findAllWithOwnerByIdIn(java.util.Collection<Long> ids);

@@ -93,7 +93,7 @@ export function ShortStories() {
       <div style={{ position: 'absolute', top: 26, left: 14, right: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
         <Link to={`/u/${card.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none', flex: 1, minWidth: 0 }}>
           <Avatar name={card.author.displayName} url={card.author.avatarUrl} size={36} ring="#fff" />
-          <span><span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{card.author.displayName}</span><span style={{ display: 'block', fontSize: 12, opacity: 0.85 }}>{total} photo{total === 1 ? '' : 's'}</span></span>
+          <span><span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{card.author.username}</span><span style={{ display: 'block', fontSize: 12, opacity: 0.85 }}>{total} photo{total === 1 ? '' : 's'}</span></span>
         </Link>
         <Link to="/discover" className="icon-btn" aria-label="Close" style={{ color: '#fff' }}><Icon.close /></Link>
       </div>

@@ -23,7 +23,7 @@ export function Landing() {
         <nav aria-label="Main" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20, fontSize: 14 }}>
           <Link to="/discover" style={{ color: 'var(--ink)', textDecoration: 'none' }}>Discover</Link>
           <Link to="/shorts" style={{ color: 'var(--ink)', textDecoration: 'none' }}>Short Stories</Link>
-          <Link to="/places/kyoto" style={{ color: 'var(--ink)', textDecoration: 'none' }}>Destinations</Link>
+          <Link to="/places" style={{ color: 'var(--ink)', textDecoration: 'none' }}>Destinations</Link>
           <Link to="/create" className="btn btn-primary" style={{ minHeight: 44 }}>Start your magazine</Link>
         </nav>
       </header>

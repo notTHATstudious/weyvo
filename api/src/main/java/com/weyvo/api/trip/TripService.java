@@ -94,6 +94,12 @@ public class TripService {
         return cards(trips.findPublicByUsername(username, PageRequest.of(0, PAGE_SIZE)), viewerId);
     }
 
+    /** Public stories at a place, newest first. */
+    @Transactional(readOnly = true)
+    public List<TripCard> atPlace(long placeId, Long viewerId) {
+        return cards(trips.findPublicByPlace(placeId), viewerId);
+    }
+
     @Transactional(readOnly = true)
     public List<TripCard> mine(long ownerId) {
         return cards(trips.findAllByOwner(ownerId, PageRequest.of(0, 100)), ownerId);

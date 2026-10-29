@@ -104,7 +104,7 @@ function QuestionCard({ q, isOwner, signedIn, authorName, onChange, onRemove }: 
     <article className="paper-card" style={{ opacity: hidden ? 0.6 : 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Avatar name={q.asker.displayName} url={q.asker.avatarUrl} size={26} />
-        <Link to={`/u/${q.asker.username}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{q.asker.displayName}</Link>
+        <Link to={`/u/${q.asker.username}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{q.asker.username}</Link>
         {hidden && <span className="tag" style={{ fontSize: 10, background: 'var(--line)' }}>{q.status === 'HIDDEN_BY_REPORTS' ? 'Hidden after reports' : 'Hidden'}</span>}
       </div>
       <p style={{ margin: '8px 0 0', fontSize: 15, fontWeight: 600 }}>{q.body}</p>

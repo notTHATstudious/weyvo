@@ -87,8 +87,7 @@ export function Profile() {
         </button>
       </div>
 
-      {/* Sample pins until trips carry real place data. */}
-      <div style={{ margin: '20px 20px 0' }}><TravelMap /></div>
+      <div style={{ margin: '20px 20px 0' }}><TravelMap username={p.username} /></div>
 
       <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', textAlign: 'center' }}>
         {stats.map(([n, l]) => (

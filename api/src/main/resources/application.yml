@@ -74,6 +74,12 @@ app:
     # Prices in paise (₹1 = 100 paise). Placeholders until pricing is decided.
     month-price-paise: ${PREMIUM_MONTH_PRICE_PAISE:9900}
     year-price-paise: ${PREMIUM_YEAR_PRICE_PAISE:99900}
+  geo:
+    # Background lookup of trip places on OpenStreetMap (Nominatim). Their usage policy: at most one
+    # request per second, and an identifying User-Agent.
+    enabled: ${GEO_ENABLED:true}
+    nominatim-url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${GEO_USER_AGENT:Weyvo/0.1 (+https://github.com/notTHATstudious/weyvo)}
   community:
     questions-per-hour: ${COMMUNITY_QUESTIONS_PER_HOUR:10}
     comments-per-hour: ${COMMUNITY_COMMENTS_PER_HOUR:20}

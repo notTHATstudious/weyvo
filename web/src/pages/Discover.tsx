@@ -9,7 +9,7 @@ import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { Reactions } from '../components/Reactions';
 import { Empty, ErrorNote, Loading } from '../components/States';
-import { places } from '../mocks/data';
+import { PlaceList } from './Places';
 import { useApi } from '../useApi';
 
 const ALL_TABS = [
@@ -36,7 +36,7 @@ export function Discover() {
       <div className="topbar">
         <span className="display brand-mobile" style={{ fontSize: 26 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
         <div style={{ display: 'flex' }}>
-          <Link to="/places/kyoto" className="icon-btn" aria-label="Search places"><Icon.search /></Link>
+          <Link to="/places" className="icon-btn" aria-label="Destinations"><Icon.search /></Link>
           {signedIn && <NotificationBell />}
           <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
         </div>
@@ -53,14 +53,8 @@ export function Discover() {
         {tab === 'latest' && <LatestTrips />}
         {tab === 'shorts' && <LatestShorts />}
 
-        {/* Destinations and the weekly Issue use sample content until the places and editorial APIs exist. */}
-        {tab === 'places' && places.map((p) => (
-          <Link key={p.slug} to={`/places/${p.slug}`} className="rise" style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--ink)' }}>
-            <div style={{ flex: '0 0 72px', height: 72, borderRadius: 12, overflow: 'hidden' }}><Photo scene={p.scene} /></div>
-            <div style={{ flex: 1 }}><p className="display" style={{ margin: 0, fontSize: 24 }}>{p.name}</p><p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>{p.stories} stories · {p.shorts} short stories</p></div>
-            <span style={{ color: 'var(--muted)' }}><Icon.chevronRight /></span>
-          </Link>
-        ))}
+        {/* The weekly Issue is editorial sample content for now. */}
+        {tab === 'places' && <DiscoverPlaces />}
 
         {tab === 'issue' && (
           <div className="rise" style={{ background: '#1C1B18', color: '#FBF8F2', borderRadius: 'var(--radius-sm)', padding: 12 }}>
@@ -85,6 +79,16 @@ export function Discover() {
   );
 }
 
+function DiscoverPlaces() {
+  const { data, loading } = useApi(() => api.places(), []);
+  return <PlaceList items={data} loading={loading} />;
+}
+
+function RailPlaces() {
+  const { data, loading } = useApi(() => api.places(), []);
+  return <PlaceList items={data} loading={loading} limit={4} />;
+}
+
 /** Desktop-only right column (hidden on phones by CSS). */
 function Rail() {
   const { signedIn } = useAuth();
@@ -98,12 +102,7 @@ function Rail() {
       </div>
       <div className="paper-card">
         <p className="eyebrow" style={{ marginBottom: 8 }}>Popular destinations</p>
-        {places.slice(0, 4).map((p) => (
-          <Link key={p.slug} to={`/places/${p.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', textDecoration: 'none', color: 'var(--ink)' }}>
-            <span style={{ flex: '0 0 40px', height: 40, borderRadius: 10, overflow: 'hidden' }}><Photo scene={p.scene} /></span>
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}<span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}>{p.stories} stories</span></span>
-          </Link>
-        ))}
+        <RailPlaces />
       </div>
       <Footer compact />
     </aside>
@@ -152,8 +151,8 @@ function TripFeedCard({ trip }: { trip: TripCard }) {
       <Link to={`/u/${trip.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, padding: '4px 0', textDecoration: 'none', color: 'var(--ink)' }}>
         <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} />
         <span style={{ flex: 1 }}>
-          <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{trip.author.displayName}</span>
-          <span style={{ display: 'block', marginTop: 1, fontSize: 12, color: 'var(--muted)' }}>@{trip.author.username} · {timeAgo(trip.publishedAt)}</span>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{trip.author.username}</span>
+          <span style={{ display: 'block', marginTop: 1, fontSize: 12, color: 'var(--muted)' }}>{timeAgo(trip.publishedAt)}</span>
         </span>
       </Link>
       <Link to={`/trips/${trip.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>

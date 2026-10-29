@@ -6,7 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Signup signup, Storage storage, Plans plans,
-                            Community community, Mail mail, Auth auth, Payments payments) {
+                            Community community, Mail mail, Auth auth, Payments payments, Geo geo) {
+
+    public record Geo(boolean enabled, String nominatimUrl, String userAgent) {}
 
     public record Payments(String razorpayKeyId, String razorpayKeySecret, String razorpayWebhookSecret,
                            int monthPricePaise, int yearPricePaise) {

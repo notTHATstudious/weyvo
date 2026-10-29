@@ -57,7 +57,7 @@ export function Story() {
           <h1 className="display rise" style={{ margin: '8px 0 0', fontSize: 'clamp(44px, 8vw, 72px)' }}>{trip.title}</h1>
           <Link to={`/u/${trip.author.username}`} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none' }}>
             <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} size={32} ring="#fff" />
-            <span style={{ fontSize: 13 }}>by <strong>{trip.author.displayName}</strong></span>
+            <span style={{ fontSize: 13 }}>by <strong>{trip.author.username}</strong></span>
           </Link>
         </div>
       </div>

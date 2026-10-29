@@ -16,6 +16,7 @@ import { VerifyBanner } from './components/VerifyBanner';
 import { EditTrip } from './pages/EditTrip';
 import { Premium } from './pages/Premium';
 import { Legal } from './pages/Legal';
+import { Places } from './pages/Places';
 
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
@@ -35,6 +36,7 @@ export function App() {
       <Route path="/trips/:slug/edit" element={<EditTrip />} />
       <Route path="/u/:handle" element={<Profile />} />
       <Route path="/create" element={<Create />} />
+      <Route path="/places" element={<Places />} />
       <Route path="/places/:slug" element={<Destination />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/signin" element={<SignIn />} />

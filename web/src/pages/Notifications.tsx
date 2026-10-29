@@ -49,7 +49,7 @@ function Row({ n }: { n: Notification }) {
       <Link to={target} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px 0', textDecoration: 'none', color: 'var(--ink)' }}>
         <Avatar name={n.actor.displayName} url={n.actor.avatarUrl} size={40} />
         <span style={{ flex: 1, fontSize: 14, lineHeight: 1.45 }}>
-          <strong>{n.actor.displayName}</strong> {sentence(n)}
+          <strong>{n.actor.username}</strong> {sentence(n)}
           <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{ago(n.createdAt)}</span>
         </span>
         {!n.read && <span aria-label="New" style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />}

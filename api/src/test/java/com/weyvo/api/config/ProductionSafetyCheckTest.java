@@ -11,7 +11,7 @@ class ProductionSafetyCheckTest {
     private static AppProperties props(String secret, boolean secureCookie, String origin, boolean requireVerified) {
         return new AppProperties(new AppProperties.Jwt(secret, Duration.ofDays(7)), new AppProperties.Cookie("weyvo_session", secureCookie),
                 new AppProperties.Cors(List.of(origin)), null, null, null, null, null, null,
-                new AppProperties.Auth(requireVerified, Duration.ofMinutes(10), 5, Duration.ofSeconds(60), 5, 8, 20, 5), null);
+                new AppProperties.Auth(requireVerified, Duration.ofMinutes(10), 5, Duration.ofSeconds(60), 5, 8, 20, 5), null, null);
     }
 
     @Test
