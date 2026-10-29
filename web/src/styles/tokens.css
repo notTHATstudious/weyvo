@@ -26,6 +26,12 @@
   --radius-lg: 22px;
   --pill: 999px;
   --shadow: 0 18px 40px rgba(28, 27, 24, 0.14);
+  /* Width of the main reading/form column; wider on desktop. */
+  --app-w: 480px;
+}
+
+@media (min-width: 1024px) {
+  :root { --app-w: 640px; }
 }
 
 :root[data-theme='dark'] {

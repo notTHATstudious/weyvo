@@ -40,7 +40,7 @@ img { display: block; max-width: 100%; }
 .tag-gold { background: var(--gold); color: var(--on-gold); }
 
 /* App shell */
-.app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 110px; position: relative; }
+.app { max-width: var(--app-w); margin: 0 auto; min-height: 100vh; padding-bottom: 110px; position: relative; }
 .app-wide { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 8px; }
 .icon-btn { width: 44px; height: 44px; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center;
@@ -79,5 +79,39 @@ textarea.input { padding: 12px 14px; min-height: auto; resize: none; line-height
 @keyframes slideUp { from { opacity: 0; transform: translateY(50px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes fill { from { width: 0; } to { width: 100%; } }
 @keyframes pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.8; } }
+@keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(540deg); opacity: 0.9; } }
+@keyframes badgePop { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+.confetti { position: absolute; top: 0; animation: confettiFall linear 1 both; }
+.badge-pop { animation: badgePop 0.6s cubic-bezier(0.3, 0.8, 0.3, 1.2) both; }
 .rise { animation: riseIn 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Wide screens: sidebar navigation, wider column, right rail ---------- */
+.nav-label, .rail, .bottom-nav .nav-brand, .bottom-nav .nav-extra { display: none; }
+
+@media (min-width: 1024px) {
+  body:has(.bottom-nav) { padding-left: 248px; }
+  .app { padding-bottom: 48px; }
+  .bottom-nav {
+    left: 0; top: 0; bottom: 0; transform: none; width: 248px; border-radius: 0; box-shadow: none;
+    flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 6px; padding: 28px 16px;
+  }
+  .bottom-nav a { width: auto; height: 50px; justify-content: flex-start; gap: 14px; padding: 0 16px; border-radius: 14px; font-size: 15px; font-weight: 500; text-decoration: none; }
+  .bottom-nav a:hover { background: rgba(255, 255, 255, 0.08); color: var(--nav-active); }
+  .bottom-nav a.create { width: auto; margin: 8px 0; }
+  .bottom-nav a.create:hover { background: var(--gold); color: var(--on-gold); filter: brightness(1.05); }
+  .nav-label { display: inline; }
+  .bottom-nav .nav-brand { display: block; height: auto; padding: 0 16px 22px; color: var(--nav-active); font-size: 30px; }
+  .bottom-nav .nav-brand:hover { background: none; }
+  .bottom-nav .nav-extra { display: flex; }
+  .bottom-nav .nav-notify { margin-top: 8px; }
+  .bottom-nav .nav-settings { margin-top: auto; }
+  .nav-dot { margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--gold); color: var(--on-gold); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .topbar .brand-mobile { visibility: hidden; }
+}
+
+@media (min-width: 1280px) {
+  .app.with-rail { max-width: 1004px; }
+  .with-rail .rail-grid { display: grid; grid-template-columns: minmax(0, 640px) 316px; gap: 48px; align-items: start; }
+  .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 24px; padding-top: 70px; }
+}

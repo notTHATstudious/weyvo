@@ -203,6 +203,18 @@ public class TripService {
         }
     }
 
+    private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+    /**
+     * 8 random characters (36^8, about 2.8 trillion). Unlisted stories are shared by link only, so the
+     * link must not be guessable from the title.
+     */
+    static String randomSuffix() {
+        StringBuilder sb = new StringBuilder(8);
+        for (int i = 0; i < 8; i++) sb.append(ALPHABET.charAt(RANDOM.nextInt(ALPHABET.length())));
+        return sb.toString();
+    }
+
     private String uniqueSlug(String title) {
         String base = Normalizer.normalize(title, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
@@ -213,7 +225,7 @@ public class TripService {
         if (base.isEmpty()) base = "trip";
         String slug;
         do {
-            slug = base + "-" + Integer.toString(RANDOM.nextInt(36 * 36 * 36 * 36), 36);
+            slug = base + "-" + randomSuffix();
         } while (trips.existsBySlug(slug));
         return slug;
     }

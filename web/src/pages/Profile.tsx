@@ -59,6 +59,7 @@ export function Profile() {
         <span className="display" style={{ width: 76, height: 76, borderRadius: '50%', background: a.color, color: '#FBF8F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, border: '3px solid var(--card)', flexShrink: 0 }}>{a.initial}</span>
         <div>
           <h1 className="display" style={{ margin: 0, fontSize: 32 }}>{p.displayName}</h1>
+          {p.premium && <span className="tag tag-gold" style={{ marginTop: 6, fontSize: 10, letterSpacing: '.08em' }}>★ PREMIUM</span>}
           {p.bio && <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--ink-soft)' }}>{p.bio}</p>}
         </div>
       </div>

@@ -28,9 +28,11 @@ export function Discover() {
   const setTab = setPicked;
 
   return (
-    <div className="app">
+    <div className="app with-rail">
+      <div className="rail-grid">
+      <div>
       <div className="topbar">
-        <span className="display" style={{ fontSize: 26 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+        <span className="display brand-mobile" style={{ fontSize: 26 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
         <div style={{ display: 'flex' }}>
           <Link to="/places/kyoto" className="icon-btn" aria-label="Search places"><Icon.search /></Link>
           {signedIn && <NotificationBell />}
@@ -73,8 +75,38 @@ export function Discover() {
           </div>
         )}
       </div>
+      </div>
+      <Rail />
+      </div>
       <BottomNav />
     </div>
+  );
+}
+
+/** Desktop-only right column (hidden on phones by CSS). */
+function Rail() {
+  const { signedIn } = useAuth();
+  return (
+    <aside className="rail" aria-label="More on Weyvo">
+      <div style={{ background: 'var(--green)', color: 'var(--on-green)', borderRadius: 20, padding: '20px 18px' }}>
+        <p className="eyebrow" style={{ color: 'var(--gold)' }}>Weyvo Premium</p>
+        <p className="display" style={{ margin: '8px 0 0', fontSize: 24 }}>More room for every journey.</p>
+        <p style={{ margin: '8px 0 14px', fontSize: 13, opacity: 0.9 }}>Bigger stories, unlimited photos, a profile badge.</p>
+        <Link to={signedIn ? '/premium' : '/signin?mode=join&next=/premium'} className="btn" style={{ background: 'var(--card)', color: 'var(--ink)', minHeight: 40 }}>See Premium</Link>
+      </div>
+      <div className="paper-card">
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Popular destinations</p>
+        {places.slice(0, 4).map((p) => (
+          <Link key={p.slug} to={`/places/${p.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', textDecoration: 'none', color: 'var(--ink)' }}>
+            <span style={{ flex: '0 0 40px', height: 40, borderRadius: 10, overflow: 'hidden' }}><Photo scene={p.scene} /></span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}<span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}>{p.stories} stories</span></span>
+          </Link>
+        ))}
+      </div>
+      <p style={{ margin: '4px 6px', fontSize: 12, lineHeight: 1.6, color: 'var(--muted)' }}>
+        About · Community guidelines · Privacy · Terms<br />© {new Date().getFullYear()} Weyvo
+      </p>
+    </aside>
   );
 }
 

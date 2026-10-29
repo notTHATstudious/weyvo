@@ -340,7 +340,7 @@ function FooterBar({ primary, busy, progress, existing, onDraft }: {
   const published = existing?.status === 'PUBLISHED';
   return (
     <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--paper)', borderTop: '1px solid var(--line)', zIndex: 10 }}>
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '12px 20px 20px', display: 'flex', gap: 10 }}>
+      <div style={{ maxWidth: 'var(--app-w)', margin: '0 auto', padding: '12px 20px 20px', display: 'flex', gap: 10 }}>
         {!published && <button type="button" className="btn btn-outline" disabled={busy} onClick={onDraft}>Save draft</button>}
         <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 1, opacity: busy ? 0.7 : 1 }} aria-live="polite">
           {busy ? progress || 'Saving…' : published ? 'Save changes' : primary}

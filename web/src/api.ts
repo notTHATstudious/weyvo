@@ -6,7 +6,7 @@ export type ShortTag = 'WEEKEND' | 'ONE_NIGHT' | 'LONG_DRIVE' | 'DAY_TRIP';
 export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
 export interface Me { id: number; username: string; displayName: string; bio: string | null; emailVerified: boolean }
-export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean }
+export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean; premium: boolean }
 export interface FollowStats { followers: number; following: number; followedByMe: boolean }
 export type ReactionType = 'been' | 'want' | 'save';
 export type QuestionStatus = 'VISIBLE' | 'HIDDEN_BY_AUTHOR' | 'HIDDEN_BY_REPORTS';
@@ -85,6 +85,7 @@ export const api = {
   signup: (b: { email: string; password: string; username: string; displayName: string }) => request<Me>('POST', '/auth/signup', b),
   login: (b: { email: string; password: string }) => request<Me>('POST', '/auth/login', b),
   logout: () => request<void>('POST', '/auth/logout'),
+  logoutEverywhere: () => request<void>('POST', '/auth/logout-everywhere'),
   verifyEmail: (code: string) => request<Me>('POST', '/auth/verify-email', { code }),
   resendCode: () => request<void>('POST', '/auth/verify-email/resend'),
   forgotPassword: (email: string) => request<void>('POST', '/auth/password/forgot', { email }),

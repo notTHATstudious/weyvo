@@ -21,6 +21,7 @@ export function AccountSettings() {
         </p>
         <a href="/api/me/export" download="weyvo-export.json" className="btn btn-outline" style={{ minHeight: 44 }}>Download my data</a>
       </Card>
+      <SessionsCard />
       <DeleteCard />
     </>
   );
@@ -106,6 +107,22 @@ function PasswordCard() {
         <button type="submit" className="btn btn-primary" disabled={busy || !current || next.length < 10} style={{ marginTop: 12, minHeight: 44 }}>{busy ? 'Saving…' : 'Change password'}</button>
         {status}
       </form>
+    </Card>
+  );
+}
+
+function SessionsCard() {
+  const { refresh } = useAuth();
+  const navigate = useNavigate();
+  const { busy, run, status } = useAction();
+  return (
+    <Card title="Devices">
+      <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--ink-soft)' }}>Lost a phone or used a shared computer? Sign out everywhere, including here.</p>
+      <button type="button" className="btn btn-outline" style={{ minHeight: 44 }} disabled={busy}
+        onClick={() => run(async () => { await api.logoutEverywhere(); await refresh(); navigate('/signin', { replace: true }); }, 'Signed out everywhere')}>
+        {busy ? 'Signing out…' : 'Sign out of all devices'}
+      </button>
+      {status}
     </Card>
   );
 }

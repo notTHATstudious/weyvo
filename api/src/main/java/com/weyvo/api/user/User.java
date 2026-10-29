@@ -76,6 +76,11 @@ public class User {
     public void markEmailVerified(Instant at) { if (emailVerifiedAt == null) emailVerifiedAt = at; }
     public int getSessionVersion() { return sessionVersion; }
 
+    /** Every existing session, on any device, stops working. */
+    public void revokeSessions() {
+        this.sessionVersion++;
+    }
+
     /** New password; every existing session (on any device) stops working. */
     public void changePassword(String newHash) {
         this.passwordHash = newHash;

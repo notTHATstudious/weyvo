@@ -88,6 +88,16 @@ public class AccountController {
                 .build();
     }
 
+    /** Signs out every device, including this one, e.g. after losing a phone. */
+    @PostMapping("/api/auth/logout-everywhere")
+    @Transactional
+    public ResponseEntity<Void> logoutEverywhere(@AuthenticationPrincipal CurrentUser current) {
+        User user = me(current);
+        user.revokeSessions();
+        log.info("All sessions revoked userId={}", user.getId());
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.clear().toString()).build();
+    }
+
     /** Everything we hold about the user, as JSON (right of access). */
     @GetMapping("/api/me/export")
     @Transactional(readOnly = true)
