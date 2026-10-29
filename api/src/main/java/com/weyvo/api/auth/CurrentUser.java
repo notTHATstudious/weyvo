@@ -1,4 +1,7 @@
 package com.weyvo.api.auth;
 
-/** The signed-in user as known from the session token. Set as the security principal. */
-public record CurrentUser(long id, String username) {}
+/**
+ * The signed-in user, rebuilt from the database on every request: an account that was suspended, or
+ * whose sessions were revoked by a password reset, stops being signed in immediately.
+ */
+public record CurrentUser(long id, String username, boolean emailVerified) {}

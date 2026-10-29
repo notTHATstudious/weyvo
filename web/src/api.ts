@@ -5,7 +5,7 @@ export type Kind = 'FULL' | 'SHORT';
 export type ShortTag = 'WEEKEND' | 'ONE_NIGHT' | 'LONG_DRIVE' | 'DAY_TRIP';
 export type Visibility = 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
 
-export interface Me { id: number; username: string; displayName: string; bio: string | null }
+export interface Me { id: number; username: string; displayName: string; bio: string | null; emailVerified: boolean }
 export interface PublicUser { username: string; displayName: string; bio: string | null; followers: number; following: number; followedByMe: boolean }
 export interface FollowStats { followers: number; following: number; followedByMe: boolean }
 export type ReactionType = 'been' | 'want' | 'save';
@@ -78,6 +78,10 @@ export const api = {
   signup: (b: { email: string; password: string; username: string; displayName: string }) => request<Me>('POST', '/auth/signup', b),
   login: (b: { email: string; password: string }) => request<Me>('POST', '/auth/login', b),
   logout: () => request<void>('POST', '/auth/logout'),
+  verifyEmail: (code: string) => request<Me>('POST', '/auth/verify-email', { code }),
+  resendCode: () => request<void>('POST', '/auth/verify-email/resend'),
+  forgotPassword: (email: string) => request<void>('POST', '/auth/password/forgot', { email }),
+  resetPassword: (email: string, code: string, password: string) => request<Me>('POST', '/auth/password/reset', { email, code, password }),
 
   feed: (kind?: Kind) => request<TripCard[]>('GET', `/trips${kind ? `?kind=${kind}` : ''}`),
   trip: (slug: string) => request<TripView>('GET', `/trips/${encodeURIComponent(slug)}`),

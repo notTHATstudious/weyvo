@@ -6,7 +6,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Signup signup, Storage storage, Plans plans,
-                            Community community) {
+                            Community community, Mail mail, Auth auth) {
+
+    public record Mail(String resendApiKey, String from, String appUrl) {}
+
+    public record Auth(boolean requireVerifiedEmail, Duration codeTtl, int codeMaxAttempts, Duration codeResendCooldown,
+                       int codesPerHour, int loginPerEmailPer15Min, int loginPerIpPer15Min, int signupsPerIpPerHour) {}
 
     public record Community(int questionsPerHour, int reportsToHide) {}
 

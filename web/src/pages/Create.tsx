@@ -18,7 +18,7 @@ const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
 interface Upload { file: File; role: 'COVER' | 'SECTION'; position: number }
 
 export function Create() {
-  const { signedIn, loading } = useAuth();
+  const { signedIn, loading, user } = useAuth();
   const [params] = useSearchParams();
   const initial = params.get('type') === 'short' ? 'short' : params.get('type') === 'full' ? 'full' : 'pick';
   const [mode, setMode] = useState<'pick' | 'short' | 'full'>(initial);
@@ -26,6 +26,7 @@ export function Create() {
 
   if (loading) return null;
   if (!signedIn) return <Navigate to={`/signin?mode=join&next=${encodeURIComponent('/create')}`} replace />;
+  if (!user?.emailVerified) return <Navigate to={`/verify?next=${encodeURIComponent('/create')}`} replace />;
 
   return (
     <div className="app" style={{ paddingBottom: 120 }}>

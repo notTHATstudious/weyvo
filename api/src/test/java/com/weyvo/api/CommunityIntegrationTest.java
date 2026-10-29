@@ -25,7 +25,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest(properties = {
-        "app.signup.check-mail-domain=false",
+        "app.signup.check-mail-domain=false", "app.auth.require-verified-email=false", "app.auth.signups-per-ip-per-hour=1000",
         "app.storage.local-dir=target/test-photos",
         "app.community.questions-per-hour=2",
         "app.community.reports-to-hide=3"})

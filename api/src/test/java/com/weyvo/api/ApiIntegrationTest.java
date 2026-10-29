@@ -26,7 +26,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 // DNS lookups are kept out of the test run; test emails use example.com, which has a null MX by design.
-@SpringBootTest(properties = "app.signup.check-mail-domain=false")
+@SpringBootTest(properties = {"app.signup.check-mail-domain=false", "app.auth.require-verified-email=false", "app.auth.signups-per-ip-per-hour=1000"})
 @AutoConfigureMockMvc
 @Testcontainers
 class ApiIntegrationTest {

@@ -10,6 +10,9 @@ import { Destination } from './pages/Destination';
 import { Settings } from './pages/Settings';
 import { SignIn } from './pages/SignIn';
 import { Notifications } from './pages/Notifications';
+import { VerifyEmail } from './pages/VerifyEmail';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { VerifyBanner } from './components/VerifyBanner';
 
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
@@ -19,6 +22,8 @@ export function App() {
   }, [pathname]);
 
   return (
+    <>
+    <VerifyBanner />
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/discover" element={<Discover />} />
@@ -30,7 +35,10 @@ export function App() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/signin" element={<SignIn />} />
       <Route path="/notifications" element={<Notifications />} />
+      <Route path="/verify" element={<VerifyEmail />} />
+      <Route path="/forgot" element={<ForgotPassword />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

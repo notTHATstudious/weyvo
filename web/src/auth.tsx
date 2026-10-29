@@ -9,6 +9,8 @@ interface Auth {
   login: (email: string, password: string) => Promise<void>;
   signup: (b: { email: string; password: string; username: string; displayName: string }) => Promise<void>;
   logout: () => Promise<void>;
+  verifyEmail: (code: string) => Promise<void>;
+  resetPassword: (email: string, code: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<Auth | null>(null);
@@ -27,9 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await api.logout();
     setUser(null);
   }, []);
+  const verifyEmail = useCallback(async (code: string) => setUser(await api.verifyEmail(code)), []);
+  const resetPassword = useCallback(async (email: string, code: string, password: string) => setUser(await api.resetPassword(email, code, password)), []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signedIn: user !== null, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, signedIn: user !== null, login, signup, logout, verifyEmail, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

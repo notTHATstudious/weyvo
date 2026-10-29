@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
 
+    /** What a valid token says; the filter still checks the version against the database. */
+    public record Claims(long userId, int sessionVersion) {}
+
     private final SecretKey key;
     private final AppProperties.Jwt config;
 
@@ -22,22 +25,23 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(config.secret()));
     }
 
-    public String issue(CurrentUser user) {
+    public String issue(long userId, int sessionVersion) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .subject(Long.toString(user.id()))
-                .claim("u", user.username())
+                .subject(Long.toString(userId))
+                .claim("sv", sessionVersion)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(config.ttl())))
                 .signWith(key)
                 .compact();
     }
 
-    /** Returns the user for a valid, unexpired token; empty for anything else. */
-    public Optional<CurrentUser> verify(String token) {
+    /** Claims for a valid, unexpired token; empty for anything else. */
+    public Optional<Claims> verify(String token) {
         try {
             var claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return Optional.of(new CurrentUser(Long.parseLong(claims.getSubject()), claims.get("u", String.class)));
+            Integer sv = claims.get("sv", Integer.class);
+            return Optional.of(new Claims(Long.parseLong(claims.getSubject()), sv == null ? -1 : sv));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

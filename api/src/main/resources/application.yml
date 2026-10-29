@@ -50,6 +50,21 @@ app:
   signup:
     # Reject email domains with no mail server (DNS MX/A lookup). Throwaway inboxes are always rejected.
     check-mail-domain: ${APP_SIGNUP_CHECK_MAIL_DOMAIN:true}
+  mail:
+    # Without a Resend key, mail is not sent (development); set RESEND_API_KEY in .env to send for real.
+    resend-api-key: ${RESEND_API_KEY:}
+    from: ${MAIL_FROM:Weyvo <onboarding@resend.dev>}
+    app-url: ${APP_URL:http://localhost:5173}
+  auth:
+    # Unverified accounts can read but not post, upload, react, follow or ask.
+    require-verified-email: ${AUTH_REQUIRE_VERIFIED_EMAIL:true}
+    code-ttl: PT10M
+    code-max-attempts: 5
+    code-resend-cooldown: PT60S
+    codes-per-hour: 5
+    login-per-email-per-15-min: ${AUTH_LOGIN_PER_EMAIL:8}
+    login-per-ip-per-15-min: ${AUTH_LOGIN_PER_IP:20}
+    signups-per-ip-per-hour: ${AUTH_SIGNUPS_PER_IP:5}
   community:
     questions-per-hour: ${COMMUNITY_QUESTIONS_PER_HOUR:10}
     # A question is hidden automatically once this many different people report it.

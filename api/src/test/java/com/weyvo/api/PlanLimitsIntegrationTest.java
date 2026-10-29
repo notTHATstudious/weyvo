@@ -27,7 +27,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 /** Tiny limits set through configuration, the same way launch values will be set. */
 @SpringBootTest(properties = {
-        "app.signup.check-mail-domain=false",
+        "app.signup.check-mail-domain=false", "app.auth.require-verified-email=false", "app.auth.signups-per-ip-per-hour=1000",
         "app.storage.local-dir=target/test-photos",
         "app.plans.free.full-trip-sections=2",
         "app.plans.free.short-story-photos=2",

@@ -29,9 +29,13 @@ export function SignIn() {
     setError('');
     setFields({});
     try {
-      if (mode === 'join') await signup(form);
-      else await login(form.email, form.password);
-      navigate(next, { replace: true });
+      if (mode === 'join') {
+        await signup(form);
+        navigate(`/verify?next=${encodeURIComponent(next)}`, { replace: true });
+      } else {
+        await login(form.email, form.password);
+        navigate(next, { replace: true });
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -74,6 +78,11 @@ export function SignIn() {
           <Field id="password" label="Password" type="password" value={form.password} onChange={set('password')} error={fields.password}
             autoComplete={joining ? 'new-password' : 'current-password'} hint={joining ? 'At least 10 characters' : undefined} />
 
+          {!joining && (
+            <p style={{ margin: '-6px 0 14px', textAlign: 'right' }}>
+              <Link to="/forgot" style={{ fontSize: 13, fontWeight: 600 }}>Forgot password?</Link>
+            </p>
+          )}
           {error && <p role="alert" style={{ margin: '4px 0 14px', fontSize: 14, color: '#B3261E' }}>{error}</p>}
 
           <button type="submit" className="btn btn-primary btn-block" disabled={busy} style={{ marginTop: 6, opacity: busy ? 0.7 : 1 }}>
@@ -109,6 +118,6 @@ function Field(props: {
 }
 
 /** Only allow in-app return paths, never an external URL. */
-function safeNext(next: string | null) {
+export function safeNext(next: string | null) {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/discover';
 }

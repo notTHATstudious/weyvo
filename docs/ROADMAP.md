@@ -24,8 +24,9 @@ Each milestone ends with: all tests green, a security pass against the checklist
 
 1. ✅ **Ask the traveller**: questions and answers on stories; author hides; anyone reports; limits per hour.
 2. ✅ **In-app notifications**: follows, reactions, questions, answers; unread count; mark as read.
-3. **Email with Resend**: verify email with a 6-digit code (10 min expiry, 5 tries, resend cooldown, hashed);
-   unverified accounts can read but not post, react or follow; forgot / reset password; optional weekly digest.
+3. ✅ **Email with Resend**: verify email with a 6-digit code (10 min expiry, 5 tries, resend cooldown, hashed);
+   unverified accounts can read but not post, react or follow; forgot / reset password (signs out other devices);
+   login, sign-up and reset rate limits. Later: weekly digest. Before deploy: trust the proxy's client-IP header safely.
 4. **Premium with Razorpay**: upgrade page, checkout, server-side signature check, webhook for renewals and
    cancellations, `plan_expires_at`; receipts by email.
 5. **Edit and manage**: edit story screen, delete story, account settings, delete account (with data export).

@@ -44,6 +44,12 @@ public class User {
     @Column(name = "plan_expires_at")
     private Instant planExpiresAt;
 
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
+    @Column(name = "session_version", nullable = false)
+    private int sessionVersion;
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -63,6 +69,16 @@ public class User {
     /** Premium counts only while it hasn't expired; a lapsed subscription falls back to Free. */
     public Plan effectivePlan(Instant now) {
         return plan == Plan.PREMIUM && (planExpiresAt == null || planExpiresAt.isAfter(now)) ? Plan.PREMIUM : Plan.FREE;
+    }
+
+    public boolean isEmailVerified() { return emailVerifiedAt != null; }
+    public void markEmailVerified(Instant at) { if (emailVerifiedAt == null) emailVerifiedAt = at; }
+    public int getSessionVersion() { return sessionVersion; }
+
+    /** New password; every existing session (on any device) stops working. */
+    public void changePassword(String newHash) {
+        this.passwordHash = newHash;
+        this.sessionVersion++;
     }
 
     public Long getId() { return id; }

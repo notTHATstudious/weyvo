@@ -31,7 +31,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest(properties = {"app.signup.check-mail-domain=false", "app.storage.local-dir=target/test-photos"})
+@SpringBootTest(properties = {"app.signup.check-mail-domain=false", "app.auth.require-verified-email=false", "app.auth.signups-per-ip-per-hour=1000", "app.storage.local-dir=target/test-photos"})
 @AutoConfigureMockMvc
 @Testcontainers
 class PhotoIntegrationTest {
