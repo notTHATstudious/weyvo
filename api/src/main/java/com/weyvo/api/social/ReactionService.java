@@ -41,6 +41,7 @@ public class ReactionService {
         Trip trip = trips.findById(tripId)
                 .filter(t -> t.isVisibleTo(userId) && t.getStatus() == Trip.Status.PUBLISHED && !blocks.between(userId, t.getOwner().getId()))
                 .orElseThrow(ApiException::notFound);
+        if (trip.isOwnedBy(userId)) throw ApiException.badRequest("You can't react to your own story");
         var params = new MapSqlParameterSource().addValue("u", userId).addValue("t", trip.getId()).addValue("type", type.name());
         if (on) {
             jdbc.update("INSERT INTO trip_reactions (user_id, trip_id, type) VALUES (:u, :t, :type) ON CONFLICT DO NOTHING", params);

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api, ApiError, type AdminReport } from '../api';
-import { Icon } from '../components/Icons';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
+import { BackButton } from '../components/BackButton';
 
 const KIND_LABEL: Record<AdminReport['kind'], string> = { TRIP: 'Story', COMMENT: 'Comment', QUESTION: 'Question' };
 const REASON_LABEL: Record<string, string> = { SPAM: 'Spam', ABUSE: 'Abusive', OFF_TOPIC: 'Off topic', OTHER: 'Something else' };
@@ -12,13 +12,12 @@ type Tab = 'overview' | 'reports' | 'users';
 
 /** Admins only (the server enforces it): numbers, reported content and accounts. */
 export function Admin() {
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('overview');
 
   return (
     <div className="app">
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
-        <button type="button" className="icon-btn" aria-label="Back" onClick={() => navigate(-1)}><Icon.back /></button>
+        <BackButton fallback="/settings" />
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>Admin</span>
         <span style={{ width: 44 }} />
       </div>

@@ -11,6 +11,7 @@ import { Reactions } from '../components/Reactions';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
+import { BackButton } from '../components/BackButton';
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
@@ -44,7 +45,7 @@ export function Story() {
       <div style={{ height: '72vh', minHeight: 480, maxHeight: 640, position: 'relative', color: '#fff' }}>
         <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} alt={`Cover photo: ${trip.title}`} />
         <div style={{ position: 'absolute', top: 12, left: 10, right: 10, display: 'flex', justifyContent: 'space-between' }}>
-          <Link to="/discover" className="icon-btn solid" aria-label="Back" style={{ color: 'var(--ink)' }}><Icon.back /></Link>
+          <BackButton fallback="/discover" solid style={{ color: 'var(--ink)' }} />
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button type="button" className="icon-btn solid" aria-label="Share story" style={{ color: 'var(--ink)' }}
               onClick={() => setSharing(true)}><Icon.share /></button>
@@ -120,7 +121,7 @@ export function Story() {
             </>
           )}
           {trip.finalNote && <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>}
-          {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} /></div>}
+          {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>}
           {trip.status === 'PUBLISHED' && <QnA tripId={trip.id} isOwner={trip.owner} authorName={trip.author.displayName} />}
           {trip.status === 'PUBLISHED' && <Comments tripId={trip.id} isOwner={trip.owner} />}
           {trip.status === 'PUBLISHED' && user && !trip.owner && <ReportStory tripId={trip.id} />}

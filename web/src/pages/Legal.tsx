@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Icon } from '../components/Icons';
 import { Footer } from '../components/Footer';
+import { BackButton } from '../components/BackButton';
 
 /**
  * Draft legal pages. Everything in [brackets] is a placeholder for the owner to fill in, and every page
@@ -151,7 +151,7 @@ export function Legal() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px 40px' }}>
       <div className="topbar" style={{ padding: '14px 0 4px' }}>
-        <Link to="/" className="icon-btn" aria-label="Home"><Icon.back /></Link>
+        <BackButton fallback="/" />
         <span className="display" style={{ fontSize: 22 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
         <span style={{ width: 44 }} />
       </div>

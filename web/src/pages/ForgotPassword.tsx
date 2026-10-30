@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
-import { Icon } from '../components/Icons';
+import { BackButton } from '../components/BackButton';
 
 /** Email → code + new password. The first step replies the same whether or not the account exists. */
 export function ForgotPassword() {
@@ -39,7 +39,7 @@ export function ForgotPassword() {
   return (
     <div className="app" style={{ paddingBottom: 40 }}>
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
-        <Link to="/signin" className="icon-btn" aria-label="Back to sign in"><Icon.back /></Link>
+        <BackButton fallback="/signin" label="Back to sign in" />
         <span className="display" style={{ fontSize: 22 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
         <span style={{ width: 44 }} />
       </div>

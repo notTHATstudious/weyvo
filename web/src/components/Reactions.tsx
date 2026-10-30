@@ -7,8 +7,8 @@ import { Icon } from './Icons';
 const FIELD: Record<ReactionType, 'beenByMe' | 'wantByMe' | 'savedByMe'> = { been: 'beenByMe', want: 'wantByMe', save: 'savedByMe' };
 
 /** Travel reactions in place of likes. Updates instantly and rolls back if the server refuses. */
-export function Reactions({ tripId, initial, showSave = true }: { tripId: number; initial: Counts; showSave?: boolean }) {
-  const { signedIn } = useAuth();
+export function Reactions({ tripId, initial, author, showSave = true }: { tripId: number; initial: Counts; author: string; showSave?: boolean }) {
+  const { signedIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [r, setR] = useState(initial);
@@ -30,6 +30,15 @@ export function Reactions({ tripId, initial, showSave = true }: { tripId: number
     } finally {
       setBusy(null);
     }
+  }
+
+  // Your own story: the counts are shown, but there's nothing for you to tap.
+  if (user && user.username.toLowerCase() === author.toLowerCase()) {
+    return (
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+        {r.been} {r.been === 1 ? 'reader has' : 'readers have'} been here · {r.want} want to go
+      </p>
+    );
   }
 
   return (

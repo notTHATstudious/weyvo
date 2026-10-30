@@ -4,9 +4,9 @@ import { api, type Notification } from '../api';
 import { Avatar } from '../components/Avatar';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
-import { Icon } from '../components/Icons';
 import { Empty, ErrorNote, Loading } from '../components/States';
 import { useApi } from '../useApi';
+import { BackButton } from '../components/BackButton';
 
 export function Notifications() {
   const { signedIn, loading: authLoading } = useAuth();
@@ -23,7 +23,7 @@ export function Notifications() {
   return (
     <div className="app">
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
-        <Link to="/discover" className="icon-btn" aria-label="Back"><Icon.back /></Link>
+        <BackButton fallback="/discover" />
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>Notifications</span>
         <span style={{ width: 44 }} />
       </div>

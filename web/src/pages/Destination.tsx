@@ -3,11 +3,11 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, sceneFor, TAG_LABEL, type PlaceDetail } from '../api';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
-import { Icon } from '../components/Icons';
 import { MapView } from '../components/MapView';
 import { Photo } from '../components/Photo';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
+import { BackButton } from '../components/BackButton';
 
 const MONTHS = 'JFMAMJJASOND'.split('');
 type Filter = 'all' | 'FULL' | 'SHORT';
@@ -33,7 +33,7 @@ export function Destination() {
       <div className="cover" style={{ height: 300 }}>
         <Photo scene={sceneFor(place.name.length)} src={cover} />
         <div className="cover-overlay" style={{ padding: '12px 10px 20px' }}>
-          <Link to="/places" className="icon-btn solid" aria-label="All destinations" style={{ color: 'var(--ink)' }}><Icon.back /></Link>
+          <BackButton fallback="/places" solid style={{ color: 'var(--ink)' }} />
           <div style={{ padding: '0 10px' }}>
             <p style={{ margin: 0, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>Destination{place.country ? ` · ${place.country}` : ''}</p>
             <h1 className="display rise" style={{ margin: '6px 0 0', fontSize: 'clamp(44px, 10vw, 68px)' }}>{place.name}</h1>

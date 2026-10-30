@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api, type Me } from './api';
+import { clearApiCache } from './useApi';
 
 interface Auth {
   user: Me | null;
@@ -29,8 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = useCallback(async (b: Parameters<Auth['signup']>[0]) => setUser(await api.signup(b)), []);
   const logout = useCallback(async () => {
     await api.logout();
+    clearApiCache();
     setUser(null);
   }, []);
+  // Cached pages belong to whoever was signed in; a different account starts fresh.
+  useEffect(() => clearApiCache(), [user?.id]);
   const verifyEmail = useCallback(async (code: string) => setUser(await api.verifyEmail(code)), []);
   const refresh = useCallback(async () => {
     try {

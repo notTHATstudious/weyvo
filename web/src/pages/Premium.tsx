@@ -5,6 +5,7 @@ import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Loading } from '../components/States';
 import { useApi } from '../useApi';
+import { BackButton } from '../components/BackButton';
 
 // Razorpay's hosted checkout. Card and UPI details are entered there, never in Weyvo.
 const CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -91,7 +92,7 @@ export function Premium() {
       {celebrate && me && p && <Welcome until={formatDate(me.premiumUntil)} limits={p.premium} onClose={() => setCelebrate(false)} />}
 
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
-        <Link to="/settings" className="icon-btn" aria-label="Back"><Icon.back /></Link>
+        <BackButton fallback="/settings" />
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>Premium</span>
         <span style={{ width: 44 }} />
       </div>

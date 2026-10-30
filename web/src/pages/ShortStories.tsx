@@ -91,6 +91,7 @@ export function ShortStories() {
   const hidden = story ? pi >= story.sections.length : false;
   const caption = story && !hidden ? story.sections[pi]?.body : '';
   const isWanted = wanted[card.id] ?? card.reactions.wantByMe;
+  const mine = !!user && user.username.toLowerCase() === card.author.username.toLowerCase();
   const next = encodeURIComponent(`/shorts?start=${card.slug}`);
 
   async function toggleWant() {
@@ -146,7 +147,7 @@ export function ShortStories() {
         </div>
       )}
 
-      <div style={{ position: 'absolute', left: 14, right: 12, bottom: 22, display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ position: 'absolute', left: 14, right: 12, bottom: 'calc(22px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0, paddingLeft: 4 }}>
             {card.shortTag && <span className="tag tag-gold">{TAG_LABEL[card.shortTag]}</span>}
@@ -155,10 +156,12 @@ export function ShortStories() {
             {caption && <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.45, opacity: 0.92 }}>{caption}</p>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', fontSize: 11 }}>
-            <button type="button" aria-label="Want to go" aria-pressed={isWanted} onClick={toggleWant}
+            {/* No Want to go on your own short story; the count still shows. */}
+            {!mine && <button type="button" aria-label="Want to go" aria-pressed={isWanted} onClick={toggleWant}
               style={{ width: 52, height: 52, borderRadius: '50%', border: 0, background: isWanted ? 'var(--gold)' : 'rgba(255,255,255,.18)', color: isWanted ? '#1C1B18' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: isWanted ? 'pop .35s ease-out' : undefined }}>
               <Icon.pin size={24} />
-            </button>
+            </button>}
+            {mine && <span aria-hidden="true" style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.pin size={24} /></span>}
             <span>{card.reactions.want - (card.reactions.wantByMe ? 1 : 0) + (isWanted ? 1 : 0)}</span>
             <Link to={`/trips/${card.slug}`} aria-label="Open as a page" style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,.18)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}><Icon.chat size={24} /></Link>
             <span>Open</span>

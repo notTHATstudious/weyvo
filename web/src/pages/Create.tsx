@@ -100,12 +100,19 @@ function useSave(existing?: TripView) {
         await api.deletePhoto(id, photoId).catch((err) => { if (!(err instanceof ApiError && err.status === 404)) throw err; });
         deleted.current.add(photoId);
       }
+      // Two at a time: quicker than one by one, gentle enough on a phone connection.
       const todo = uploads.filter((u) => !uploaded.current.has(u.file));
-      for (const [i, u] of todo.entries()) {
-        setProgress(`Uploading photo ${i + 1} of ${todo.length}…`);
-        await api.uploadPhoto(id, u.file, u.role, u.position);
-        uploaded.current.add(u.file);
-      }
+      let done = 0;
+      const queue = [...todo];
+      setProgress(`Uploading photos 0 of ${todo.length}…`);
+      const worker = async () => {
+        for (let u = queue.shift(); u; u = queue.shift()) {
+          await api.uploadPhoto(id, u.file, u.role, u.position);
+          uploaded.current.add(u.file);
+          setProgress(`Uploading photos ${++done} of ${todo.length}…`);
+        }
+      };
+      await Promise.all([worker(), worker()]);
       if (publish && existing?.status !== 'PUBLISHED') {
         setProgress('Publishing…');
         await api.publishTrip(id);
@@ -339,7 +346,7 @@ function FooterBar({ primary, busy, progress, existing, onDraft }: {
 }) {
   const published = existing?.status === 'PUBLISHED';
   return (
-    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--paper)', borderTop: '1px solid var(--line)', zIndex: 10 }}>
+    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, paddingBottom: 'env(safe-area-inset-bottom)', background: 'var(--paper)', borderTop: '1px solid var(--line)', zIndex: 10 }}>
       <div style={{ maxWidth: 'var(--app-w)', margin: '0 auto', padding: '12px 20px 20px', display: 'flex', gap: 10 }}>
         {!published && <button type="button" className="btn btn-outline" disabled={busy} onClick={onDraft}>Save draft</button>}
         <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 1, opacity: busy ? 0.7 : 1 }} aria-live="polite">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, sceneFor, TAG_LABEL, type TripCard } from '../api';
+import { api, sceneFor, type TripCard } from '../api';
 import { Avatar } from '../components/Avatar';
 import { Footer } from '../components/Footer';
 import { useAuth } from '../auth';
@@ -15,7 +15,6 @@ import { useApi } from '../useApi';
 const ALL_TABS = [
   { id: 'following', label: 'Following' },
   { id: 'latest', label: 'Latest' },
-  { id: 'shorts', label: 'Short Stories' },
   { id: 'places', label: 'Destinations' },
   { id: 'issue', label: "This week's Issue" },
 ] as const;
@@ -51,7 +50,6 @@ export function Discover() {
       <div style={{ padding: '0 20px' }}>
         {tab === 'following' && <FollowingTrips onBrowse={() => setTab('latest')} />}
         {tab === 'latest' && <LatestTrips />}
-        {tab === 'shorts' && <LatestShorts />}
 
         {/* The weekly Issue is editorial sample content for now. */}
         {tab === 'places' && <DiscoverPlaces />}
@@ -162,31 +160,8 @@ function TripFeedCard({ trip }: { trip: TripCard }) {
           <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{trip.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{trip.title}</p></div>
         </div>
       </Link>
-      <div style={{ marginTop: 12 }}><Reactions tripId={trip.id} initial={trip.reactions} /></div>
+      <div style={{ marginTop: 12 }}><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>
     </article>
-  );
-}
-
-function LatestShorts() {
-  const { data, error, loading, retry } = useApi(() => api.feed('SHORT'), []);
-  if (loading) return <Loading />;
-  if (error) return <ErrorNote message={error.message} onRetry={retry} />;
-  if (!data?.length) return <Empty title="No short stories yet" body="A weekend, a one-night stay, a long drive. Post one in a minute." cta={{ to: '/create?type=short', label: 'Post a short story' }} />;
-  return (
-    <>
-      <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--muted)' }}>Weekends, one-night stays and long drives.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-        {data.map((s) => (
-          <Link key={s.id} to={`/shorts?start=${s.slug}`} className="cover rise" style={{ height: 250, borderRadius: 16 }}>
-            <Photo scene={sceneFor(s.id)} src={s.cover?.thumbUrl} />
-            <div className="cover-overlay" style={{ padding: 10 }}>
-              {s.shortTag && <span className="tag" style={{ alignSelf: 'flex-start', fontSize: 10 }}>{TAG_LABEL[s.shortTag]}</span>}
-              <p className="display" style={{ margin: 0, fontSize: 19 }}>{s.title}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </>
   );
 }
 

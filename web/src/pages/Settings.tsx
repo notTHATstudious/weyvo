@@ -6,6 +6,7 @@ import { Footer } from '../components/Footer';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
 import { useTheme } from '../theme';
+import { BackButton } from '../components/BackButton';
 
 export function Settings() {
   const { theme, setTheme } = useTheme();
@@ -16,7 +17,7 @@ export function Settings() {
   return (
     <div className="app">
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
-        <button type="button" className="icon-btn" aria-label="Back" onClick={() => navigate(-1)}><Icon.back /></button>
+        <BackButton fallback="/discover" />
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>Settings</span>
         <span style={{ width: 44 }} />
       </div>

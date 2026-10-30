@@ -4,6 +4,7 @@
 html, body, #root { margin: 0; min-height: 100%; }
 /* Phones: no double-tap zoom, no font inflation, and every text field at 16px so iPhone doesn't zoom in on focus. */
 html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 @media (pointer: coarse) { input, textarea, select { font-size: 16px !important; } }
 body {
   background: var(--paper);
@@ -43,7 +44,8 @@ img { display: block; max-width: 100%; }
 .tag-gold { background: var(--gold); color: var(--on-gold); }
 
 /* App shell */
-.app { max-width: var(--app-w); margin: 0 auto; min-height: 100vh; padding-bottom: 110px; position: relative; }
+/* env(safe-area-inset-*) keeps content and the bar clear of rounded corners, the notch and the home bar. */
+.app { max-width: var(--app-w); margin: 0 auto; min-height: 100vh; min-height: 100dvh; padding-bottom: calc(110px + env(safe-area-inset-bottom)); position: relative; }
 .app-wide { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 8px; }
 .icon-btn { width: 44px; height: 44px; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center;
@@ -52,7 +54,8 @@ img { display: block; max-width: 100%; }
 .scroll-x { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .scroll-x::-webkit-scrollbar { display: none; }
 
-.bottom-nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; width: min(452px, calc(100% - 28px));
+.bottom-nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, calc(env(safe-area-inset-bottom) + 6px));
+  width: min(452px, calc(100% - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)));
   background: var(--nav-bg); border-radius: 26px; display: flex; justify-content: space-around; padding: 6px; box-shadow: var(--shadow); z-index: 20; }
 .bottom-nav a { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: var(--nav-fg); border-radius: 18px; }
 .bottom-nav a.active { color: var(--nav-active); background: rgba(255, 255, 255, 0.1); }
@@ -99,7 +102,7 @@ textarea.input { padding: 12px 14px; min-height: auto; resize: none; line-height
 
 @media (min-width: 1024px) {
   body:has(.bottom-nav) { padding-left: 248px; }
-  .app { padding-bottom: 48px; }
+  .app { padding-bottom: calc(48px + env(safe-area-inset-bottom)); }
   .bottom-nav {
     left: 0; top: 0; bottom: 0; transform: none; width: 248px; border-radius: 0; box-shadow: none;
     flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 6px; padding: 28px 16px;
@@ -122,4 +125,16 @@ textarea.input { padding: 12px 14px; min-height: auto; resize: none; line-height
   .app.with-rail { max-width: 1004px; }
   .with-rail .rail-grid { display: grid; grid-template-columns: minmax(0, 640px) 316px; gap: 48px; align-items: start; }
   .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 24px; padding-top: 70px; }
+}
+
+/* Taps: no grey flash on phones, a small press-in on buttons instead. Transform only, so it stays cheap. */
+a, button { -webkit-tap-highlight-color: transparent; }
+.btn, .pill, .tab, .icon-btn { transition: transform .12s ease, background-color .2s, color .2s, border-color .2s; }
+.btn:active, .pill:active, .tab:active, .icon-btn:active { transform: scale(.97); }
+/* Smooth scrolling inside horizontal rows on iPhone, and no scroll chaining past the page edge. */
+.scroll-x { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+
+/* People who ask their device for less motion get none. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

@@ -214,9 +214,9 @@ export const api = {
   updateTrip: (id: number, b: TripInput) => request<TripView>('PUT', `/trips/${id}`, b),
   deleteTrip: (id: number) => request<void>('DELETE', `/trips/${id}`),
   deletePhoto: (tripId: number, photoId: number) => request<void>('DELETE', `/trips/${tripId}/photos/${photoId}`),
-  uploadAvatar: (file: File) => {
+  uploadAvatar: async (file: File) => {
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', await shrinkPhoto(file, 800));
     return request<{ avatarUrl: string }>('PUT', '/me/avatar', form);
   },
   removeAvatar: () => request<void>('DELETE', '/me/avatar'),
@@ -224,14 +224,42 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) => request<void>('POST', '/auth/password/change', { currentPassword, newPassword }),
   deleteAccount: (password: string) => request<void>('DELETE', '/me', { password }),
   publishTrip: (id: number) => request<TripView>('POST', `/trips/${id}/publish`),
-  uploadPhoto: (tripId: number, file: File, role: 'COVER' | 'SECTION', position = 0) => {
+  uploadPhoto: async (tripId: number, file: File, role: 'COVER' | 'SECTION', position = 0) => {
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', await shrinkPhoto(file));
     form.append('role', role);
     form.append('position', String(position));
     return request<PhotoRef>('POST', `/trips/${tripId}/photos`, form);
   },
 };
+
+/**
+ * Phone photos are often 5-15 MB, but the server keeps at most 2000 px. Resizing on the device first sends a
+ * fraction of the data, so uploads finish much faster on mobile. The re-encode also drops location data;
+ * the server still checks, resizes and strips every photo itself. Falls back to the original on any problem.
+ */
+export async function shrinkPhoto(file: File, max = 2000): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 1_500_000) {
+      bitmap.close();
+      return file;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.86));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
 
 /** Quick checks before uploading; the server re-checks everything. */
 export function photoProblem(file: File): string | null {

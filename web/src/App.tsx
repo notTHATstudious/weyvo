@@ -5,9 +5,19 @@ import { Discover } from './pages/Discover';
 import { VerifyBanner } from './components/VerifyBanner';
 import { WakeBanner } from './components/WakeBanner';
 
+const loaders: (() => Promise<unknown>)[] = [];
+
 /** Loads a page's code only when it's first opened, so the first visit downloads less. */
 function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  loaders.push(load);
   return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+
+/** Once the first page is up and the browser is idle, fetch the other pages so moving around is instant. */
+function preloadPages() {
+  const run = () => loaders.forEach((load) => load().catch(() => undefined));
+  if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 4000 });
+  else setTimeout(run, 2500);
 }
 
 const ShortStories = page(() => import('./pages/ShortStories'), 'ShortStories');
@@ -29,6 +39,7 @@ const Places = page(() => import('./pages/Places'), 'Places');
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
   const { pathname } = useLocation();
+  useEffect(preloadPages, []);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);

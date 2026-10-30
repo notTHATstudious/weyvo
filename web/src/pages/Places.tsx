@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { api, type PlaceSummary } from '../api';
 import { BottomNav } from '../components/BottomNav';
-import { Icon } from '../components/Icons';
 import { MiniMap } from '../components/MiniMap';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
+import { BackButton } from '../components/BackButton';
 
 /** Destinations with the most public stories, from real data. */
 export function Places() {
@@ -12,7 +12,7 @@ export function Places() {
   return (
     <div className="app">
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
-        <Link to="/discover" className="icon-btn" aria-label="Back"><Icon.back /></Link>
+        <BackButton fallback="/discover" />
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>Destinations</span>
         <span style={{ width: 44 }} />
       </div>
