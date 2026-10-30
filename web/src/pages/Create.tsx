@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, ApiError, TAG_LABEL, type PhotoRef, type PlanUsage, type ShortTag, type TripInput, type TripView, type Visibility } from '../api';
 import { useApi } from '../useApi';
@@ -8,6 +8,7 @@ import { Photo } from '../components/Photo';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { useAutosave } from '../useAutosave';
 import { PlaceField } from '../components/PlaceField';
+import { forgetAtlasPrefill, readAtlasPrefill, stashAtlasPrefill } from '../atlas';
 
 const TAGS: ShortTag[] = ['WEEKEND', 'ONE_NIGHT', 'LONG_DRIVE', 'DAY_TRIP'];
 const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
@@ -25,10 +26,13 @@ export function Create() {
   const initial = params.get('type') === 'short' ? 'short' : params.get('type') === 'full' ? 'full' : 'pick';
   const [mode, setMode] = useState<'pick' | 'short' | 'full'>(initial);
   const plan = useApi(() => (signedIn ? api.myPlan() : Promise.resolve(null)), [signedIn]);
+  // A plan from BubDub's Atlas arrives after #atlas=; keep it through sign-in.
+  useState(stashAtlasPrefill);
+  const here = `/create${params.toString() ? `?${params.toString()}` : ''}`;
 
   if (loading) return null;
-  if (!signedIn) return <Navigate to={`/signin?mode=join&next=${encodeURIComponent('/create')}`} replace />;
-  if (!user?.emailVerified) return <Navigate to={`/verify?next=${encodeURIComponent('/create')}`} replace />;
+  if (!signedIn) return <Navigate to={`/signin?mode=join&next=${encodeURIComponent(here)}`} replace />;
+  if (!user?.emailVerified) return <Navigate to={`/verify?next=${encodeURIComponent(here)}`} replace />;
 
   return (
     <div className="app" style={{ paddingBottom: 120 }}>
@@ -63,7 +67,7 @@ export function Create() {
         )}
         {mode !== 'pick' && plan.data && <PlanNote usage={plan.data} />}
         {mode === 'short' && <ShortForm maxPhotos={plan.data?.limits.shortStoryPhotos ?? 4} />}
-        {mode === 'full' && <FullForm maxSections={plan.data?.limits.fullTripSections ?? 3} />}
+        {mode === 'full' && (plan.data || plan.error) && <FullForm maxSections={plan.data?.limits.fullTripSections ?? 3} />}
       </div>
     </div>
   );
@@ -216,17 +220,24 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
 }
 
 export function FullForm({ maxSections, existing }: { maxSections: number; existing?: TripView }) {
+  // Started from a BubDub's Atlas plan: its title, place, dates and days become the first draft.
+  const [atlas] = useState(() => (existing ? null : readAtlasPrefill()));
   const [f, setF] = useState({
-    title: existing?.title ?? '', place: existing?.place ?? '', startDate: existing?.startDate ?? '', endDate: existing?.endDate ?? '',
-    intro: existing?.intro ?? '', finalNote: existing?.finalNote ?? '' });
+    title: existing?.title ?? atlas?.title ?? '', place: existing?.place ?? atlas?.place ?? '',
+    startDate: existing?.startDate ?? atlas?.start ?? '', endDate: existing?.endDate ?? atlas?.end ?? '',
+    intro: existing?.intro ?? atlas?.intro ?? '', finalNote: existing?.finalNote ?? '' });
   const [cover, setCover] = useState<Slot>({ file: null, existing: existing?.cover ?? null });
   const original = [existing?.cover ?? null, ...(existing?.sections.map((s) => s.photo) ?? [])];
   const [sections, setSections] = useState<({ heading: string; body: string; photoCaption: string } & Slot)[]>(
     existing?.sections.length
       ? existing.sections.map((s) => ({ heading: s.heading ?? '', body: s.body, photoCaption: s.photoCaption ?? '', file: null, existing: s.photo }))
-      : [{ heading: '', body: '', photoCaption: '', ...emptySlot() }]);
+      : atlas?.sections.length
+        ? atlas.sections.slice(0, maxSections).map((x) => ({ heading: x.heading, body: x.body, photoCaption: '', ...emptySlot() }))
+        : [{ heading: '', body: '', photoCaption: '', ...emptySlot() }]);
   const [moments, setMoments] = useState(() => [...(existing?.moments ?? []), '', '', ''].slice(0, 3));
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
+  useEffect(() => { if (atlas) forgetAtlasPrefill(); }, [atlas]);
+  const fromAtlas = atlas ? { days: atlas.sections.length, kept: Math.min(atlas.sections.length, maxSections) } : null;
   const draft = useAutosave(`full:${existing?.id ?? 'new'}`, {
     f, visibility, moments, sections: sections.map(({ heading, body, photoCaption }) => ({ heading, body, photoCaption })) });
   const { save, busy, progress, error, setError, fields } = useSave(existing, draft.clear);
@@ -266,6 +277,15 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       <h1 className="display rise" style={{ margin: '6px 0 4px', fontSize: 36 }}>{existing ? 'Edit your issue' : 'Your next issue'}</h1>
       <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--ink-soft)' }}>Tap the cover to choose a photo. This is how it appears in feeds and on your shelf.</p>
       {draft.offer && <DraftOffer savedAt={draft.offer.savedAt} onRestore={restore} onDiscard={draft.discard} />}
+      {fromAtlas && (
+        <div role="status" className="paper-card" style={{ marginBottom: 16, padding: '12px 14px', borderLeft: '4px solid var(--green)' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Started from your BubDub's Atlas plan</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+            Swap the plan notes for what really happened, and add your photos.
+            {fromAtlas.kept < fromAtlas.days && ` Your plan has ${fromAtlas.days} days; the first ${fromAtlas.kept} fit your plan's sections.`}
+          </p>
+        </div>
+      )}
       <div style={{ marginBottom: 16 }}>
         <PhotoPicker file={cover.file} existingUrl={cover.existing?.url} onChange={(file) => setCover((c) => ({ ...c, ...pick(file) }))} label="cover photo" height={240}>
           <div className="cover-overlay" style={{ padding: 16, color: '#fff', pointerEvents: 'none' }}>

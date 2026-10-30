@@ -11,6 +11,8 @@ export const Icon = {
   compass: ({ size = 22 }: P) => svg(size, <><circle cx="12" cy="12" r="9" /><path d="M15.5 8.5l-2 5-5 2 2-5z" /></>),
   play: ({ size = 22 }: P) => svg(size, <><rect x="6" y="3" width="12" height="18" rx="2" /><path d="M10.5 9.5v5l4-2.5z" /></>),
   plus: ({ size = 22 }: P) => svg(size, <path d="M12 5v14M5 12h14" />, 2.2),
+  /** A folded map with a route: planning a trip (BubDub's Atlas). */
+  route: ({ size = 22 }: P) => svg(size, <><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z" /><path d="M9 4v14M15 6v14" /></>),
   pin: ({ size = 22 }: P) => svg(size, <><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></>),
   user: ({ size = 22 }: P) => svg(size, <><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></>),
   bell: ({ size = 22 }: P) => svg(size, <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8" /><path d="M10 20a2 2 0 0 0 4 0" /></>),

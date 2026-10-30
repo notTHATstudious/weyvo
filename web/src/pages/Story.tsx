@@ -12,6 +12,7 @@ import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { BackButton } from '../components/BackButton';
+import { atlasLink, likeThisTrip } from '../atlas';
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
@@ -122,6 +123,7 @@ export function Story() {
           )}
           {trip.finalNote && <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>}
           {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>}
+          {trip.status === 'PUBLISHED' && <PlanLikeThis place={trip.place} start={trip.startDate} end={trip.endDate} back={`/trips/${trip.slug}`} />}
           {trip.status === 'PUBLISHED' && <QnA tripId={trip.id} isOwner={trip.owner} authorName={trip.author.displayName} />}
           {trip.status === 'PUBLISHED' && <Comments tripId={trip.id} isOwner={trip.owner} />}
           {trip.status === 'PUBLISHED' && user && !trip.owner && <ReportStory tripId={trip.id} />}
@@ -129,6 +131,22 @@ export function Story() {
       )}
       {sharing && <ShareSheet trip={trip} onClose={() => setSharing(false)} />}
     </div>
+  );
+}
+
+/** One tap to BubDub's Atlas with this story's place and trip length filled in. */
+function PlanLikeThis({ place, start, end, back }: { place: string; start: string | null; end: string | null; back: string }) {
+  const { depart, ret } = likeThisTrip(start, end);
+  return (
+    <a href={atlasLink({ to: place, depart, ret, back })} className="paper-card"
+      style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', color: 'var(--ink)', textDecoration: 'none' }}>
+      <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 12, flex: '0 0 40px', background: 'var(--green)', color: 'var(--on-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.route size={20} /></span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontWeight: 600 }}>Plan a trip like this</span>
+        <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)' }}>Day-by-day plan for {place.split(',')[0]} in BubDub's Atlas</span>
+      </span>
+      <Icon.chevronRight />
+    </a>
   );
 }
 

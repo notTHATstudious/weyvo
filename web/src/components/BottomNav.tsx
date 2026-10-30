@@ -16,6 +16,7 @@ export function BottomNav() {
     { to: '/shorts', label: newShorts ? 'Short Stories, new' : 'Short Stories', icon: <Icon.play />, dot: newShorts },
     { to: '/create', label: 'Create', icon: <Icon.plus />, create: true },
     { to: '/places', label: 'Destinations', icon: <Icon.pin /> },
+    { to: '/plan', label: 'Plan a trip', icon: <Icon.route /> },
     { to: user ? `/u/${user.username}` : '/signin?next=/discover', label: 'Your magazine', icon: <Icon.user /> },
   ];
 

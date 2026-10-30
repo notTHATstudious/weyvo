@@ -8,6 +8,8 @@ import { Photo } from '../components/Photo';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { BackButton } from '../components/BackButton';
+import { atlasLink, likeThisTrip } from '../atlas';
+import { Icon } from '../components/Icons';
 
 const MONTHS = 'JFMAMJJASOND'.split('');
 type Filter = 'all' | 'FULL' | 'SHORT';
@@ -45,6 +47,11 @@ export function Destination() {
       </div>
 
       <MarkButtons place={place} />
+      <div style={{ padding: '10px 20px 0' }}>
+        <a href={atlasLink({ to: place.name, back: `/places/${place.slug}`, ...likeThisTrip() })} className="btn btn-outline btn-block" style={{ minHeight: 44 }}>
+          <Icon.route size={18} /> Plan a trip to {place.name}
+        </a>
+      </div>
 
       <div style={{ margin: '18px 20px 0' }}>
         <MapView pins={[{ placeSlug: place.slug, name: place.name, country: place.country, lat: place.lat, lng: place.lng, trips: [] }]} color="#1F4D3A" height={200} zoom={8} />
