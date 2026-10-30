@@ -127,12 +127,13 @@ export function safeNext(next: string | null) {
 }
 
 /**
- * Real places from real travellers above the form: the latest stories' covers, each tagged with where
- * and who, so the first thing a visitor sees is the community. Illustrations fill in when there are few.
+ * Real places from real travellers above the form, each tagged with where and who. Only covers other
+ * readers have reacted to this week make it (the most loved first), so a random or test photo never
+ * greets a visitor; the illustrations fill any gaps.
  */
 function Mosaic() {
-  const { data } = useApi(() => api.feed(), []);
-  const picks = (data ?? []).filter((t) => t.cover).slice(0, 3);
+  const { data } = useApi(() => api.thisWeek(), []);
+  const picks = (data ?? []).filter((t) => t.cover && t.reactions.been + t.reactions.want > 0).slice(0, 3);
   const scenes = ['road', 'mountain', 'sea'] as const;
   const tiles = [0, 1, 2].map((i) => picks[i] ?? null);
   const label = (t: TripCard) => `${t.place.split(',')[0]} · ${t.author.username}`;
