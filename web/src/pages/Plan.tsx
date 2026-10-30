@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../api';
 import { ATLAS_URL, atlasLink } from '../atlas';
-import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
 import { Pin } from '../components/Wordmark';
-import { useApi } from '../useApi';
 
 /** BubDub's Atlas page colours, so the planner sits on the same background as Weyvo around it. */
 const ATLAS_BG = { light: '#F4EEE9', dark: '#14110F' } as const;
@@ -17,19 +14,12 @@ const ATLAS_BG = { light: '#F4EEE9', dark: '#14110F' } as const;
  * ?to=, ?depart= and ?return= (from a story or destination) fill the trip in.
  */
 export function Plan() {
-  const { user } = useAuth();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const theme: 'light' | 'dark' = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
   const [showInstall, setShowInstall] = useState(false);
   const prompt = useInstallPrompt();
-  const want = useApi(() => (user ? api.myList('want') : Promise.resolve([])), [user?.id]);
-  const popular = useApi(() => api.places(), []);
 
   const to = params.get('to') ?? '';
-  const ideas = [...new Set([
-    ...(want.data ?? []).map((t) => t.place.split(',')[0].trim()),
-    ...(popular.data ?? []).map((p) => p.name),
-  ])].filter(Boolean).slice(0, 10);
 
   const src = useMemo(() => {
     const q = new URLSearchParams({ embed: 'weyvo', ref: 'weyvo', theme });
@@ -62,18 +52,9 @@ export function Plan() {
               Install
             </button>
           </div>
-          <p style={{ margin: '10px 2px 0', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>Your next trip, planned in seconds.</p>
+          <p style={{ margin: '10px 2px 2px', fontSize: 10.5, fontWeight: 600, letterSpacing: '.24em', textTransform: 'uppercase',
+            color: theme === 'dark' ? '#D9B26A' : '#A9711C' }}>Plan less · Wander more</p>
           {showInstall && <InstallSteps onClose={() => setShowInstall(false)} />}
-          {ideas.length > 0 && (
-            <div className="scroll-x" style={{ gap: 6, marginTop: 10, paddingBottom: 2 }} aria-label="Quick destinations">
-              {ideas.map((name) => (
-                <button key={name} type="button" className="pill" aria-pressed={to === name} style={{ minHeight: 34, fontSize: 12, flex: '0 0 auto' }}
-                  onClick={() => setParams({ to: name }, { replace: true })}>
-                  <Icon.pin size={13} /> {name}
-                </button>
-              ))}
-            </div>
-          )}
         </header>
 
         {/* Atlas itself: the form, then the day-by-day plan, right here. */}
