@@ -67,13 +67,23 @@ export function ShortStories() {
   );
 
   if (feed.loading) return shell(<p style={{ padding: 24, opacity: 0.8 }}>Loading short stories…</p>);
+  if (feed.error) {
+    return shell(
+      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', gap: 16 }}>
+        <p className="display" style={{ margin: 0, fontSize: 30 }}>Couldn't load short stories.</p>
+        <p style={{ margin: 0, opacity: 0.85 }}>{feed.error.message}</p>
+        <button type="button" className="btn" style={{ background: '#FBF8F2', color: '#1C1B18', alignSelf: 'flex-start' }} onClick={feed.retry}>Try again</button>
+        <Link to="/discover" className="btn" style={{ alignSelf: 'flex-start', background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,.45)' }}>Back to Discover</Link>
+      </div>,
+    );
+  }
   if (!card) {
     return shell(
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', gap: 16 }}>
         <p className="display" style={{ margin: 0, fontSize: 34 }}>No short stories yet.</p>
         <p style={{ margin: 0, opacity: 0.85 }}>A weekend, a one-night stay, a long drive. Be the first.</p>
         <Link to="/create?type=short" className="btn" style={{ background: '#FBF8F2', color: '#1C1B18', alignSelf: 'flex-start' }}>Post a short story</Link>
-        <Link to="/discover" style={{ color: '#fff' }}>Back to Discover</Link>
+        <Link to="/discover" className="btn" style={{ alignSelf: 'flex-start', background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,.45)' }}>Back to Discover</Link>
       </div>,
     );
   }

@@ -102,7 +102,7 @@ function Overview({ onReports }: { onReports: () => void }) {
 
       <p style={{ margin: '16px 0 0', fontSize: 11, color: 'var(--muted)' }}>
         Updated {new Date(s.generatedAt).toLocaleTimeString()} · days in India time ·{' '}
-        <button type="button" onClick={() => setVersion((v) => v + 1)} style={{ border: 0, background: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', fontSize: 11 }}>Refresh</button>
+        <button type="button" className="btn btn-outline" onClick={() => setVersion((v) => v + 1)} style={{ minHeight: 30, padding: '0 12px', fontSize: 12, marginLeft: 4 }}>Refresh</button>
       </p>
     </>
   );

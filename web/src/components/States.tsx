@@ -20,6 +20,11 @@ export function Empty({ title, body, cta }: { title: string; body: string; cta?:
   );
 }
 
-export function ErrorNote({ message }: { message: string }) {
-  return <p role="alert" className="paper-card" style={{ fontSize: 14, color: '#B3261E', margin: 0 }}>{message}</p>;
+export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  return (
+    <div role="alert" className="paper-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <p style={{ fontSize: 14, color: '#B3261E', margin: 0 }}>{message}</p>
+      {onRetry && <button type="button" className="btn btn-outline" style={{ minHeight: 38 }} onClick={onRetry}>Try again</button>}
+    </div>
+  );
 }

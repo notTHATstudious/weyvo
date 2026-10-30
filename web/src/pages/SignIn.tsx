@@ -98,7 +98,7 @@ export function SignIn() {
         <p style={{ margin: '18px 0 0', textAlign: 'center', fontSize: 14, color: 'var(--ink-soft)' }}>
           {joining ? 'Already have an account?' : 'New to Weyvo?'}{' '}
           <button type="button" onClick={() => { setMode(joining ? 'signin' : 'join'); setError(''); setFields({}); }}
-            style={{ border: 0, background: 'none', color: 'var(--green)', fontWeight: 600, padding: 8, textDecoration: 'underline' }}>
+            className="btn btn-outline" style={{ minHeight: 38, padding: '0 16px', fontSize: 14, marginLeft: 6 }}>
             {joining ? 'Sign in' : 'Join free'}
           </button>
         </p>

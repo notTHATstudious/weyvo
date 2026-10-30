@@ -4,6 +4,7 @@ import { ApiError } from './api';
 /** Loads data for a page; refetches when deps change and ignores responses that arrive after a newer request. */
 export function useApi<T>(load: () => Promise<T>, deps: DependencyList) {
   const [state, setState] = useState<{ data: T | null; error: ApiError | null; loading: boolean }>({ data: null, error: null, loading: true });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let current = true;
@@ -16,7 +17,7 @@ export function useApi<T>(load: () => Promise<T>, deps: DependencyList) {
       current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, attempt]);
 
-  return state;
+  return { ...state, retry: () => setAttempt((a) => a + 1) };
 }

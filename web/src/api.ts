@@ -94,19 +94,62 @@ export class ApiError extends Error {
   }
 }
 
+// ---- waking a sleeping server ----
+// The free API host sleeps when idle and takes up to a minute to start. Requests that are slow or hit a
+// gateway error while it starts are retried, and WakeBanner tells the reader what's happening.
+
+const slowListeners = new Set<(slow: boolean) => void>();
+let slowRequests = 0;
+
+export function onSlowRequests(listener: (slow: boolean) => void) {
+  slowListeners.add(listener);
+  return () => { slowListeners.delete(listener); };
+}
+
+function markSlow(delta: number) {
+  const before = slowRequests > 0;
+  slowRequests += delta;
+  if (before !== slowRequests > 0) slowListeners.forEach((l) => l(slowRequests > 0));
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  let res: Response;
   const isForm = body instanceof FormData;
+  // POST may create something, so it's never repeated; the rest are safe to retry.
+  const retryable = method !== 'POST';
+  const giveUpAt = Date.now() + 90_000;
+  let slow = false;
+  const slowTimer = setTimeout(() => { slow = true; markSlow(1); }, 4000);
+  let res: Response | null = null;
   try {
-    res = await fetch(`/api${path}`, {
-      method,
-      credentials: 'same-origin',
-      // FormData sets its own multipart boundary header.
-      headers: body === undefined || isForm ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
-    });
-  } catch {
-    throw new ApiError("Can't reach Weyvo right now. Check your connection.", 0);
+    for (let attempt = 1; ; attempt++) {
+      const abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 30_000);
+      try {
+        res = await fetch(`/api${path}`, {
+          method,
+          credentials: 'same-origin',
+          signal: abort.signal,
+          // FormData sets its own multipart boundary header.
+          headers: body === undefined || isForm ? undefined : { 'Content-Type': 'application/json' },
+          body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
+        });
+      } catch {
+        res = null;
+      } finally {
+        clearTimeout(timeout);
+      }
+      const starting = !res || res.status === 502 || res.status === 503 || res.status === 504;
+      if (!starting || !retryable || Date.now() > giveUpAt) break;
+      await sleep(Math.min(2000 * attempt, 8000));
+    }
+  } finally {
+    clearTimeout(slowTimer);
+    if (slow) markSlow(-1);
+  }
+  if (!res || res.status === 502 || res.status === 503 || res.status === 504) {
+    throw new ApiError(navigator.onLine === false ? "You're offline. Check your connection." : 'Weyvo is waking up. Try again in a moment.', 0);
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));

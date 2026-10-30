@@ -122,9 +122,9 @@ function NotificationBell() {
 }
 
 function FollowingTrips({ onBrowse }: { onBrowse: () => void }) {
-  const { data, error, loading } = useApi(() => api.followingFeed(), []);
+  const { data, error, loading, retry } = useApi(() => api.followingFeed(), []);
   if (loading) return <Loading />;
-  if (error) return <ErrorNote message={error.message} />;
+  if (error) return <ErrorNote message={error.message} onRetry={retry} />;
   if (!data?.length) {
     return (
       <div className="paper-card" style={{ textAlign: 'center', padding: '32px 20px' }}>
@@ -138,9 +138,9 @@ function FollowingTrips({ onBrowse }: { onBrowse: () => void }) {
 }
 
 function LatestTrips() {
-  const { data, error, loading } = useApi(() => api.feed('FULL'), []);
+  const { data, error, loading, retry } = useApi(() => api.feed('FULL'), []);
   if (loading) return <Loading />;
-  if (error) return <ErrorNote message={error.message} />;
+  if (error) return <ErrorNote message={error.message} onRetry={retry} />;
   if (!data?.length) return <Empty title="No stories yet" body="Be the first to publish a trip on Weyvo." cta={{ to: '/create', label: 'Create your first issue' }} />;
   return <>{data.map((t) => <TripFeedCard key={t.id} trip={t} />)}</>;
 }
@@ -168,9 +168,9 @@ function TripFeedCard({ trip }: { trip: TripCard }) {
 }
 
 function LatestShorts() {
-  const { data, error, loading } = useApi(() => api.feed('SHORT'), []);
+  const { data, error, loading, retry } = useApi(() => api.feed('SHORT'), []);
   if (loading) return <Loading />;
-  if (error) return <ErrorNote message={error.message} />;
+  if (error) return <ErrorNote message={error.message} onRetry={retry} />;
   if (!data?.length) return <Empty title="No short stories yet" body="A weekend, a one-night stay, a long drive. Post one in a minute." cta={{ to: '/create?type=short', label: 'Post a short story' }} />;
   return (
     <>

@@ -81,14 +81,14 @@ export function VerifyEmail() {
         <p style={{ margin: '18px 0 0', textAlign: 'center', fontSize: 14, color: 'var(--ink-soft)' }}>
           Didn't get it?{' '}
           <button type="button" onClick={resend} disabled={wait > 0}
-            style={{ border: 0, background: 'none', color: wait > 0 ? 'var(--muted)' : 'var(--green)', fontWeight: 600, padding: 8, textDecoration: wait > 0 ? 'none' : 'underline' }}>
+            className="btn btn-outline" style={{ minHeight: 38, padding: '0 16px', fontSize: 14, marginLeft: 6 }}>
             {wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
           </button>
         </p>
         <p style={{ margin: '4px 0 0', textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
           Wrong email?{' '}
           <button type="button" onClick={async () => { await logout(); navigate('/signin?mode=join'); }}
-            style={{ border: 0, background: 'none', color: 'var(--muted)', padding: 8, textDecoration: 'underline' }}>Sign out and start again</button>
+            className="btn btn-outline" style={{ minHeight: 38, padding: '0 16px', fontSize: 14, marginLeft: 6 }}>Sign out and start again</button>
         </p>
       </div>
     </div>
