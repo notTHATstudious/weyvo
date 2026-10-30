@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ApiError, type AdminReport } from '../api';
+import { api, ApiError, type AdminReport, type AdminStats } from '../api';
+import { clearApiCache } from '../useApi';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { BackButton } from '../components/BackButton';
@@ -99,11 +100,73 @@ function Overview({ onReports }: { onReports: () => void }) {
         )}
       </Section>
 
+      <SystemSection s={s.system} />
+
       <p style={{ margin: '16px 0 0', fontSize: 11, color: 'var(--muted)' }}>
         Updated {new Date(s.generatedAt).toLocaleTimeString()} · days in India time ·{' '}
         <button type="button" className="btn btn-outline" onClick={() => setVersion((v) => v + 1)} style={{ minHeight: 30, padding: '0 12px', fontSize: 12, marginLeft: 4 }}>Refresh</button>
       </p>
     </>
+  );
+}
+
+/** A thin usage bar: green, turning gold past 70% and red past 90%. */
+function Meter({ used, max }: { used: number; max: number }) {
+  const pct = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
+  const color = pct > 90 ? '#B3261E' : pct > 70 ? 'var(--gold)' : 'var(--green)';
+  return (
+    <div role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={used} style={{ height: 6, borderRadius: 3, background: 'var(--line)', overflow: 'hidden', marginTop: 6 }}>
+      <span style={{ display: 'block', height: '100%', width: `${pct}%`, background: color }} />
+    </div>
+  );
+}
+
+/** What Weyvo keeps in this browser, in KB. Only Weyvo's own keys are counted. */
+function deviceUsage() {
+  let pages = 0, drafts = 0, other = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)!;
+      const size = (k.length + (localStorage.getItem(k)?.length ?? 0)) * 2 / 1024;
+      if (k === 'weyvo-pages') pages += size;
+      else if (k.startsWith('weyvo-draft:')) drafts += size;
+      else if (k.startsWith('weyvo') || k === 'theme') other += size;
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return { pages, drafts, other, total: pages + drafts + other };
+}
+
+function SystemSection({ s }: { s: AdminStats['system'] }) {
+  const [device, setDevice] = useState(deviceUsage);
+  const kb = (n: number) => (n < 1 ? '<1 KB' : `${Math.round(n)} KB`);
+  const up = s.uptimeMinutes < 60 ? `${s.uptimeMinutes} min` : s.uptimeMinutes < 1440 ? `${Math.round(s.uptimeMinutes / 60)} h` : `${Math.round(s.uptimeMinutes / 1440)} days`;
+  return (
+    <Section title="System">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-soft)' }}>Server memory</p>
+          <p className="display" style={{ margin: '2px 0 0', fontSize: 20 }}>{s.heapUsedMb} <span style={{ fontSize: 12, color: 'var(--muted)' }}>/ {s.heapMaxMb} MB</span></p>
+          <Meter used={s.heapUsedMb} max={s.heapMaxMb} />
+          <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--muted)' }}>Running for {up}</p>
+        </div>
+        <div>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-soft)' }}>Database</p>
+          <p className="display" style={{ margin: '2px 0 0', fontSize: 20 }}>{s.databaseMb} <span style={{ fontSize: 12, color: 'var(--muted)' }}>/ 500 MB</span></p>
+          <Meter used={s.databaseMb} max={500} />
+          <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--muted)' }}>{fmt(s.photos)} photos stored · free plan limit</p>
+        </div>
+      </div>
+      <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-soft)' }}>Kept on this device, so pages open instantly</p>
+        <p className="display" style={{ margin: '2px 0 0', fontSize: 20 }}>{kb(device.pages)} <span style={{ fontSize: 12, color: 'var(--muted)' }}>/ 150 KB</span></p>
+        <Meter used={device.pages} max={150} />
+        <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--muted)' }}>Drafts {kb(device.drafts)} · account and settings {kb(device.other)} · {kb(device.total)} in all</p>
+        <button type="button" className="btn btn-outline" style={{ minHeight: 32, padding: '0 12px', fontSize: 12, marginTop: 10 }}
+          onClick={() => { clearApiCache(); setDevice(deviceUsage()); }}>Clear saved pages</button>
+      </div>
+    </Section>
   );
 }
 

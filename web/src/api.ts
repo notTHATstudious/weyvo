@@ -65,6 +65,7 @@ export interface AdminStats {
   retention: { days: number; cohort: number; returned: number }[];
   daily: { day: string; signups: number; active: number; stories: number }[];
   openReports: number; generatedAt: string;
+  system: { heapUsedMb: number; heapMaxMb: number; uptimeMinutes: number; databaseMb: number; photos: number };
 }
 export interface AdminUser {
   username: string; displayName: string; email: string; status: 'ACTIVE' | 'SUSPENDED'; premium: boolean; admin: boolean;

@@ -32,8 +32,10 @@ public class AdminStatsService {
     /** Of people who joined in the cohort window, how many came back at least `days` days after joining. */
     public record Retention(int days, int cohort, int returned) {}
     public record Day(LocalDate day, int signups, int active, int stories) {}
+    /** The server and database right now: cheap to read, so it's live on every refresh. */
+    public record SystemInfo(long heapUsedMb, long heapMaxMb, long uptimeMinutes, long databaseMb, int photos) {}
     public record Stats(Users users, Active active, Signups signups, Stories stories, Engagement engagement,
-                        List<Retention> retention, List<Day> daily, int openReports, Instant generatedAt) {}
+                        List<Retention> retention, List<Day> daily, int openReports, SystemInfo system, Instant generatedAt) {}
 
     public record UserRow(String username, String displayName, String email, String status, boolean premium, boolean admin,
                           boolean verified, Instant joinedAt, Instant lastSeenAt, int stories) {}
@@ -98,7 +100,16 @@ public class AdminStatsService {
                 new Signups(i(u, "signups_today"), i(u, "signups_week"), i(u, "signups_month")),
                 new Stories(i(s, "published"), i(s, "full"), i(s, "shorts"), i(s, "drafts")),
                 new Engagement(i(e, "stories"), i(e, "comments"), i(e, "questions"), i(e, "reactions"), i(e, "saves"), i(e, "follows"), i(e, "shares")),
-                List.of(retention(7), retention(30)), daily, reports == null ? 0 : reports, Instant.now());
+                List.of(retention(7), retention(30)), daily, reports == null ? 0 : reports, system(), Instant.now());
+    }
+
+    private SystemInfo system() {
+        Runtime rt = Runtime.getRuntime();
+        long mb = 1024 * 1024;
+        Long db = jdbc.queryForObject("SELECT pg_database_size(current_database())", new MapSqlParameterSource(), Long.class);
+        Integer photos = jdbc.queryForObject("SELECT count(*) FROM trip_photos", new MapSqlParameterSource(), Integer.class);
+        long uptime = java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / 60_000;
+        return new SystemInfo((rt.totalMemory() - rt.freeMemory()) / mb, rt.maxMemory() / mb, uptime, db == null ? 0 : db / mb, photos == null ? 0 : photos);
     }
 
     /**
