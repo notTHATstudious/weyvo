@@ -50,10 +50,7 @@ export async function renderShareCard(trip: TripView, format: CardFormat): Promi
   ctx.font = `800 64px ${DISPLAY}`;
   ctx.fillText('weyvo', pad, pad + 56);
   const markWidth = ctx.measureText('weyvo').width;
-  ctx.fillStyle = '#E3A23B';
-  ctx.beginPath();
-  ctx.arc(pad + markWidth + 14, pad + 48, 9, 0, Math.PI * 2);
-  ctx.fill();
+  drawPin(ctx, pad + markWidth + 16, pad + 16, 22);
   ctx.fillStyle = '#FBF8F2';
   ctx.font = `600 28px ${BODY}`;
   const kind = trip.kind === 'FULL' ? 'FULL TRIP' : `SHORT STORY${trip.shortTag ? ` · ${TAG_LABEL[trip.shortTag].toUpperCase()}` : ''}`;
@@ -112,6 +109,30 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+/** The gold map pin that ends the Weyvo name; x is its centre, y its top, w its width. */
+function drawPin(ctx: CanvasRenderingContext2D, x: number, y: number, w: number) {
+  const r = w / 2;
+  const cy = y + r;
+  const g = ctx.createRadialGradient(x - r * 0.35, cy - r * 0.5, r * 0.1, x, cy, r * 1.8);
+  g.addColorStop(0, '#FFF1C4');
+  g.addColorStop(0.35, '#F2C566');
+  g.addColorStop(0.75, '#D9982F');
+  g.addColorStop(1, '#A9711C');
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x, y + w * 1.4);
+  ctx.bezierCurveTo(x, y + w * 1.4, x - r, cy + r * 0.75, x - r, cy);
+  ctx.arc(x, cy, r, Math.PI, 0);
+  ctx.bezierCurveTo(x + r, cy + r * 0.75, x, y + w * 1.4, x, y + w * 1.4);
+  ctx.fill();
+  ctx.fillStyle = '#FBF7EF';
+  ctx.beginPath();
+  ctx.arc(x, cy, r * 0.36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, maxLines: number): string[] {

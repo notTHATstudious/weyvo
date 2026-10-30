@@ -3,6 +3,7 @@ import { api } from '../api';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from './Icons';
+import { Pin } from './Wordmark';
 
 /** A bottom bar on phones; on wide screens CSS turns it into a labelled left sidebar. */
 export function BottomNav() {
@@ -18,7 +19,7 @@ export function BottomNav() {
 
   return (
     <nav className="bottom-nav" aria-label="App">
-      <Link to="/discover" className="nav-brand display" aria-label="Weyvo home">weyvo<span style={{ color: 'var(--gold)' }}>.</span></Link>
+      <Link to="/discover" className="nav-brand display" aria-label="Weyvo home">weyvo<Pin /></Link>
       {items.map((i) => (
         <NavLink key={i.to} to={i.to} aria-label={i.label}
           className={({ isActive }) => [i.create ? 'create' : '', isActive && !i.create ? 'active' : ''].join(' ')}>

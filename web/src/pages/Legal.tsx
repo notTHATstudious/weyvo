@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Footer } from '../components/Footer';
 import { BackButton } from '../components/BackButton';
+import { Wordmark } from '../components/Wordmark';
 
 /**
  * Draft legal pages. Everything in [brackets] is a placeholder for the owner to fill in, and every page
@@ -152,7 +153,7 @@ export function Legal() {
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 20px 40px' }}>
       <div className="topbar" style={{ padding: '14px 0 4px' }}>
         <BackButton fallback="/" />
-        <span className="display" style={{ fontSize: 22 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+        <Wordmark size={22} />
         <span style={{ width: 44 }} />
       </div>
       <p role="note" className="paper-card" style={{ fontSize: 13, color: 'var(--chip-gold-fg)', background: 'var(--chip-gold-bg)' }}>

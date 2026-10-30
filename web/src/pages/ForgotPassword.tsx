@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { BackButton } from '../components/BackButton';
+import { Wordmark } from '../components/Wordmark';
 
 /** Email → code + new password. The first step replies the same whether or not the account exists. */
 export function ForgotPassword() {
@@ -40,7 +41,7 @@ export function ForgotPassword() {
     <div className="app" style={{ paddingBottom: 40 }}>
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
         <BackButton fallback="/signin" label="Back to sign in" />
-        <span className="display" style={{ fontSize: 22 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+        <Wordmark size={22} />
         <span style={{ width: 44 }} />
       </div>
       <div style={{ padding: '0 20px' }}>

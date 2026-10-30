@@ -23,11 +23,13 @@ public class ResendMailer implements Mailer {
 
     private final RestClient http;
     private final String from;
+    private final String site;
     private final boolean enabled;
 
     public ResendMailer(AppProperties props, RestClient.Builder builder) {
         var cfg = props.mail();
         this.from = cfg.from();
+        this.site = cfg.appUrl().replaceAll("/+$", "");
         this.enabled = cfg.resendApiKey() != null && !cfg.resendApiKey().isBlank();
         this.http = builder.baseUrl("https://api.resend.com")
                 .defaultHeader("Authorization", "Bearer " + (enabled ? cfg.resendApiKey() : ""))
@@ -44,7 +46,8 @@ public class ResendMailer implements Mailer {
         try {
             http.post().uri("/emails")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("from", from, "to", List.of(to), "subject", subject, "text", text, "html", html))
+                    // Templates point images at {{site}}: the web address emails link back to.
+                    .body(Map.of("from", from, "to", List.of(to), "subject", subject, "text", text, "html", html.replace("{{site}}", site)))
                     .retrieve()
                     .toBodilessEntity();
             log.info("Email sent: {}", safeSubject);

@@ -3,6 +3,7 @@ import { Photo } from '../components/Photo';
 import { Icon } from '../components/Icons';
 import { Footer } from '../components/Footer';
 import { people, shorts, trips } from '../mocks/data';
+import { Wordmark } from '../components/Wordmark';
 
 const pillars = [
   { n: '01', t: 'Full trips', d: 'A guided magazine template: cover, photos, story sections and favourite moments. No blank page.' },
@@ -18,7 +19,7 @@ export function Landing() {
     <div>
       <header className="app-wide" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 24px', borderBottom: '1px solid var(--line)' }}>
         <Link to="/" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
-          <span className="display" style={{ fontSize: 26 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+          <Wordmark size={26} />
         </Link>
         <nav aria-label="Main" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20, fontSize: 14 }}>
           <Link to="/discover" style={{ color: 'var(--ink)', textDecoration: 'none' }}>Discover</Link>

@@ -4,6 +4,7 @@ import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { safeNext } from './SignIn';
+import { Wordmark } from '../components/Wordmark';
 
 const COOLDOWN = 60;
 
@@ -59,7 +60,7 @@ export function VerifyEmail() {
     <div className="app" style={{ paddingBottom: 40 }}>
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
         <Link to="/discover" className="icon-btn" aria-label="Back"><Icon.back /></Link>
-        <span className="display" style={{ fontSize: 22 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+        <Wordmark size={22} />
         <span style={{ width: 44 }} />
       </div>
       <div style={{ padding: '0 20px' }}>

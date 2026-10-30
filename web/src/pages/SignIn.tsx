@@ -5,6 +5,7 @@ import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
+import { Wordmark } from '../components/Wordmark';
 
 /** Sign in and join on one page. ?mode=join opens the join form; ?next= returns the reader where they were. */
 export function SignIn() {
@@ -55,7 +56,7 @@ export function SignIn() {
     <div className="app" style={{ paddingBottom: 40 }}>
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
         <Link to={next} className="icon-btn" aria-label="Back"><Icon.back /></Link>
-        <span className="display" style={{ fontSize: 22 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+        <Wordmark size={22} />
         <span style={{ width: 44 }} />
       </div>
 

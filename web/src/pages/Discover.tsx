@@ -11,6 +11,7 @@ import { Reactions } from '../components/Reactions';
 import { Empty, ErrorNote, Loading } from '../components/States';
 import { PlaceList } from './Places';
 import { useApi } from '../useApi';
+import { Wordmark } from '../components/Wordmark';
 
 const ALL_TABS = [
   { id: 'following', label: 'Following' },
@@ -35,7 +36,7 @@ export function Discover() {
       <div className="rail-grid">
       <div>
       <div className="topbar">
-        <span className="display brand-mobile" style={{ fontSize: 26 }}>weyvo<span style={{ color: 'var(--gold)' }}>.</span></span>
+        <Wordmark size={26} className="brand-mobile" />
         <div style={{ display: 'flex' }}>
           <Link to="/search" className="icon-btn" aria-label="Search"><Icon.search /></Link>
           {signedIn && <NotificationBell />}

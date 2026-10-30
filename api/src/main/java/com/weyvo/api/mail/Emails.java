@@ -30,7 +30,7 @@ public final class Emails {
         return """
                 <div style="font-family:Inter,Arial,sans-serif;background:#F3EEE5;padding:32px 16px;color:#1C1B18">
                   <div style="max-width:440px;margin:0 auto;background:#FBF8F2;border-radius:16px;padding:28px">
-                    <p style="font-size:22px;font-weight:800;margin:0 0 18px">weyvo<span style="color:#E3A23B">.</span></p>
+                    <p style="font-size:22px;font-weight:800;margin:0 0 18px">weyvo<img src="{{site}}/pin.png" width="13" height="18" alt="" style="margin-left:2px;vertical-align:baseline;border:0"></p>
                     <p style="margin:0 0 12px">Hi %s,</p>
                     <p style="margin:0 0 18px">%s</p>
                     <p style="font-size:34px;font-weight:700;letter-spacing:8px;margin:0 0 18px">%s</p>
