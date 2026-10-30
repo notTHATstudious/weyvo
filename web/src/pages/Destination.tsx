@@ -8,7 +8,7 @@ import { Photo } from '../components/Photo';
 import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { BackButton } from '../components/BackButton';
-import { atlasLink, likeThisTrip } from '../atlas';
+import { likeThisTrip, planLink } from '../atlas';
 import { Icon } from '../components/Icons';
 
 const MONTHS = 'JFMAMJJASOND'.split('');
@@ -48,9 +48,9 @@ export function Destination() {
 
       <MarkButtons place={place} />
       <div style={{ padding: '10px 20px 0' }}>
-        <a href={atlasLink({ to: place.name, back: `/places/${place.slug}`, ...likeThisTrip() })} className="btn btn-outline btn-block" style={{ minHeight: 44 }}>
+        <Link to={planLink({ to: place.name, ...likeThisTrip() })} className="btn btn-outline btn-block" style={{ minHeight: 44 }}>
           <Icon.route size={18} /> Plan a trip to {place.name}
-        </a>
+        </Link>
       </div>
 
       <div style={{ margin: '18px 20px 0' }}>

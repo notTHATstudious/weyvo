@@ -18,6 +18,14 @@ export function atlasLink(trip: { to?: string; from?: string; depart?: string; r
   return `${ATLAS_URL}/?${q.toString()}`;
 }
 
+/** Weyvo's own Plan tab with a trip filled in: Atlas opens inside Weyvo. */
+export function planLink(trip: { to: string; depart?: string; ret?: string }) {
+  const q = new URLSearchParams({ to: trip.to.slice(0, 120) });
+  if (trip.depart) q.set('depart', trip.depart);
+  if (trip.ret) q.set('return', trip.ret);
+  return `/plan?${q.toString()}`;
+}
+
 /** YYYY-MM-DD, `days` from today. */
 export function daysFromNow(days: number) {
   const d = new Date(Date.now() + days * 86_400_000);

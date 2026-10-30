@@ -1,119 +1,94 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-import { atlasLink, daysFromNow, type AtlasStyle } from '../atlas';
+import { ATLAS_URL, atlasLink } from '../atlas';
 import { useAuth } from '../auth';
 import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
-import { PlaceField } from '../components/PlaceField';
+import { Pin } from '../components/Wordmark';
 import { useApi } from '../useApi';
 
-const STYLES: [AtlasStyle, string][] = [['budget', 'Budget'], ['balanced', 'Balanced'], ['premium', 'Premium']];
+/** BubDub's Atlas page colours, so the planner sits on the same background as Weyvo around it. */
+const ATLAS_BG = { light: '#F4EEE9', dark: '#14110F' } as const;
 
 /**
- * The Plan tab: BubDub's Atlas, Weyvo's trip-planning companion. A quick form here, the full planner in
- * Atlas (its own app), opened with the trip filled in.
+ * The Plan tab: BubDub's Atlas running inside Weyvo, like a mini-app. The planner and its results show
+ * right here, in Atlas's own look; Atlas is also its own app, which this page offers to install.
+ * ?to=, ?depart= and ?return= (from a story or destination) fill the trip in.
  */
 export function Plan() {
   const { user } = useAuth();
-  const [to, setTo] = useState('');
-  const [from, setFrom] = useState('');
-  const [depart, setDepart] = useState(daysFromNow(14));
-  const [ret, setRet] = useState(daysFromNow(17));
-  const [style, setStyle] = useState<AtlasStyle>('balanced');
+  const [params, setParams] = useSearchParams();
+  const theme: 'light' | 'dark' = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const [showInstall, setShowInstall] = useState(false);
   const want = useApi(() => (user ? api.myList('want') : Promise.resolve([])), [user?.id]);
   const popular = useApi(() => api.places(), []);
 
+  const to = params.get('to') ?? '';
   const ideas = [...new Set([
     ...(want.data ?? []).map((t) => t.place.split(',')[0].trim()),
     ...(popular.data ?? []).map((p) => p.name),
-  ])].filter(Boolean).slice(0, 8);
+  ])].filter(Boolean).slice(0, 10);
 
-  const go = (dest = to) => {
-    window.location.href = atlasLink({ to: dest.trim(), from: from.trim(), depart, ret: ret >= depart ? ret : depart, style });
-  };
+  const src = useMemo(() => {
+    const q = new URLSearchParams({ embed: 'weyvo', ref: 'weyvo', theme });
+    if (to) q.set('to', to.slice(0, 120));
+    const depart = params.get('depart');
+    const ret = params.get('return');
+    if (depart && /^\d{4}-\d{2}-\d{2}$/.test(depart)) q.set('depart', depart);
+    if (ret && /^\d{4}-\d{2}-\d{2}$/.test(ret)) q.set('return', ret);
+    return `${ATLAS_URL}/?${q.toString()}`;
+  }, [to, params, theme]);
 
   return (
-    <div className="app">
-      <div style={{ padding: '18px 20px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--green)', color: 'var(--on-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.route size={24} /></span>
-          <div>
-            <h1 className="display" style={{ margin: 0, fontSize: 32 }}>Plan a trip</h1>
-            <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--muted)' }}>with <strong style={{ color: 'var(--ink)' }}>BubDub's Atlas</strong> by Weyvo</p>
+    <div style={{ background: ATLAS_BG[theme], minHeight: '100dvh' }}>
+      <div className="app" style={{ paddingBottom: 0, display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+        <header style={{ padding: 'max(14px, env(safe-area-inset-top)) 18px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 13, flex: '0 0 42px', background: 'var(--green)', color: 'var(--on-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.route size={22} /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h1 style={{ margin: 0, fontFamily: "'Pacifico', cursive", fontWeight: 400, fontSize: 24, lineHeight: 1.2, color: theme === 'dark' ? '#E8D6B0' : '#22315C' }}>BubDub's Atlas</h1>
+              <span className="display" style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, fontSize: 13, color: 'var(--muted)' }}>
+                <span style={{ fontFamily: 'var(--font-body)', fontWeight: 400, fontSize: 11 }}>by</span>
+                <span style={{ color: 'var(--ink)', display: 'inline-flex', alignItems: 'baseline' }}>weyvo<Pin /></span>
+              </span>
+            </div>
+            <button type="button" className="pill" aria-expanded={showInstall} onClick={() => setShowInstall((s) => !s)} style={{ minHeight: 34, fontSize: 12 }}>Get the app</button>
           </div>
-        </div>
-        <p style={{ margin: '14px 0 18px', fontSize: 15, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
-          A day-by-day plan with places, travel options and a rough budget, in a few seconds. Then come back and tell the story.
-        </p>
-
-        <form className="paper-card" style={{ padding: '16px 16px 18px' }} onSubmit={(e) => { e.preventDefault(); go(); }}>
-          <PlaceField id="plan-to" label="Where to" value={to} onChange={setTo} placeholder="Spiti, Hampi, Goa…" />
-          <PlaceField id="plan-from" label="From (optional)" value={from} onChange={setFrom} placeholder="Mumbai" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-            <label style={{ display: 'block', marginBottom: 14 }}>
-              <span className="field-label">Leave</span>
-              <input className="input" type="date" value={depart} min={daysFromNow(0)} onChange={(e) => setDepart(e.target.value)} />
-            </label>
-            <label style={{ display: 'block', marginBottom: 14 }}>
-              <span className="field-label">Head home</span>
-              <input className="input" type="date" value={ret} min={depart} onChange={(e) => setRet(e.target.value)} />
-            </label>
-          </div>
-          <p className="field-label">Travel style</p>
-          <div role="radiogroup" aria-label="Travel style" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            {STYLES.map(([v, l]) => (
-              <button key={v} type="button" role="radio" aria-checked={style === v} className="pill" aria-pressed={style === v} onClick={() => setStyle(v)} style={{ minHeight: 40 }}>{l}</button>
-            ))}
-          </div>
-          <button type="submit" className="btn btn-primary btn-block" disabled={!to.trim()}>Plan with BubDub's Atlas</button>
-          <p style={{ margin: '10px 2px 0', fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>Opens BubDub's Atlas with your trip filled in. "Back to Weyvo" brings you here.</p>
-        </form>
-
-        {ideas.length > 0 && (
-          <section style={{ marginTop: 22 }}>
-            <h2 className="eyebrow" style={{ margin: '0 0 10px', fontWeight: 600 }}>{want.data?.length ? 'From your Want to go, and popular now' : 'Popular on Weyvo'}</h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <p style={{ margin: '10px 2px 0', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>Your next trip, planned in seconds.</p>
+          {showInstall && <InstallSteps />}
+          {ideas.length > 0 && (
+            <div className="scroll-x" style={{ gap: 6, marginTop: 10, paddingBottom: 2 }} aria-label="Quick destinations">
               {ideas.map((name) => (
-                <button key={name} type="button" className="pill" onClick={() => go(name)} style={{ minHeight: 40 }}>
-                  <Icon.pin size={15} /> Plan {name}
+                <button key={name} type="button" className="pill" aria-pressed={to === name} style={{ minHeight: 34, fontSize: 12, flex: '0 0 auto' }}
+                  onClick={() => setParams({ to: name }, { replace: true })}>
+                  <Icon.pin size={13} /> {name}
                 </button>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </header>
 
-        <AtlasInstall />
+        {/* Atlas itself: the form, then the day-by-day plan, right here. */}
+        <iframe key={src} src={src} title="BubDub's Atlas trip planner" allow="clipboard-write; web-share"
+          style={{ flex: 1, width: '100%', border: 0, display: 'block', background: ATLAS_BG[theme], marginBottom: 'calc(84px + env(safe-area-inset-bottom))' }} />
       </div>
       <BottomNav />
     </div>
   );
 }
 
-const HIDE_KEY = 'weyvo-atlas-install-hidden';
-
-/** "Get BubDub's Atlas on your home screen": hidden for 14 days when dismissed. */
-function AtlasInstall() {
-  const [hidden, setHidden] = useState(() => {
-    try {
-      return Date.now() - Number(localStorage.getItem(HIDE_KEY) ?? 0) < 14 * 86_400_000;
-    } catch {
-      return false;
-    }
-  });
-  if (hidden) return null;
+/** How to add BubDub's Atlas to the home screen as its own app (it can't prompt from inside Weyvo). */
+function InstallSteps() {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   return (
-    <section className="paper-card" style={{ marginTop: 22, padding: '14px 16px', borderLeft: '4px solid var(--gold)' }}>
-      <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Get BubDub's Atlas as its own app</p>
-      <p style={{ margin: '6px 0 12px', fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+    <div className="paper-card" style={{ marginTop: 10, padding: '12px 14px', borderLeft: '4px solid var(--gold)' }}>
+      <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>BubDub's Atlas as its own app</p>
+      <p style={{ margin: '4px 0 10px', fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
         Saved plans open offline on the road.{' '}
-        {ios ? <>Open Atlas in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>.</> : <>Open Atlas and choose <b>Install app</b> or <b>Add to Home screen</b> from the browser menu.</>}
+        {ios ? <>Open it in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>.</> : <>Open it and choose <b>Install app</b> or <b>Add to Home screen</b> from the browser menu.</>}
       </p>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <a className="btn btn-outline" href={atlasLink()} style={{ minHeight: 38 }}>Open Atlas</a>
-        <button type="button" className="btn btn-outline" style={{ minHeight: 38, borderColor: 'var(--line-strong)' }}
-          onClick={() => { setHidden(true); try { localStorage.setItem(HIDE_KEY, String(Date.now())); } catch { /* fine */ } }}>Not now</button>
-      </div>
-    </section>
+      <a className="btn btn-primary" href={atlasLink()} style={{ minHeight: 38 }}>Open BubDub's Atlas</a>
+    </div>
   );
 }
