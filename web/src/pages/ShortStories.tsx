@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState, type ReactNode, useRef } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, sceneFor, TAG_LABEL, type ShortTag } from '../api';
 import { Avatar } from '../components/Avatar';
 import { useAuth } from '../auth';
@@ -7,6 +7,7 @@ import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { useApi } from '../useApi';
 import { friendly } from '../components/States';
+import { markShortsSeen } from '../shortsSeen';
 
 const FILTERS: ('ALL' | ShortTag)[] = ['ALL', 'WEEKEND', 'ONE_NIGHT', 'LONG_DRIVE', 'DAY_TRIP'];
 
@@ -23,6 +24,10 @@ export function ShortStories() {
   // Local overrides after tapping Want; the server's state comes with each card.
   const [wanted, setWanted] = useState<Record<number, boolean>>({});
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Opening Short Stories clears the 'new' dot on the bottom bar.
+  useEffect(markShortsSeen, []);
 
   // Open at the story the reader tapped, once the feed has loaded.
   useEffect(() => {
@@ -61,8 +66,28 @@ export function ShortStories() {
   const nextPhoto = () => (pi < total - 1 ? setPi(pi + 1) : nextStory());
   const prevPhoto = () => pi > 0 && setPi(pi - 1);
 
+  // Swipe up for the next person's story, like Reels; swipe down to close.
+  const touch = useRef<{ x: number; y: number; t: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const p = e.touches[0];
+    touch.current = { x: p.clientX, y: p.clientY, t: Date.now() };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touch.current;
+    touch.current = null;
+    if (!start || !card) return;
+    const p = e.changedTouches[0];
+    const dx = p.clientX - start.x;
+    const dy = p.clientY - start.y;
+    if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(dx) * 1.5 || Date.now() - start.t > 800) return;
+    if (dy < 0) nextPerson();
+    else close();
+  };
+  const close = () => (location.key !== 'default' ? navigate(-1) : navigate('/discover', { replace: true }));
+
   const shell = (children: ReactNode) => (
-    <div style={{ position: 'fixed', inset: 0, background: '#0F0E0C', color: '#fff', display: 'flex', justifyContent: 'center' }}>
+    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+      style={{ position: 'fixed', inset: 0, background: '#0F0E0C', color: '#fff', display: 'flex', justifyContent: 'center', touchAction: 'pan-x', overscrollBehavior: 'none' }}>
       <div style={{ position: 'relative', width: '100%', maxWidth: 480, height: '100%', overflow: 'hidden' }}>{children}</div>
     </div>
   );
@@ -126,7 +151,7 @@ export function ShortStories() {
           <Avatar name={card.author.displayName} url={card.author.avatarUrl} size={36} ring="#fff" />
           <span><span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{card.author.username}</span><span style={{ display: 'block', fontSize: 12, opacity: 0.85 }}>{total} photo{total === 1 ? '' : 's'}</span></span>
         </Link>
-        <Link to="/discover" className="icon-btn" aria-label="Close" style={{ color: '#fff' }}><Icon.close /></Link>
+        <button type="button" className="icon-btn" aria-label="Close" style={{ color: '#fff' }} onClick={close}><Icon.close /></button>
       </div>
 
       <div className="scroll-x" style={{ position: 'absolute', top: 80, left: 14, right: 14 }}>

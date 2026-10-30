@@ -4,14 +4,16 @@ import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from './Icons';
 import { Pin } from './Wordmark';
+import { useNewShorts } from '../shortsSeen';
 
 /** A bottom bar on phones; on wide screens CSS turns it into a labelled left sidebar. */
 export function BottomNav() {
   const { user } = useAuth();
+  const newShorts = useNewShorts(user?.username);
   const unread = useApi(() => (user ? api.unreadCount() : Promise.resolve({ count: 0 })), [user?.id]);
   const items = [
     { to: '/discover', label: 'Discover', icon: <Icon.compass /> },
-    { to: '/shorts', label: 'Short Stories', icon: <Icon.play /> },
+    { to: '/shorts', label: newShorts ? 'Short Stories, new' : 'Short Stories', icon: <Icon.play />, dot: newShorts },
     { to: '/create', label: 'Create', icon: <Icon.plus />, create: true },
     { to: '/places', label: 'Destinations', icon: <Icon.pin /> },
     { to: user ? `/u/${user.username}` : '/signin?next=/discover', label: 'Your magazine', icon: <Icon.user /> },
@@ -23,8 +25,11 @@ export function BottomNav() {
       {items.map((i) => (
         <NavLink key={i.to} to={i.to} aria-label={i.label}
           className={({ isActive }) => [i.create ? 'create' : '', isActive && !i.create ? 'active' : ''].join(' ')}>
-          {i.icon}
-          <span className="nav-label" aria-hidden="true">{i.label}</span>
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            {i.icon}
+            {'dot' in i && i.dot && <span aria-hidden="true" style={{ position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: '50%', background: 'var(--gold)', boxShadow: '0 0 0 2px var(--nav-bg)' }} />}
+          </span>
+          <span className="nav-label" aria-hidden="true">{i.label.replace(', new', '')}</span>
         </NavLink>
       ))}
       {user && (

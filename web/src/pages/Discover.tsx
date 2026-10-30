@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, sceneFor, type TripCard } from '../api';
+import { api, sceneFor, TAG_LABEL, type TripCard } from '../api';
 import { Avatar } from '../components/Avatar';
 import { Footer } from '../components/Footer';
 import { useAuth } from '../auth';
@@ -146,7 +146,9 @@ function NotificationBell() {
 }
 
 function FollowingTrips({ onBrowse }: { onBrowse: () => void }) {
-  const { data, error, loading, retry } = useApi(() => api.followingFeed(), []);
+  // Discover is for full trips; short stories have their own section.
+  const { data: all, error, loading, retry } = useApi(() => api.followingFeed(), []);
+  const data = all?.filter((t) => t.kind === 'FULL') ?? null;
   if (loading) return <Loading />;
   if (error) return <ErrorNote message={error.message} onRetry={retry} />;
   if (!data?.length) {
@@ -218,7 +220,7 @@ function TripFeedCard({ trip }: { trip: TripCard }) {
       <Link to={`/trips/${trip.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>
         <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} />
         <div className="cover-overlay">
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>Full trip</span><span>Weyvo</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>{trip.kind === 'FULL' ? 'Full trip' : `Short story${trip.shortTag ? ` · ${TAG_LABEL[trip.shortTag]}` : ''}`}</span><span>Weyvo</span></div>
           <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{trip.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{trip.title}</p></div>
         </div>
       </Link>
