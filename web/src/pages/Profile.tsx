@@ -85,20 +85,21 @@ export function Profile() {
         <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
       </div>
 
-      <div style={{ padding: '4px 20px 0', display: 'flex', gap: 16, alignItems: 'center' }}>
-        {isMe
-          ? <Link to="/settings" aria-label="Change profile picture" style={{ borderRadius: '50%' }}><Avatar name={p.displayName} url={p.avatarUrl} size={80} ring="var(--card)" /></Link>
-          : <Avatar name={p.displayName} url={p.avatarUrl} size={80} ring="var(--card)" />}
-        <div style={{ minWidth: 0 }}>
-          <h1 className="display" style={{ margin: 0, fontSize: 30 }}>{p.displayName}</h1>
-          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--muted)' }}>@{p.username}
-            {p.premium && <span className="tag tag-gold" style={{ marginLeft: 8, fontSize: 10, letterSpacing: '.08em' }}>★ PREMIUM</span>}
-          </p>
-          {p.bio
-            ? <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.45, color: 'var(--ink-soft)' }}>{p.bio}</p>
-            : isMe && <Link to="/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: 13, fontWeight: 600 }}>Add a short bio</Link>}
+      <div style={{ padding: '8px 20px 0', display: 'flex', gap: 18, alignItems: 'center' }}>
+        <span style={{ flex: '0 0 auto', borderRadius: '50%', padding: p.premium ? 3 : 0, background: p.premium ? 'linear-gradient(135deg, #F6D58B, #E3A23B 55%, #B87A1E)' : 'none' }}>
+          {isMe
+            ? <Link to="/settings" aria-label="Change profile picture" style={{ display: 'block', borderRadius: '50%' }}><Avatar name={p.displayName} url={p.avatarUrl} size={84} ring="var(--card)" /></Link>
+            : <Avatar name={p.displayName} url={p.avatarUrl} size={84} ring="var(--card)" />}
+        </span>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <h1 className="display" style={{ margin: 0, fontSize: 30, lineHeight: 1.05, overflowWrap: 'anywhere' }}>{p.displayName}</h1>
+          <p style={{ margin: 0, fontSize: 15, color: 'var(--muted)' }}>@{p.username}</p>
+          {p.premium && <PremiumBadge />}
         </div>
       </div>
+      {p.bio
+        ? <p style={{ margin: '16px 20px 0', fontSize: 15, lineHeight: 1.55, color: 'var(--ink-soft)', whiteSpace: 'pre-line' }}>{p.bio}</p>
+        : isMe && <div style={{ padding: '14px 20px 0' }}><Link to="/settings" className="btn btn-outline" style={{ minHeight: 36, padding: '0 14px', fontSize: 13 }}>Add a short bio</Link></div>}
 
       <div style={{ padding: '16px 20px 0', display: 'flex', gap: 10 }}>
         {isMe ? (
@@ -161,6 +162,20 @@ export function Profile() {
       </div>
       <BottomNav />
     </div>
+  );
+}
+
+/** The Premium mark: a small gold-foil pill with a star. */
+function PremiumBadge() {
+  return (
+    <span title="Weyvo Premium member"
+      style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 11px 5px 9px', borderRadius: 999,
+        background: 'linear-gradient(135deg, #F6D58B 0%, #E3A23B 55%, #C68A2B 100%)', color: '#2A1E08',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.55), 0 2px 8px rgba(199,138,43,.35)',
+        fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase' }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.5 1.3 6.6L12 17.2l-5.9 3.3 1.3-6.6-4.9-4.5 6.6-.8z" /></svg>
+      Premium
+    </span>
   );
 }
 
