@@ -111,7 +111,7 @@ export function Profile() {
           </button>
         )}
         <button type="button" className="btn btn-outline" style={{ minHeight: 44, borderColor: 'var(--line-strong)' }}
-          onClick={async () => setShared(await shareLink(`/u/${p.username}`, `${p.displayName} on Weyvo`))}>
+          onClick={async () => setShared(await shareLink(`/s/u/${p.username}`, `${p.displayName} on Weyvo`))}>
           {shared === 'copied' ? 'Link copied' : 'Share profile'}
         </button>
       </div>

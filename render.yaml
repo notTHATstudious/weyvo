@@ -40,6 +40,9 @@ services:
         value: X-Forwarded-For
       - key: APP_CLIENT_IP_TRUSTED_HOPS
         value: "3"
+      # Error reports (Sentry, Spring Boot project). Optional: leave empty to turn off.
+      - key: SENTRY_DSN
+        sync: false
       # Secrets and per-account values: Render asks for these on the first deploy.
       - key: DATABASE_URL
         sync: false
@@ -68,11 +71,19 @@ services:
     rootDir: web
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    envVars:
+      # Error reports from the website (Sentry, React project). Public by design; optional.
+      - key: VITE_SENTRY_DSN
+        sync: false
     autoDeploy: true
     routes:
       - type: rewrite
         source: /api/*
         destination: https://weyvo-api.onrender.com/api/*
+      # Shared links: a preview page for WhatsApp/Instagram cards that forwards people to the story.
+      - type: rewrite
+        source: /s/*
+        destination: https://weyvo-api.onrender.com/api/share/*
       # Single-page app: every other path is served by index.html.
       - type: rewrite
         source: /*

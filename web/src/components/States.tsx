@@ -20,11 +20,27 @@ export function Empty({ title, body, cta }: { title: string; body: string; cta?:
   );
 }
 
+/** Turns a raw error into words a reader can act on. */
+export function friendly(message: string): { title: string; body: string } {
+  const m = message.toLowerCase();
+  if (m.includes('waking')) return { title: 'Weyvo is waking up', body: 'After a quiet spell the first visit takes up to a minute. Try again in a moment.' };
+  if (m.includes('offline') || m.includes("can't reach")) return { title: "You're offline", body: 'Check your connection, then try again.' };
+  if (m.includes('not found')) return { title: "We couldn't find that", body: 'It may have moved or been removed. Try again, or head back to Discover.' };
+  if (m.includes('too many') || m.includes('slow down') || m.includes('a lot in the last hour')) return { title: 'Take a short break', body: message };
+  if (m.includes('sign in')) return { title: 'Please sign in', body: message };
+  if (m === 'something went wrong' || m.startsWith('something went wrong')) return { title: 'Something went wrong', body: "It's not you. Try again in a moment." };
+  return { title: 'That didn’t work', body: message };
+}
+
 export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { title, body } = friendly(message);
   return (
-    <div role="alert" className="paper-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-      <p style={{ fontSize: 14, color: '#B3261E', margin: 0 }}>{message}</p>
-      {onRetry && <button type="button" className="btn btn-outline" style={{ minHeight: 38 }} onClick={onRetry}>Try again</button>}
+    <div role="alert" className="paper-card rise" style={{ textAlign: 'center', padding: '28px 20px' }}>
+      <span aria-hidden="true" style={{ display: 'inline-flex', width: 52, height: 52, borderRadius: '50%', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--chip-gold-bg)', color: 'var(--chip-gold-fg)', fontSize: 24, fontWeight: 700 }}>!</span>
+      <p className="display" style={{ margin: '14px 0 0', fontSize: 24 }}>{title}</p>
+      <p style={{ margin: '8px auto 0', maxWidth: 320, fontSize: 14, lineHeight: 1.5, color: 'var(--ink-soft)' }}>{body}</p>
+      {onRetry && <button type="button" className="btn btn-primary" style={{ marginTop: 16, minHeight: 42 }} onClick={onRetry}>Try again</button>}
     </div>
   );
 }

@@ -32,6 +32,11 @@ public class SocialController {
         return reactions.set(user.id(), tripId, parse(type), false);
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/api/suggestions/travellers")
+    public java.util.List<FollowService.Suggestion> suggested(@AuthenticationPrincipal CurrentUser user) {
+        return follows.suggestions(user == null ? null : user.id());
+    }
+
     @PutMapping("/api/users/{username}/follow")
     public FollowStats follow(@AuthenticationPrincipal CurrentUser user, @PathVariable String username) {
         return follows.set(user.id(), username, true);

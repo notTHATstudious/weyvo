@@ -42,7 +42,7 @@ export function ShareSheet({ trip, onClose }: { trip: TripView; onClose: () => v
   }
 
   async function copyLink() {
-    const result = await shareLink(`/trips/${trip.slug}`, trip.title);
+    const result = await shareLink(`/s/${trip.slug}`, trip.title);
     if (result === 'copied' || result === 'shared') api.recordShare(trip.id, 'LINK').catch(() => undefined);
     setNote(result === 'copied' ? 'Link copied' : result === 'shared' ? 'Shared' : result === 'failed' ? "Couldn't copy the link" : '');
   }

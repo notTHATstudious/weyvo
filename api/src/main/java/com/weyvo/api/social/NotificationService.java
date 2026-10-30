@@ -2,6 +2,7 @@ package com.weyvo.api.social;
 
 import java.time.Instant;
 import java.util.List;
+import com.weyvo.api.push.PushService;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,11 @@ public class NotificationService {
     public record Item(long id, Type type, Actor actor, TripLink trip, boolean read, Instant createdAt) {}
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final PushService push;
 
-    public NotificationService(NamedParameterJdbcTemplate jdbc) {
+    public NotificationService(NamedParameterJdbcTemplate jdbc, PushService push) {
         this.jdbc = jdbc;
+        this.push = push;
     }
 
     /** Records an event once. Self-actions and repeats of the same event are ignored. */
@@ -33,13 +36,33 @@ public class NotificationService {
     public void notify(long recipientId, long actorId, Type type, Long tripId, Long questionId, Long commentId) {
         if (recipientId == actorId) return;
         // Nothing passes between two people when either has blocked the other.
-        jdbc.update("""
+        int added = jdbc.update("""
                 INSERT INTO notifications (recipient_id, actor_id, type, trip_id, question_id, comment_id)
                 SELECT :r, :a, :type, :trip, :q, :c
                 WHERE NOT EXISTS (SELECT 1 FROM user_blocks WHERE (blocker_id = :r AND blocked_id = :a) OR (blocker_id = :a AND blocked_id = :r))
                 ON CONFLICT DO NOTHING""",
                 new MapSqlParameterSource().addValue("r", recipientId).addValue("a", actorId)
                         .addValue("type", type.name()).addValue("trip", tripId).addValue("q", questionId).addValue("c", commentId));
+        // A new event (not a repeat) also goes to the phones the person turned notifications on for.
+        if (added > 0) pushFor(recipientId, actorId, type, tripId);
+    }
+
+    private void pushFor(long recipientId, long actorId, Type type, Long tripId) {
+        String actor = jdbc.queryForObject("SELECT username FROM users WHERE id = :a", new MapSqlParameterSource("a", actorId), String.class);
+        var trip = tripId == null ? null : jdbc.query("SELECT slug, title FROM trips WHERE id = :t", new MapSqlParameterSource("t", tripId),
+                (rs, i) -> new TripLink(rs.getString("slug"), rs.getString("title"))).stream().findFirst().orElse(null);
+        String on = trip == null ? "" : " “" + trip.title() + "”";
+        String body = switch (type) {
+            case FOLLOW -> actor + " started following you";
+            case BEEN -> actor + " has been there too:" + on;
+            case WANT -> actor + " wants to go after reading" + on;
+            case QUESTION -> actor + " asked you about" + on;
+            case ANSWER -> actor + " answered your question on" + on;
+            case COMMENT -> actor + " commented on" + on;
+            case REPLY -> actor + " replied to your comment on" + on;
+        };
+        String url = type == Type.FOLLOW || trip == null ? "/u/" + actor : "/trips/" + trip.slug();
+        push.sendLater(recipientId, new PushService.Message("Weyvo", body, url));
     }
 
     /**

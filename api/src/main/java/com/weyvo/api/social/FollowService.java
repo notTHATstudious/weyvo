@@ -51,6 +51,30 @@ public class FollowService {
         return new FollowStats(followers == null ? 0 : followers, following == null ? 0 : following, mine);
     }
 
+    public record Suggestion(String username, String displayName, String avatarUrl, int stories) {}
+
+    /**
+     * Travellers worth following: active people with the most public stories (recent ones count most),
+     * leaving out the viewer, people they already follow, and anyone in a block with them.
+     */
+    @Transactional(readOnly = true)
+    public List<Suggestion> suggestions(Long viewerId) {
+        return jdbc.query("""
+                SELECT u.username, u.display_name, u.avatar_version, count(t.id) AS stories,
+                       max(t.published_at) AS latest
+                FROM users u
+                JOIN trips t ON t.owner_id = u.id AND t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL
+                WHERE u.status = 'ACTIVE' AND u.id <> COALESCE(CAST(:v AS BIGINT), -1)
+                  AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = CAST(:v AS BIGINT) AND f.followee_id = u.id)
+                  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = CAST(:v AS BIGINT) AND b.blocked_id = u.id)
+                                                              OR (b.blocker_id = u.id AND b.blocked_id = CAST(:v AS BIGINT)))
+                GROUP BY u.id
+                ORDER BY count(t.id) FILTER (WHERE t.published_at > now() - interval '30 days') DESC, count(t.id) DESC, latest DESC
+                LIMIT 6""", new MapSqlParameterSource("v", viewerId),
+                (rs, i) -> new Suggestion(rs.getString("username"), rs.getString("display_name"),
+                        com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version")), rs.getInt("stories")));
+    }
+
     @Transactional(readOnly = true)
     public List<Long> followeeIds(long followerId) {
         return jdbc.queryForList("SELECT followee_id FROM follows WHERE follower_id = :a",

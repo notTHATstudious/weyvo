@@ -55,6 +55,31 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             ORDER BY t.published_at DESC LIMIT 50""", nativeQuery = true)
     List<Trip> findPublicByPlace(long placeId);
 
+    /** Public stories whose title or place contains the pattern (already escaped, with % around it). */
+    @Query(value = """
+            SELECT t.id FROM trips t JOIN users o ON o.id = t.owner_id AND o.status = 'ACTIVE'
+            WHERE t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL
+              AND (t.title ILIKE ?1 ESCAPE '\\' OR t.place ILIKE ?1 ESCAPE '\\')
+            ORDER BY t.published_at DESC LIMIT 12""", nativeQuery = true)
+    List<Long> searchPublicIds(String pattern);
+
+    /**
+     * The week's most loved public stories: reactions count once and comments twice, over the last 7 days.
+     * New stories with no activity yet still qualify, so the list isn't empty on a quiet week.
+     */
+    @Query(value = """
+            SELECT t.id FROM trips t
+            JOIN users o ON o.id = t.owner_id AND o.status = 'ACTIVE'
+            LEFT JOIN (SELECT trip_id, count(*) AS n FROM trip_reactions
+                       WHERE created_at > now() - interval '7 days' GROUP BY trip_id) r ON r.trip_id = t.id
+            LEFT JOIN (SELECT trip_id, count(*) AS n FROM trip_comments
+                       WHERE created_at > now() - interval '7 days' AND status = 'VISIBLE' GROUP BY trip_id) c ON c.trip_id = t.id
+            WHERE t.status = 'PUBLISHED' AND t.visibility = 'PUBLIC' AND t.removed_at IS NULL
+              AND (COALESCE(r.n, 0) + COALESCE(c.n, 0) > 0 OR t.published_at > now() - interval '7 days')
+            ORDER BY COALESCE(r.n, 0) + 2 * COALESCE(c.n, 0) DESC, t.published_at DESC
+            LIMIT 10""", nativeQuery = true)
+    List<Long> findTopThisWeekIds();
+
     @EntityGraph(attributePaths = "owner")
     @Query("select t from Trip t where t.id in ?1")
     List<Trip> findAllWithOwnerByIdIn(java.util.Collection<Long> ids);

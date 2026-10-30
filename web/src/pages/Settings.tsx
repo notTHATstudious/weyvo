@@ -7,6 +7,7 @@ import { BottomNav } from '../components/BottomNav';
 import { Icon } from '../components/Icons';
 import { useTheme } from '../theme';
 import { BackButton } from '../components/BackButton';
+import { PushToggle } from '../components/PushToggle';
 
 export function Settings() {
   const { theme, setTheme } = useTheme();
@@ -52,6 +53,7 @@ export function Settings() {
             <span style={{ fontSize: 15, fontWeight: 600 }}>Admin dashboard</span><Icon.chevronRight />
           </Link>
         )}
+        {user && <PushToggle />}
         <AccountSettings />
         {user && <BlockedList />}
         <Footer />

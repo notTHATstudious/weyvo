@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").permitAll()
                         // Reads of public content; the service decides how much of each trip to return.
                         .requestMatchers(HttpMethod.GET, "/api/trips", "/api/trips/*", "/api/users/*", "/api/users/*/trips", "/api/users/*/avatar", "/api/photos/*/*", "/api/trips/*/questions", "/api/trips/*/comments",
-                                "/api/places", "/api/places/*", "/api/users/*/map").permitAll()
+                                "/api/places", "/api/places/*", "/api/users/*/map", "/api/share/*", "/api/share/u/*", "/api/search", "/api/suggestions/travellers", "/api/push/key").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())

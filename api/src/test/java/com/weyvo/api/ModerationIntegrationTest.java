@@ -153,6 +153,41 @@ class ModerationIntegrationTest {
         mvc.perform(get("/api/trips/" + story.slug())).andExpect(status().isOk());
     }
 
+    @Test
+    void newFeaturesWorkTogether() throws Exception {
+        Account writer = signup("finder");
+        Account reader = signup("seeker");
+        Story story = publish(writer);
+
+        // Search finds the traveller and the story; LIKE wildcards are literal.
+        mvc.perform(get("/api/search").param("q", writer.username()))
+                .andExpect(jsonPath("$.people[0].username").value(writer.username()));
+        mvc.perform(get("/api/search").param("q", "Moderation test")).andExpect(jsonPath("$.stories[*].slug", hasItem(story.slug())));
+        mvc.perform(get("/api/search").param("q", "%_")).andExpect(jsonPath("$.people", hasSize(0)));
+
+        // This week, suggestions, share preview.
+        mvc.perform(get("/api/trips/this-week")).andExpect(jsonPath("$[*].slug", hasItem(story.slug())));
+        mvc.perform(get("/api/suggestions/travellers").cookie(reader.cookie())).andExpect(jsonPath("$[*].username", hasItem(writer.username())));
+        mvc.perform(get("/api/share/" + story.slug()))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("og:title")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Moderation test")));
+
+        // You can't react to your own story.
+        mvc.perform(put("/api/trips/" + story.id() + "/reactions/been").cookie(writer.cookie())).andExpect(status().isBadRequest());
+
+        // Push: public key for anyone; only real push services accepted.
+        mvc.perform(get("/api/push/key")).andExpect(jsonPath("$.publicKey").isNotEmpty());
+        var key = WebPushKeys.browserKey();
+        mvc.perform(put("/api/me/push").cookie(reader.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endpoint\":\"https://example.com/steal\",\"keys\":{\"p256dh\":\"" + key + "\",\"auth\":\"AAAAAAAAAAAAAAAAAAAAAA\"}}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/me/push").cookie(reader.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/test-" + UUID.randomUUID() + "\",\"keys\":{\"p256dh\":\"" + key + "\",\"auth\":\"AAAAAAAAAAAAAAAAAAAAAA\"}}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(put("/api/me/push").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
+    }
+
     private org.springframework.test.web.servlet.ResultActions comment(Account a, long tripId, String text) throws Exception {
         return mvc.perform(post("/api/trips/" + tripId + "/comments").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"text\":\"" + text + "\"}"));

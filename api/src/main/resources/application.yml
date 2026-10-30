@@ -28,6 +28,17 @@ logging:
     # collect console output, so set LOG_FILE to empty there.
     name: ${LOG_FILE:logs/weyvo-api.log}
 
+# Error reports. Off unless SENTRY_DSN is set (Render). No request bodies, cookies, IPs or user details are sent.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${APP_ENV:development}
+  send-default-pii: false
+  traces-sample-rate: 0.0
+  max-request-body-size: none
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
+
 server:
   port: ${PORT:8080}
   error:

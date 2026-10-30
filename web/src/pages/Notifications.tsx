@@ -7,6 +7,7 @@ import { BottomNav } from '../components/BottomNav';
 import { Empty, ErrorNote, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { BackButton } from '../components/BackButton';
+import { PushToggle } from '../components/PushToggle';
 
 export function Notifications() {
   const { signedIn, loading: authLoading } = useAuth();
@@ -29,6 +30,7 @@ export function Notifications() {
       </div>
       <div style={{ padding: '0 20px' }}>
         <h1 className="display" style={{ margin: '8px 0 18px', fontSize: 38 }}>What's new</h1>
+        <PushToggle compact />
         {loading ? <Loading /> : error ? <ErrorNote message={error.message} /> : !data?.length ? (
           <Empty title="All quiet" body="When someone follows you, reacts, comments, replies or asks about a trip, you'll see it here." />
         ) : (

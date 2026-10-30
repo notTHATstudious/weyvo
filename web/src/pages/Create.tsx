@@ -6,6 +6,7 @@ import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { PhotoPicker } from '../components/PhotoPicker';
+import { useAutosave } from '../useAutosave';
 
 const TAGS: ShortTag[] = ['WEEKEND', 'ONE_NIGHT', 'LONG_DRIVE', 'DAY_TRIP'];
 const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
@@ -71,7 +72,7 @@ export function Create() {
  * Saves a story. New: create, upload photos one by one, then publish; if something fails the story stays a
  * private draft and trying again reuses it. Editing: update the text, delete removed photos, upload new ones.
  */
-function useSave(existing?: TripView) {
+function useSave(existing?: TripView, onSaved?: () => void) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
@@ -117,6 +118,7 @@ function useSave(existing?: TripView) {
         setProgress('Publishing…');
         await api.publishTrip(id);
       }
+      onSaved?.();
       navigate(`/trips/${created.current!.slug}`);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Something went wrong. Try again.';
@@ -150,7 +152,15 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
   const [items, setItems] = useState<({ caption: string } & Slot)[]>(
     existing?.sections.length ? existing.sections.map((s) => ({ caption: s.body, file: null, existing: s.photo })) : [{ caption: '', ...emptySlot() }]);
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
-  const { save, busy, progress, error, setError, fields } = useSave(existing);
+  const draft = useAutosave(`short:${existing?.id ?? 'new'}`, { tag, title, place, visibility, captions: items.map((it) => it.caption) });
+  const { save, busy, progress, error, setError, fields } = useSave(existing, draft.clear);
+
+  function restore() {
+    const d = draft.accept();
+    if (!d) return;
+    setTag(d.tag); setTitle(d.title); setPlace(d.place); setVisibility(d.visibility);
+    setItems((xs) => d.captions.map((caption, i) => ({ ...(xs[i] ?? { caption: '', ...emptySlot() }), caption })));
+  }
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
@@ -167,6 +177,7 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
   return (
     <form onSubmit={submit}>
       <h1 className="display rise" style={{ margin: '6px 0 18px', fontSize: 36 }}>{existing ? 'Edit short story' : 'New short story'}</h1>
+      {draft.offer && <DraftOffer savedAt={draft.offer.savedAt} onRestore={restore} onDiscard={draft.discard} />}
       <p className="field-label">What kind of escape?</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
         {TAGS.map((t) => (
@@ -215,8 +226,17 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       : [{ heading: '', body: '', photoCaption: '', ...emptySlot() }]);
   const [moments, setMoments] = useState(() => [...(existing?.moments ?? []), '', '', ''].slice(0, 3));
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
-  const { save, busy, progress, error, setError, fields } = useSave(existing);
+  const draft = useAutosave(`full:${existing?.id ?? 'new'}`, {
+    f, visibility, moments, sections: sections.map(({ heading, body, photoCaption }) => ({ heading, body, photoCaption })) });
+  const { save, busy, progress, error, setError, fields } = useSave(existing, draft.clear);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
+
+  function restore() {
+    const d = draft.accept();
+    if (!d) return;
+    setF(d.f); setVisibility(d.visibility); setMoments(d.moments);
+    setSections((ss) => d.sections.map((text, i) => ({ ...(ss[i] ?? { heading: '', body: '', photoCaption: '', ...emptySlot() }), ...text })));
+  }
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
@@ -244,6 +264,7 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
     <form onSubmit={submit}>
       <h1 className="display rise" style={{ margin: '6px 0 4px', fontSize: 36 }}>{existing ? 'Edit your issue' : 'Your next issue'}</h1>
       <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--ink-soft)' }}>Tap the cover to choose a photo. This is how it appears in feeds and on your shelf.</p>
+      {draft.offer && <DraftOffer savedAt={draft.offer.savedAt} onRestore={restore} onDiscard={draft.discard} />}
       <div style={{ marginBottom: 16 }}>
         <PhotoPicker file={cover.file} existingUrl={cover.existing?.url} onChange={(file) => setCover((c) => ({ ...c, ...pick(file) }))} label="cover photo" height={240}>
           <div className="cover-overlay" style={{ padding: 16, color: '#fff', pointerEvents: 'none' }}>
@@ -290,6 +311,20 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       {error && <p role="alert" style={{ margin: '14px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
       <FooterBar busy={busy} progress={progress} existing={existing} primary="Publish" onDraft={(e) => submit(e, false)} />
     </form>
+  );
+}
+
+/** Offers back text kept from an unfinished story on this device. */
+function DraftOffer({ savedAt, onRestore, onDiscard }: { savedAt: number; onRestore: () => void; onDiscard: () => void }) {
+  return (
+    <div role="status" className="paper-card" style={{ marginBottom: 16, padding: '12px 14px', borderLeft: '4px solid var(--gold)' }}>
+      <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>You have unsaved writing from {new Date(savedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
+      <p style={{ margin: '4px 0 10px', fontSize: 13, color: 'var(--ink-soft)' }}>The text is kept on this device; photos need choosing again.</p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className="btn btn-primary" style={{ minHeight: 38 }} onClick={onRestore}>Restore</button>
+        <button type="button" className="btn btn-outline" style={{ minHeight: 38 }} onClick={onDiscard}>Discard</button>
+      </div>
+    </div>
   );
 }
 

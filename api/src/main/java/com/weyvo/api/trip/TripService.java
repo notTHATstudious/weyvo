@@ -97,6 +97,24 @@ public class TripService {
         return cards(trips.findPublicByUsername(username, PageRequest.of(0, PAGE_SIZE)), viewerId);
     }
 
+    /** Public stories matching a search pattern, newest first. */
+    @Transactional(readOnly = true)
+    public List<TripCard> search(String pattern, Long viewerId) {
+        return inOrder(trips.searchPublicIds(pattern), viewerId);
+    }
+
+    /** The week's most loved stories, best first. */
+    @Transactional(readOnly = true)
+    public List<TripCard> topThisWeek(Long viewerId) {
+        return inOrder(trips.findTopThisWeekIds(), viewerId);
+    }
+
+    private List<TripCard> inOrder(List<Long> ids, Long viewerId) {
+        Map<Long, Trip> byId = new java.util.HashMap<>();
+        trips.findAllWithOwnerByIdIn(ids).forEach(t -> byId.put(t.getId(), t));
+        return cards(ids.stream().map(byId::get).filter(java.util.Objects::nonNull).toList(), viewerId);
+    }
+
     /** Public stories at a place, newest first. */
     @Transactional(readOnly = true)
     public List<TripCard> atPlace(long placeId, Long viewerId) {

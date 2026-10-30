@@ -34,6 +34,11 @@ public class TripController {
         return service.feed(kind, idOf(user));
     }
 
+    @GetMapping("/api/trips/this-week")
+    public List<TripCard> thisWeek(@AuthenticationPrincipal CurrentUser user) {
+        return service.topThisWeek(idOf(user));
+    }
+
     @GetMapping("/api/trips/{slug}")
     public TripView view(@PathVariable String slug, @AuthenticationPrincipal CurrentUser user) {
         return service.view(slug, idOf(user));

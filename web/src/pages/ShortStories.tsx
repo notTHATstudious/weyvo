@@ -6,6 +6,7 @@ import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { useApi } from '../useApi';
+import { friendly } from '../components/States';
 
 const FILTERS: ('ALL' | ShortTag)[] = ['ALL', 'WEEKEND', 'ONE_NIGHT', 'LONG_DRIVE', 'DAY_TRIP'];
 
@@ -70,8 +71,8 @@ export function ShortStories() {
   if (feed.error) {
     return shell(
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', gap: 16 }}>
-        <p className="display" style={{ margin: 0, fontSize: 30 }}>Couldn't load short stories.</p>
-        <p style={{ margin: 0, opacity: 0.85 }}>{feed.error.message}</p>
+        <p className="display" style={{ margin: 0, fontSize: 30 }}>{friendly(feed.error.message).title}</p>
+        <p style={{ margin: 0, opacity: 0.85 }}>{friendly(feed.error.message).body}</p>
         <button type="button" className="btn" style={{ background: '#FBF8F2', color: '#1C1B18', alignSelf: 'flex-start' }} onClick={feed.retry}>Try again</button>
         <Link to="/discover" className="btn" style={{ alignSelf: 'flex-start', background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,.45)' }}>Back to Discover</Link>
       </div>,

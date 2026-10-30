@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ApiError } from '../api';
+import { api, ApiError, sceneFor, type TripCard } from '../api';
+import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
@@ -59,9 +60,7 @@ export function SignIn() {
       </div>
 
       <div style={{ padding: '0 20px' }}>
-        <div className="cover" style={{ height: 150, borderRadius: 'var(--radius-lg)', margin: '8px 0 22px' }}>
-          <Photo scene="road" />
-        </div>
+        <Mosaic />
         <h1 className="display rise" style={{ margin: 0, fontSize: 38 }}>{joining ? 'Start your magazine' : 'Welcome back'}</h1>
         <p style={{ margin: '8px 0 22px', fontSize: 15, color: 'var(--ink-soft)' }}>
           {joining ? 'Free, and it takes a minute. Use the email you actually read.' : 'Sign in to finish stories and post your own.'}
@@ -80,7 +79,7 @@ export function SignIn() {
 
           {!joining && (
             <p style={{ margin: '-6px 0 14px', textAlign: 'right' }}>
-              <Link to="/forgot" style={{ fontSize: 13, fontWeight: 600 }}>Forgot password?</Link>
+              <Link to="/forgot" style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)', textDecoration: 'none', padding: '6px 0', display: 'inline-block' }}>Forgot password?</Link>
             </p>
           )}
           {error && <p role="alert" style={{ margin: '4px 0 14px', fontSize: 14, color: '#B3261E' }}>{error}</p>}
@@ -125,4 +124,31 @@ function Field(props: {
 /** Only allow in-app return paths, never an external URL. */
 export function safeNext(next: string | null) {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/discover';
+}
+
+/**
+ * Real places from real travellers above the form: the latest stories' covers, each tagged with where
+ * and who, so the first thing a visitor sees is the community. Illustrations fill in when there are few.
+ */
+function Mosaic() {
+  const { data } = useApi(() => api.feed(), []);
+  const picks = (data ?? []).filter((t) => t.cover).slice(0, 3);
+  const scenes = ['road', 'mountain', 'sea'] as const;
+  const tiles = [0, 1, 2].map((i) => picks[i] ?? null);
+  const label = (t: TripCard) => `${t.place.split(',')[0]} · ${t.author.username}`;
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gridTemplateRows: '1fr 1fr', gap: 6, height: 200, margin: '8px 0 22px' }}>
+      {tiles.map((t, i) => (
+        <div key={i} className="cover" style={{ gridRow: i === 0 ? 'span 2' : undefined, borderRadius: i === 0 ? '22px 8px 8px 22px' : i === 1 ? '8px 22px 8px 8px' : '8px 8px 22px 8px' }}>
+          <Photo scene={t ? sceneFor(t.id) : scenes[i]} src={t?.cover?.thumbUrl} alt={t ? `${t.title}, ${t.place}` : ''} />
+          {t && (
+            <span style={{ position: 'absolute', left: 8, bottom: 8, maxWidth: 'calc(100% - 16px)', padding: '4px 9px', borderRadius: 999,
+              background: 'rgba(20,14,10,.55)', color: '#fff', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {label(t)}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }

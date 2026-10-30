@@ -70,6 +70,11 @@ export interface AdminUser {
   username: string; displayName: string; email: string; status: 'ACTIVE' | 'SUSPENDED'; premium: boolean; admin: boolean;
   verified: boolean; joinedAt: string; lastSeenAt: string | null; stories: number;
 }
+export interface SearchResults {
+  people: { username: string; displayName: string; avatarUrl: string | null }[];
+  places: { slug: string; name: string; country: string | null; stories: number }[];
+  stories: TripCard[];
+}
 export interface BlockedUser { username: string; displayName: string; avatarUrl: string | null }
 export interface AdminReport {
   kind: 'TRIP' | 'COMMENT' | 'QUESTION'; id: number; text: string | null; author: string; tripSlug: string; tripTitle: string;
@@ -168,6 +173,12 @@ export const api = {
   forgotPassword: (email: string) => request<void>('POST', '/auth/password/forgot', { email }),
   resetPassword: (email: string, code: string, password: string) => request<Me>('POST', '/auth/password/reset', { email, code, password }),
 
+  search: (q: string) => request<SearchResults>('GET', `/search?q=${encodeURIComponent(q)}`),
+  suggestedTravellers: () => request<{ username: string; displayName: string; avatarUrl: string | null; stories: number }[]>('GET', '/suggestions/travellers'),
+  pushKey: () => request<{ publicKey: string }>('GET', '/push/key'),
+  pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) => request<void>('PUT', '/me/push', sub),
+  pushUnsubscribe: (endpoint: string) => request<void>('DELETE', '/me/push', { endpoint }),
+  thisWeek: () => request<TripCard[]>('GET', '/trips/this-week'),
   feed: (kind?: Kind) => request<TripCard[]>('GET', `/trips${kind ? `?kind=${kind}` : ''}`),
   trip: (slug: string) => request<TripView>('GET', `/trips/${encodeURIComponent(slug)}`),
   user: (username: string) => request<PublicUser>('GET', `/users/${encodeURIComponent(username)}`),
