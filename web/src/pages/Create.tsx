@@ -7,6 +7,7 @@ import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { useAutosave } from '../useAutosave';
+import { PlaceField } from '../components/PlaceField';
 
 const TAGS: ShortTag[] = ['WEEKEND', 'ONE_NIGHT', 'LONG_DRIVE', 'DAY_TRIP'];
 const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
@@ -185,7 +186,7 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
         ))}
       </div>
       <TextField id="st" label="Title" value={title} onChange={setTitle} max={60} error={fields.title} placeholder="Sunday drive to Lonavala" display />
-      <TextField id="sp" label="Where" value={place} onChange={setPlace} max={120} error={fields.place} placeholder="Lonavala, Maharashtra" />
+      <PlaceField id="sp" label="Where" value={place} onChange={setPlace} error={fields.place} placeholder="Lonavala, Maharashtra" />
 
       <p className="field-label" style={{ marginTop: 4 }}>Photos <span>· up to {maxPhotos}, with a line each. JPEG or PNG</span></p>
       {items.map((it, i) => (
@@ -275,7 +276,7 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       </div>
 
       <TextField id="ft" label={`Trip title · ${f.title.length} / 60`} value={f.title} onChange={set('title')} max={60} error={fields.title} placeholder="The beach we had to ourselves" display />
-      <TextField id="fd" label="Destination" value={f.place} onChange={set('place')} max={120} error={fields.place} placeholder="Gokarna, Karnataka" />
+      <PlaceField id="fd" label="Destination" value={f.place} onChange={set('place')} error={fields.place} placeholder="Gokarna, Karnataka" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
         <TextField id="fs" label="From" type="date" value={f.startDate} onChange={set('startDate')} />
         <TextField id="fe" label="To" type="date" value={f.endDate} onChange={set('endDate')} />

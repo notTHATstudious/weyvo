@@ -8,8 +8,42 @@ import { ApiError } from './api';
 const recent = new Map<string, unknown>();
 const MAX_RECENT = 60;
 
+// A small copy is kept on the device too, so the app opens straight onto what you last saw even while the
+// free server is still waking up. Capped at about 150 KB; cleared on sign-out or a different account.
+const STORE = 'weyvo-pages';
+const MAX_BYTES = 150_000;
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE) ?? '[]') as [string, unknown][];
+  saved.forEach(([k, v]) => recent.set(k, v));
+} catch {
+  /* nothing kept, or storage unavailable */
+}
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
+function persist() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    try {
+      const entries = [...recent.entries()];
+      let json = JSON.stringify(entries);
+      // Newest entries are last; drop the oldest until it fits.
+      while (json.length > MAX_BYTES && entries.length > 1) {
+        entries.shift();
+        json = JSON.stringify(entries);
+      }
+      localStorage.setItem(STORE, json.length > MAX_BYTES ? '[]' : json);
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, 1000);
+}
+
 export function clearApiCache() {
   recent.clear();
+  try {
+    localStorage.removeItem(STORE);
+  } catch {
+    /* storage unavailable */
+  }
 }
 
 /** Loads data for a page; refetches when deps change and ignores responses that arrive after a newer request. */
@@ -29,6 +63,7 @@ export function useApi<T>(load: () => Promise<T>, deps: DependencyList) {
         recent.delete(key);
         recent.set(key, data);
         if (recent.size > MAX_RECENT) recent.delete(recent.keys().next().value as string);
+        persist();
         if (current) setState({ data, error: null, loading: false });
       },
       (error) => {

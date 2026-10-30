@@ -22,6 +22,7 @@ export function Profile() {
   const [shared, setShared] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [shelf, setShelf] = useState<Shelf>('issues');
+  const [menu, setMenu] = useState(false);
   const isMe = user?.username.toLowerCase() === handle.toLowerCase();
 
   const person = useApi(() => api.user(handle), [handle, user?.id, version]);
@@ -82,7 +83,10 @@ export function Profile() {
     <div className="app">
       <div className="topbar">
         <span style={{ fontSize: 15, fontWeight: 700 }}>@{p.username}</span>
-        <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
+        {isMe || !user
+          ? <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
+          : <button type="button" className="icon-btn" aria-label="More options" aria-expanded={menu} onClick={() => setMenu((m) => !m)}
+              style={{ fontSize: 24, fontWeight: 700, letterSpacing: 1 }}>⋯</button>}
       </div>
 
       <div style={{ padding: '8px 20px 0', display: 'flex', gap: 18, alignItems: 'center' }}>
@@ -116,7 +120,12 @@ export function Profile() {
         </button>
       </div>
 
-      {user && !isMe && <div style={{ padding: '6px 20px 0', textAlign: 'right' }}><BlockButton username={p.username} blocked={false} onChange={() => { setFollow(null); setVersion((v) => v + 1); }} /></div>}
+      {menu && user && !isMe && (
+        <div style={{ padding: '12px 20px 0' }}>
+          <BlockButton username={p.username} blocked={false} confirmNow onCancel={() => setMenu(false)}
+            onChange={() => { setMenu(false); setFollow(null); setVersion((v) => v + 1); }} />
+        </div>
+      )}
 
       <div style={{ margin: '20px 20px 0' }}><TravelMap username={p.username} /></div>
 
@@ -180,8 +189,8 @@ function PremiumBadge() {
 }
 
 /** Block asks once before acting; unblock is immediate. */
-function BlockButton({ username, blocked, onChange }: { username: string; blocked: boolean; onChange: () => void }) {
-  const [confirming, setConfirming] = useState(false);
+function BlockButton({ username, blocked, onChange, confirmNow, onCancel }: { username: string; blocked: boolean; onChange: () => void; confirmNow?: boolean; onCancel?: () => void }) {
+  const [confirming, setConfirming] = useState(!!confirmNow);
   const [error, setError] = useState('');
 
   async function run(on: boolean) {
@@ -216,7 +225,7 @@ function BlockButton({ username, blocked, onChange }: { username: string; blocke
       </p>
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
         <button type="button" className="btn" style={{ minHeight: 38, background: '#B3261E', color: '#fff' }} onClick={() => run(true)}>Block</button>
-        <button type="button" className="btn btn-outline" style={{ minHeight: 38 }} onClick={() => setConfirming(false)}>Cancel</button>
+        <button type="button" className="btn btn-outline" style={{ minHeight: 38 }} onClick={() => { setConfirming(false); onCancel?.(); }}>Cancel</button>
       </div>
       {error && <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
