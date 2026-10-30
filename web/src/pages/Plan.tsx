@@ -53,7 +53,10 @@ export function Plan() {
                 <span style={{ color: 'var(--ink)', display: 'inline-flex', alignItems: 'baseline' }}>weyvo<Pin /></span>
               </span>
             </div>
-            <button type="button" className="pill" aria-expanded={showInstall} onClick={() => setShowInstall((s) => !s)} style={{ minHeight: 34, fontSize: 12 }}>Get the app</button>
+            <button type="button" aria-expanded={showInstall} onClick={() => setShowInstall((s) => !s)}
+              style={{ flex: '0 0 auto', minHeight: 26, padding: '0 10px', borderRadius: 999, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink-soft)', fontSize: 11, fontWeight: 600, letterSpacing: '.02em' }}>
+              Get the app
+            </button>
           </div>
           <p style={{ margin: '10px 2px 0', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>Your next trip, planned in seconds.</p>
           {showInstall && <InstallSteps />}
