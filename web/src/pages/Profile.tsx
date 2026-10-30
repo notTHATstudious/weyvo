@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, ApiError, sceneFor, type FollowStats } from '../api';
+import { api, ApiError, sceneFor, type FollowStats, type TripCard } from '../api';
 import { Avatar } from '../components/Avatar';
 import { shareLink } from '../share';
 import { useAuth } from '../auth';
@@ -11,6 +11,8 @@ import { Empty, Loading } from '../components/States';
 import { TravelMap } from '../components/TravelMap';
 import { useApi } from '../useApi';
 
+type Shelf = 'issues' | 'shorts' | 'want' | 'save';
+
 export function Profile() {
   const { handle = '' } = useParams();
   const { user } = useAuth();
@@ -19,6 +21,7 @@ export function Profile() {
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+  const [shelf, setShelf] = useState<Shelf>('issues');
   const isMe = user?.username.toLowerCase() === handle.toLowerCase();
 
   const person = useApi(() => api.user(handle), [handle, user?.id, version]);
@@ -55,6 +58,11 @@ export function Profile() {
   const full = all.filter((t) => t.kind === 'FULL');
   const shorts = all.filter((t) => t.kind === 'SHORT');
   const stats: [string, string][] = [[String(full.length), 'trips'], [String(shorts.length), 'short'], [String(f.followers), 'followers'], [String(f.following), 'following']];
+  const shelves: [Shelf, string, number | null][] = [
+    ['issues', 'Issues', full.length],
+    ['shorts', 'Short stories', shorts.length],
+    ...(isMe ? ([['want', 'Want to go', null], ['save', 'Saved', null]] as [Shelf, string, null][]) : []),
+  ];
 
   async function toggleFollow() {
     if (!user) return navigate(`/signin?mode=join&next=${encodeURIComponent(`/u/${handle}`)}`);
@@ -117,11 +125,16 @@ export function Profile() {
         ))}
       </div>
 
-      <div style={{ margin: '28px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--ink)', paddingBottom: 8 }}>
-        <h2 className="display" style={{ margin: 0, fontSize: 26 }}>The issues</h2><span style={{ fontSize: 12, color: 'var(--muted)' }}>{full.length} full trips</span>
+      {/* One shelf at a time, so long lists never push the others far down the page. */}
+      <div role="tablist" aria-label="Shelf" className="scroll-x" style={{ gap: 6, margin: '26px 20px 0', paddingBottom: 10, borderBottom: '1px solid var(--line-strong)' }}>
+        {shelves.map(([id, label, count]) => (
+          <button key={id} type="button" role="tab" className="tab" aria-selected={shelf === id} onClick={() => setShelf(id)} style={{ fontSize: 13, flex: '0 0 auto' }}>
+            {label}{count !== null ? ` · ${count}` : ''}
+          </button>
+        ))}
       </div>
-      <div style={{ padding: '14px 20px 0' }}>
-        {trips.loading ? <Loading /> : full.length === 0 ? (
+      <div role="tabpanel" style={{ padding: '14px 20px 0' }}>
+        {shelf === 'issues' && (trips.loading ? <Loading /> : full.length === 0 ? (
           <Empty title={isMe ? 'Your shelf is empty' : 'No issues yet'} body={isMe ? 'Publish a full trip and it appears here as an issue.' : `${p.displayName} hasn't published a full trip yet.`}
             cta={isMe ? { to: '/create', label: 'Create an issue' } : undefined} />
         ) : (
@@ -138,27 +151,14 @@ export function Profile() {
               </Link>
             ))}
           </div>
-        )}
+        ))}
+        {shelf === 'shorts' && (shorts.length === 0 ? (
+          <Empty title="No short stories yet" body={isMe ? 'A weekend, a one-night stay, a long drive. Post one.' : `${p.displayName} hasn't posted a short story yet.`}
+            cta={isMe ? { to: '/create?type=short', label: 'Post a short story' } : undefined} />
+        ) : <TileGrid items={shorts} />)}
+        {shelf === 'want' && <MyList type="want" empty="Tap Want to go on any story to plan your next trip." />}
+        {shelf === 'save' && <MyList type="save" empty="Bookmark stories to read later." />}
       </div>
-
-      {shorts.length > 0 && (
-        <>
-          <div style={{ margin: '28px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--ink)', paddingBottom: 8 }}>
-            <h2 className="display" style={{ margin: 0, fontSize: 26 }}>Short stories</h2>
-          </div>
-          <div className="scroll-x" style={{ gap: 10, padding: '14px 20px 0' }}>
-            {shorts.map((s) => (
-              <Link key={s.id} to={`/trips/${s.slug}`} className="cover" style={{ flex: '0 0 120px', height: 180, borderRadius: 14 }}>
-                <Photo scene={sceneFor(s.id)} src={s.cover?.thumbUrl} />
-                <span className="display" style={{ position: 'absolute', left: 8, right: 8, bottom: 8, fontSize: 15, textShadow: '0 1px 6px rgba(0,0,0,.4)' }}>{s.title}</span>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-
-      {isMe && <MyList type="want" title="Want to go" empty="Tap Want to go on any story to plan your next trip." />}
-      {isMe && <MyList type="save" title="Saved" empty="Bookmark stories to read later. Only you see this list." />}
       <BottomNav />
     </div>
   );
@@ -209,29 +209,31 @@ function BlockButton({ username, blocked, onChange }: { username: string; blocke
 }
 
 /** Your private lists, shown only on your own profile. */
-function MyList({ type, title, empty }: { type: 'save' | 'want'; title: string; empty: string }) {
+function MyList({ type, empty }: { type: 'save' | 'want'; empty: string }) {
   const { data, loading } = useApi(() => api.myList(type), [type]);
-  const items = data ?? [];
+  if (loading && !data) return <Loading />;
+  if (!data?.length) return <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-soft)' }}>{empty} Only you see this list.</p>;
   return (
     <>
-      <div style={{ margin: '28px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--ink)', paddingBottom: 8 }}>
-        <h2 className="display" style={{ margin: 0, fontSize: 26 }}>{title}</h2><span style={{ fontSize: 12, color: 'var(--muted)' }}>Only you see this</span>
-      </div>
-      {loading ? null : items.length === 0 ? (
-        <p style={{ margin: '12px 20px 0', fontSize: 14, color: 'var(--ink-soft)' }}>{empty}</p>
-      ) : (
-        <div className="scroll-x" style={{ gap: 10, padding: '14px 20px 0' }}>
-          {items.map((t) => (
-            <Link key={t.id} to={`/trips/${t.slug}`} className="cover" style={{ flex: '0 0 140px', height: 180, borderRadius: 14 }}>
-              <Photo scene={sceneFor(t.id)} src={t.cover?.thumbUrl} />
-              <span style={{ position: 'absolute', left: 8, right: 8, bottom: 8, textShadow: '0 1px 6px rgba(0,0,0,.45)' }}>
-                <span style={{ display: 'block', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase' }}>{t.place}</span>
-                <span className="display" style={{ display: 'block', fontSize: 16 }}>{t.title}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>Only you see this list.</p>
+      <TileGrid items={data} />
     </>
+  );
+}
+
+/** Three-across tiles for short stories and saved lists. */
+function TileGrid({ items }: { items: TripCard[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+      {items.map((t) => (
+        <Link key={t.id} to={`/trips/${t.slug}`} className="cover" style={{ height: 170, borderRadius: 12 }}>
+          <Photo scene={sceneFor(t.id)} src={t.cover?.thumbUrl} />
+          <span style={{ position: 'absolute', left: 7, right: 7, bottom: 7, textShadow: '0 1px 6px rgba(0,0,0,.45)' }}>
+            <span style={{ display: 'block', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.place}</span>
+            <span className="display" style={{ display: 'block', fontSize: 14 }}>{t.title}</span>
+          </span>
+        </Link>
+      ))}
+    </div>
   );
 }
