@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ATLAS_URL, atlasLink } from '../atlas';
 import { BottomNav } from '../components/BottomNav';
-import { Icon } from '../components/Icons';
 import { Pin } from '../components/Wordmark';
 
 /** BubDub's Atlas page colours, so the planner sits on the same background as Weyvo around it. */
@@ -36,7 +35,7 @@ export function Plan() {
       <div className="app" style={{ paddingBottom: 0, display: 'flex', flexDirection: 'column', height: '100dvh' }}>
         <header style={{ padding: 'max(14px, env(safe-area-inset-top)) 18px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 13, flex: '0 0 42px', background: 'var(--green)', color: 'var(--on-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.route size={22} /></span>
+            <img src="/atlas-icon.png" alt="" width={46} height={46} style={{ flex: '0 0 46px', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,.18)' }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <h1 style={{ margin: 0, fontFamily: "'Pacifico', cursive", fontWeight: 400, fontSize: 24, lineHeight: 1.2, color: theme === 'dark' ? '#E8D6B0' : '#22315C' }}>BubDub's Atlas</h1>
               <span className="display" style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, fontSize: 13, color: 'var(--muted)' }}>
@@ -52,8 +51,12 @@ export function Plan() {
               Install
             </button>
           </div>
-          <p style={{ margin: '10px 2px 2px', fontSize: 10.5, fontWeight: 600, letterSpacing: '.24em', textTransform: 'uppercase',
-            color: theme === 'dark' ? '#D9B26A' : '#A9711C' }}>Plan less · Wander more</p>
+          {/* The tagline as a masthead line: centred between two hairlines. */}
+          <div aria-hidden="false" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 4px 4px' }}>
+            <span style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${theme === 'dark' ? '#D9B26A' : '#A9711C'})`, opacity: .55 }} />
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.26em', textTransform: 'uppercase', whiteSpace: 'nowrap', color: theme === 'dark' ? '#D9B26A' : '#A9711C' }}>Plan less · Wander more</span>
+            <span style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${theme === 'dark' ? '#D9B26A' : '#A9711C'})`, opacity: .55 }} />
+          </div>
           {showInstall && <InstallSteps onClose={() => setShowInstall(false)} />}
         </header>
 
