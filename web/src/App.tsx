@@ -52,6 +52,8 @@ export function App() {
     <VerifyBanner />
     <WakeBanner />
     <OfflineBanner />
+    {/* One main landmark for screen readers; each page sits inside it. */}
+    <main id="main">
     <Suspense fallback={null}>
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -76,6 +78,7 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </main>
     </>
   );
 }
