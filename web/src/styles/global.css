@@ -76,6 +76,9 @@ img { display: block; max-width: 100%; }
 .input { width: 100%; min-height: 48px; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--card);
   padding: 0 14px; font: 16px var(--font-body); color: var(--ink); }
 textarea.input { padding: 12px 14px; min-height: auto; resize: none; line-height: 1.5; }
+/* iPhone gives date fields a fixed minimum width, which pushed side-by-side dates off screen. */
+input.input[type='date'], input.input[type='time'] { min-width: 0; max-width: 100%; display: block; -webkit-appearance: none; appearance: none; text-align: left; }
+input.input[type='date']::-webkit-date-and-time-value { text-align: left; }
 .input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
 
 /* Legal pages */

@@ -4,6 +4,7 @@ import { Landing } from './pages/Landing';
 import { Discover } from './pages/Discover';
 import { VerifyBanner } from './components/VerifyBanner';
 import { WakeBanner } from './components/WakeBanner';
+import { OfflineBanner } from './components/OfflineBanner';
 
 const loaders: (() => Promise<unknown>)[] = [];
 
@@ -50,6 +51,7 @@ export function App() {
     <>
     <VerifyBanner />
     <WakeBanner />
+    <OfflineBanner />
     <Suspense fallback={null}>
       <Routes>
         <Route path="/" element={<Landing />} />

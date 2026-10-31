@@ -92,13 +92,15 @@ function useSave(existing?: TripView, onSaved?: () => void) {
     setError('');
     setFields({});
     try {
+      setProgress('Saving…');
       if (existing) {
-        setProgress('Saving…');
         await api.updateTrip(existing.id, input);
       } else if (!created.current) {
-        setProgress('Saving…');
         const trip = await api.createTrip(input);
         created.current = { id: trip.id, slug: trip.slug };
+      } else {
+        // An earlier try already made the draft: send what's on screen now, so fixes count.
+        await api.updateTrip(created.current.id, input);
       }
       const id = created.current!.id;
       for (const photoId of removals.filter((p) => !deleted.current.has(p))) {
@@ -126,8 +128,11 @@ function useSave(existing?: TripView, onSaved?: () => void) {
       onSaved?.();
       navigate(`/trips/${created.current!.slug}`);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Something went wrong. Try again.';
-      const draftNote = !existing && created.current ? '. Your story is saved as a private draft; press the button again to retry.' : '';
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const msg = offline
+        ? "You're offline. Your writing is kept on this phone; publish when you're back online"
+        : err instanceof ApiError ? err.message : 'Something went wrong. Try again';
+      const draftNote = !existing && created.current ? '. It is saved as a private draft for now.' : '.';
       setError(msg + draftNote);
       if (err instanceof ApiError) setFields(err.fields);
     } finally {
@@ -135,7 +140,14 @@ function useSave(existing?: TripView, onSaved?: () => void) {
       setProgress('');
     }
   }
-  return { save, busy, progress, error, setError, fields };
+  /** Shows what's missing and takes the writer straight to it. */
+  function needs(fieldId: string, message: string) {
+    setError(message);
+    const el = document.getElementById(fieldId);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => el?.focus({ preventScroll: true }), 350);
+  }
+  return { save, busy, progress, error, setError, fields, needs };
 }
 
 /** A photo slot: a new file to upload, or the photo already on the story (editing). */
@@ -158,7 +170,7 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
     existing?.sections.length ? existing.sections.map((s) => ({ caption: s.body, file: null, existing: s.photo })) : [{ caption: '', ...emptySlot() }]);
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
   const draft = useAutosave(`short:${existing?.id ?? 'new'}`, { tag, title, place, visibility, captions: items.map((it) => it.caption) });
-  const { save, busy, progress, error, setError, fields } = useSave(existing, draft.clear);
+  const { save, busy, progress, error, fields, needs } = useSave(existing, draft.clear);
 
   function restore() {
     const d = draft.accept();
@@ -170,7 +182,8 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
     const blank = items.findIndex((it) => !it.caption.trim());
-    if (blank >= 0 && (items.length > 1 || items[blank].file || items[blank].existing)) return setError(`Add a line for photo ${blank + 1}, or remove it`);
+    if (blank >= 0 && (items.length > 1 || items[blank].file || items[blank].existing)) return needs(`cap${blank}`, `Add a line for photo ${blank + 1}, or remove it.`);
+    if (publish && !items.some((it) => it.caption.trim())) return needs('cap0', 'Add a photo with a line before posting. Save draft works without one.');
     const input: TripInput = { kind: 'SHORT', shortTag: tag, title, place, visibility, sections: items.filter((it) => it.caption.trim()).map((it) => ({ body: it.caption })) };
     const uploads = items.flatMap((it, position) => (it.file ? [{ file: it.file, role: 'SECTION' as const, position }] : []));
     save(input, uploads, removedPhotos(original, items), publish);
@@ -240,7 +253,7 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
   const fromAtlas = atlas ? { days: atlas.sections.length, kept: Math.min(atlas.sections.length, maxSections) } : null;
   const draft = useAutosave(`full:${existing?.id ?? 'new'}`, {
     f, visibility, moments, sections: sections.map(({ heading, body, photoCaption }) => ({ heading, body, photoCaption })) });
-  const { save, busy, progress, error, setError, fields } = useSave(existing, draft.clear);
+  const { save, busy, progress, error, fields, needs } = useSave(existing, draft.clear);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
 
   function restore() {
@@ -254,7 +267,10 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
     e.preventDefault();
     const blank = sections.findIndex((s) => !s.body.trim());
     if (blank >= 0 && (sections.length > 1 || sections[blank].file || sections[blank].existing)) {
-      return setError(`Write the story for section ${blank + 1}, or remove it`);
+      return needs(`b${blank}`, `Write the story for section ${blank + 1}, or remove it.`);
+    }
+    if (publish && !sections.some((s) => s.body.trim())) {
+      return needs('b0', 'Write at least one story section before publishing. Save draft works without one.');
     }
     const input: TripInput = {
       kind: 'FULL', title: f.title, place: f.place, visibility,
@@ -371,7 +387,7 @@ function TextField(props: {
   const { id, label, value, onChange, max, error, placeholder, type = 'text', multiline, display } = props;
   const style = { ...(display ? { fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 } : {}), ...(error ? { borderColor: '#B3261E' } : {}) };
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: 14, minWidth: 0 }}>
       <label htmlFor={id} className="field-label">{label}</label>
       {multiline
         ? <textarea id={id} className="input" rows={3} maxLength={max} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={style} aria-invalid={!!error} />

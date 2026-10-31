@@ -18,12 +18,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class AdminController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminController.class);
+
     private final ModerationService moderation;
     private final AdminStatsService stats;
+    private final com.weyvo.api.photo.PhotoService photos;
+    private final com.weyvo.api.user.UserRepository users;
 
-    public AdminController(ModerationService moderation, AdminStatsService stats) {
+    public AdminController(ModerationService moderation, AdminStatsService stats, com.weyvo.api.photo.PhotoService photos,
+                           com.weyvo.api.user.UserRepository users) {
         this.moderation = moderation;
         this.stats = stats;
+        this.photos = photos;
+        this.users = users;
     }
 
     /**
@@ -51,6 +58,22 @@ public class AdminController {
     public List<AdminStatsService.UserRow> users(@AuthenticationPrincipal CurrentUser user, @RequestParam(defaultValue = "") String q) {
         requireAdmin(user);
         return stats.users(q);
+    }
+
+    public record DeletePhotos(String username, String confirm) {}
+
+    /** Testing tool: delete all story photos, or one account's. The exact phrase must be typed to confirm. */
+    @PostMapping("/api/admin/photos/delete")
+    public java.util.Map<String, Integer> deletePhotos(@AuthenticationPrincipal CurrentUser user, @org.springframework.web.bind.annotation.RequestBody DeletePhotos body) {
+        requireAdmin(user);
+        if (body == null || !"DELETE PHOTOS".equals(body.confirm())) throw ApiException.badRequest("Type DELETE PHOTOS to confirm");
+        Long ownerId = null;
+        if (body.username() != null && !body.username().isBlank()) {
+            ownerId = users.findByUsernameIgnoreCase(body.username().strip()).map(com.weyvo.api.user.User::getId).orElseThrow(ApiException::notFound);
+        }
+        int n = photos.deleteAllPhotos(ownerId);
+        log.info("Admin {} deleted {} photos ({})", user.id(), n, ownerId == null ? "all accounts" : "account " + ownerId);
+        return java.util.Map.of("deleted", n);
     }
 
     @PostMapping("/api/admin/users/{username}/restore")

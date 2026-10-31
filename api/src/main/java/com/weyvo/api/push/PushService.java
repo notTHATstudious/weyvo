@@ -77,6 +77,11 @@ public class PushService {
             throw ApiException.badRequest("That notification subscription isn't valid");
         }
         // One device belongs to one account: signing in as someone else on it moves the subscription.
+        // At most 10 devices per account; the oldest goes first.
+        jdbc.update("""
+                DELETE FROM push_subscriptions WHERE id IN (
+                  SELECT id FROM push_subscriptions WHERE user_id = :u AND endpoint <> :e ORDER BY created_at DESC OFFSET 9)""",
+                new MapSqlParameterSource().addValue("u", userId).addValue("e", endpoint));
         jdbc.update("""
                 INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (:u, :e, :p, :a)
                 ON CONFLICT (endpoint) DO UPDATE SET user_id = :u, p256dh = :p, auth = :a""",

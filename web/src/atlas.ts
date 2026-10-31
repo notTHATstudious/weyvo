@@ -14,7 +14,7 @@ export function atlasLink(trip: { to?: string; from?: string; depart?: string; r
   if (trip.ret) q.set('return', trip.ret);
   if (trip.style) q.set('style', trip.style);
   // Where "Back to Weyvo" returns to: a path on Weyvo only.
-  q.set('back', trip.back && trip.back.startsWith('/') && !trip.back.startsWith('//') ? trip.back : '/plan');
+  q.set('back', trip.back && /^\/(?![\/\\])[^\\\s]*$/.test(trip.back) ? trip.back : '/plan');
   return `${ATLAS_URL}/?${q.toString()}`;
 }
 

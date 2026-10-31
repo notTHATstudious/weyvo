@@ -150,6 +150,15 @@ class ModerationIntegrationTest {
 
         mvc.perform(post("/api/admin/users/" + writer.username() + "/suspend").cookie(admin.cookie())).andExpect(status().isNoContent());
         mvc.perform(post("/api/admin/users/" + writer.username() + "/restore").cookie(admin.cookie())).andExpect(status().isNoContent());
+
+        // Deleting photos (testing tool): admins only, and only with the exact phrase.
+        String body = "{\"username\":\"" + writer.username() + "\",\"confirm\":\"DELETE PHOTOS\"}";
+        Account plain = signup("plain");
+        mvc.perform(post("/api/admin/photos/delete").cookie(plain.cookie()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/photos/delete").cookie(admin.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"confirm\":\"delete\"}")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/admin/photos/delete").cookie(admin.cookie()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.deleted").value(0));
         mvc.perform(get("/api/trips/" + story.slug())).andExpect(status().isOk());
     }
 

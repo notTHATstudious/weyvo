@@ -149,6 +149,20 @@ public class PhotoService {
     }
 
     /** Storage isn't transactional, so files are removed only once the database change has committed. */
+    /**
+     * Testing tool for admins: removes every story photo (or one account's), rows and files. Stories stay and
+     * show their illustrations instead. Returns how many photos were removed.
+     */
+    @Transactional
+    public int deleteAllPhotos(Long ownerId) {
+        List<TripPhoto> gone = ownerId == null
+                ? photos.findAll()
+                : photos.findAll().stream().filter(p -> trips.findById(p.getTripId()).map(t -> t.isOwnedBy(ownerId)).orElse(false)).toList();
+        photos.deleteAll(gone);
+        deleteFilesAfterCommit(gone);
+        return gone.size();
+    }
+
     private void deleteFilesAfterCommit(Collection<TripPhoto> removed) {
         if (removed.isEmpty()) return;
         List<String> keys = new ArrayList<>();

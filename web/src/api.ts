@@ -147,7 +147,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
         clearTimeout(timeout);
       }
       const starting = !res || res.status === 502 || res.status === 503 || res.status === 504;
-      if (!starting || !retryable || Date.now() > giveUpAt) break;
+      // No connection at all: say so now rather than retrying for a minute.
+      if (!starting || !retryable || Date.now() > giveUpAt || navigator.onLine === false) break;
       await sleep(Math.min(2000 * attempt, 8000));
     }
   } finally {
@@ -218,6 +219,7 @@ export const api = {
   adminDecide: (kind: AdminReport['kind'], id: number, decision: 'hide' | 'keep') => request<void>('POST', `/admin/reports/${kind.toLowerCase()}/${id}/${decision}`),
   adminStats: () => request<AdminStats>('GET', '/admin/stats'),
   adminUsers: (q: string) => request<AdminUser[]>('GET', `/admin/users?q=${encodeURIComponent(q)}`),
+  adminDeletePhotos: (username: string, confirm: string) => request<{ deleted: number }>('POST', '/admin/photos/delete', { username: username || null, confirm }),
   adminRestore: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/restore`),
   recordShare: (tripId: number, kind: 'LINK' | 'IMAGE') => request<void>('POST', `/trips/${tripId}/shares`, { kind }),
   adminSuspend: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/suspend`),

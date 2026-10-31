@@ -9,8 +9,9 @@ export type PushState = 'on' | 'off' | 'blocked' | 'add-to-home-screen' | 'unsup
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
 
+/** Offline use and notifications. Production only: in development it would keep old code around. */
 export function registerServiceWorker() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
 }
 
 export async function pushState(): Promise<PushState> {

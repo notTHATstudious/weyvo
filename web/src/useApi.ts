@@ -37,6 +37,17 @@ function persist() {
   }, 1000);
 }
 
+/** When each page query last came back from the server, so returning to the app can refresh stale ones. */
+const fetchedAt = new Map<string, number>();
+const STALE_AFTER = 30_000;
+const refreshers = new Set<() => void>();
+if (typeof document !== 'undefined') {
+  // Coming back to the app (switching tabs or apps, unlocking the phone) or back online: quietly refresh what's on screen.
+  const refreshAll = () => { if (document.visibilityState === 'visible') refreshers.forEach((r) => r()); };
+  document.addEventListener('visibilitychange', refreshAll);
+  window.addEventListener('online', refreshAll);
+}
+
 export function clearApiCache() {
   recent.clear();
   try {
@@ -44,6 +55,8 @@ export function clearApiCache() {
   } catch {
     /* storage unavailable */
   }
+  // Photos kept for offline belong to whoever was signed in too.
+  if (typeof caches !== 'undefined') caches.delete('weyvo-photos').catch(() => undefined);
 }
 
 /** Loads data for a page; refetches when deps change and ignores responses that arrive after a newer request. */
@@ -54,12 +67,19 @@ export function useApi<T>(load: () => Promise<T>, deps: DependencyList) {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    const refresh = () => { if (Date.now() - (fetchedAt.get(key) ?? 0) > STALE_AFTER) setAttempt((a) => a + 1); };
+    refreshers.add(refresh);
+    return () => { refreshers.delete(refresh); };
+  }, [key]);
+
+  useEffect(() => {
     let current = true;
     const cached = recent.has(key);
     // With a cached copy on screen, refresh in the background; otherwise show loading.
     setState(cached ? { data: recent.get(key) as T, error: null, loading: false } : (s) => ({ ...s, loading: true, error: null }));
     load().then(
       (data) => {
+        fetchedAt.set(key, Date.now());
         recent.delete(key);
         recent.set(key, data);
         if (recent.size > MAX_RECENT) recent.delete(recent.keys().next().value as string);

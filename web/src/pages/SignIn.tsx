@@ -123,8 +123,12 @@ function Field(props: {
 }
 
 /** Only allow in-app return paths, never an external URL. */
+/**
+ * Where to go after signing in: only a path on Weyvo. "//site" and "/\\site" (which browsers read as
+ * another website), backslashes and control characters anywhere fall back to Discover.
+ */
 export function safeNext(next: string | null) {
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/discover';
+  return next && /^\/(?![\/\\])[^\\\s]*$/.test(next) && next.length <= 500 ? next : '/discover';
 }
 
 /**

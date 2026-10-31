@@ -18,7 +18,7 @@ export function WakeBanner() {
     const t = setTimeout(() => setLong(true), 11_000);
     return () => clearTimeout(t);
   }, [slow]);
-  if (!slow) return null;
+  if (!slow || !navigator.onLine) return null;
   return (
     <div role="status" style={{ position: 'fixed', top: 'max(10px, env(safe-area-inset-top))', left: '50%', transform: 'translateX(-50%)', zIndex: 80,
       maxWidth: 'min(92vw, 420px)', background: '#1C1B18', color: '#FBF8F2', borderRadius: 999, padding: long ? '10px 16px' : '7px 14px',

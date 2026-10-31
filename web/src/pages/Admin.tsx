@@ -166,7 +166,45 @@ function SystemSection({ s }: { s: AdminStats['system'] }) {
         <button type="button" className="btn btn-outline" style={{ minHeight: 32, padding: '0 12px', fontSize: 12, marginTop: 10 }}
           onClick={() => { clearApiCache(); setDevice(deviceUsage()); }}>Clear saved pages</button>
       </div>
+      <DeletePhotos />
     </Section>
+  );
+}
+
+/** Testing tool: remove story photos (everyone's, or one account's). Needs the exact phrase typed. */
+function DeletePhotos() {
+  const [username, setUsername] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const ready = confirm === 'DELETE PHOTOS';
+  async function run() {
+    setBusy(true);
+    setNote('');
+    try {
+      const { deleted } = await api.adminDeletePhotos(username.trim(), confirm);
+      setNote(`Deleted ${deleted} ${deleted === 1 ? 'photo' : 'photos'}. Stories now show their illustrations.`);
+      setConfirm('');
+    } catch (err) {
+      setNote(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+      <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#B3261E', letterSpacing: '.08em', textTransform: 'uppercase' }}>Testing tools</p>
+      <p style={{ margin: '4px 0 10px', fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+        Delete story photos from the database and storage. Stories stay; this can't be undone.
+      </p>
+      <input className="input" placeholder="Username (empty = everyone's photos)" value={username} onChange={(e) => setUsername(e.target.value)} style={{ marginBottom: 8 }} />
+      <input className="input" placeholder="Type DELETE PHOTOS to confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoCapitalize="characters" />
+      <button type="button" className="btn btn-block" disabled={!ready || busy} onClick={run}
+        style={{ marginTop: 10, minHeight: 42, background: ready ? '#B3261E' : 'var(--line-strong)', color: '#fff' }}>
+        {busy ? 'Deleting…' : username.trim() ? `Delete ${username.trim()}'s photos` : "Delete everyone's photos"}
+      </button>
+      {note && <p role="status" style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--ink-soft)' }}>{note}</p>}
+    </div>
   );
 }
 

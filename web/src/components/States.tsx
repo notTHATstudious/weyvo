@@ -32,7 +32,26 @@ export function friendly(message: string): { title: string; body: string } {
   return { title: 'That didn’t work', body: message };
 }
 
+/** With no connection: what still works, instead of a dead end. */
+function OfflineCard({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div role="status" className="paper-card rise" style={{ textAlign: 'center', padding: '26px 20px' }}>
+      <p className="display" style={{ margin: 0, fontSize: 24 }}>You're offline</p>
+      <p style={{ margin: '8px auto 0', maxWidth: 320, fontSize: 14, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+        Stories you've opened are still here. Meanwhile, you can still:
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, alignItems: 'stretch', maxWidth: 300, marginInline: 'auto' }}>
+        <Link to="/create" className="btn btn-primary">Write a story</Link>
+        <span style={{ fontSize: 12, color: 'var(--muted)', marginTop: -2 }}>Kept on this phone; post it when you're back online.</span>
+        <a href="https://bubdub-s-atlas.onrender.com/?ref=weyvo" className="btn btn-outline">Your saved trip plans</a>
+        {onRetry && <button type="button" className="btn btn-outline" style={{ borderColor: 'var(--line-strong)' }} onClick={onRetry}>Try again</button>}
+      </div>
+    </div>
+  );
+}
+
 export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return <OfflineCard onRetry={onRetry} />;
   const { title, body } = friendly(message);
   return (
     <div role="alert" className="paper-card rise" style={{ textAlign: 'center', padding: '28px 20px' }}>
