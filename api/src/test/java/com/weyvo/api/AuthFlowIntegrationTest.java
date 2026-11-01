@@ -3,6 +3,7 @@ package com.weyvo.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -60,7 +61,6 @@ class AuthFlowIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate db;
 
-    private record Account(Cookie cookie, String email) {}
 
     @BeforeEach
     void clearOutbox() {
@@ -68,18 +68,23 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void unverifiedAccountsCanReadButNotPostUntilTheCodeIsEntered() throws Exception {
-        Account a = signup("newbie");
-        String code = lastCodeFor(a.email());
+    void noSessionUntilTheEmailedCodeIsEntered() throws Exception {
+        String email = signup("newbie");
+        String code = lastCodeFor(email);
         assertThat(code).matches("\\d{6}");
 
-        mvc.perform(get("/api/auth/me").cookie(a.cookie())).andExpect(jsonPath("$.emailVerified").value(false));
-        mvc.perform(get("/api/trips").cookie(a.cookie())).andExpect(status().isOk());
-        createTrip(a).andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Verify your email to do that"));
+        // The right password alone doesn't sign an unconfirmed account in; it sends a fresh code instead.
+        login(email, "correct-horse-battery").andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("verify_email"))
+                .andExpect(header().doesNotExist("Set-Cookie"));
 
-        verify(a, wrong(code)).andExpect(status().isBadRequest());
-        verify(a, code).andExpect(status().isOk()).andExpect(jsonPath("$.emailVerified").value(true));
-        createTrip(a).andExpect(status().isCreated());
+        complete(email, wrong(lastCodeFor(email))).andExpect(status().isBadRequest());
+        Cookie session = complete(email, lastCodeFor(email)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailVerified").value(true))
+                .andReturn().getResponse().getCookie("weyvo_session");
+        assertThat(session).isNotNull();
+        createTrip(session).andExpect(status().isCreated());
+        login(email, "correct-horse-battery").andExpect(status().isOk());
 
         // Only a keyed hash of the code is stored.
         String stored = db.queryForObject("SELECT code_hash FROM email_codes ORDER BY id DESC LIMIT 1", String.class);
@@ -88,63 +93,75 @@ class AuthFlowIntegrationTest {
 
     @Test
     void aCodeStopsWorkingAfterFiveWrongTries() throws Exception {
-        Account a = signup("guesser");
-        String code = lastCodeFor(a.email());
-        for (int i = 0; i < 5; i++) verify(a, wrong(code)).andExpect(status().isBadRequest());
-        verify(a, code).andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("That code has expired. Ask for a new one"));
+        String email = signup("guesser");
+        String code = lastCodeFor(email);
+        for (int i = 0; i < 5; i++) complete(email, wrong(code)).andExpect(status().isBadRequest());
+        complete(email, code).andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("That code has expired. Ask for a new one"));
     }
 
     @Test
-    void resendingHasACooldown() throws Exception {
-        Account a = signup("impatient");
-        mvc.perform(post("/api/auth/verify-email/resend").cookie(a.cookie())).andExpect(status().isTooManyRequests());
+    void askingForANewCodeRevealsNothingAndHasACooldown() throws Exception {
+        String email = signup("impatient");
+        int sent = OUTBOX.size();
+        sendCode(email).andExpect(status().isNoContent());
+        assertThat(OUTBOX).hasSize(sent); // still in the 60-second cooldown: quietly not sent
+        sendCode("nobody-" + UUID.randomUUID() + "@example.com").andExpect(status().isNoContent());
+        assertThat(OUTBOX).hasSize(sent);
     }
 
     @Test
     void passwordResetDoesNotRevealAccountsAndSignsOutOtherSessions() throws Exception {
-        Account a = signup("forgetful");
+        String email = signup("forgetful");
+        Cookie old = complete(email, lastCodeFor(email)).andReturn().getResponse().getCookie("weyvo_session");
         OUTBOX.clear();
 
         forgot("nobody-" + UUID.randomUUID() + "@example.com").andExpect(status().isNoContent());
         assertThat(OUTBOX).isEmpty();
-        forgot(a.email()).andExpect(status().isNoContent());
-        String code = lastCodeFor(a.email());
+        forgot(email).andExpect(status().isNoContent());
+        String code = lastCodeFor(email);
 
-        reset(a.email(), wrong(code), "a-brand-new-password").andExpect(status().isBadRequest());
-        Cookie fresh = reset(a.email(), code, "a-brand-new-password").andExpect(status().isOk())
+        reset(email, wrong(code), "a-brand-new-password").andExpect(status().isBadRequest());
+        Cookie fresh = reset(email, code, "a-brand-new-password").andExpect(status().isOk())
                 .andReturn().getResponse().getCookie("weyvo_session");
 
-        mvc.perform(get("/api/auth/me").cookie(a.cookie())).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").cookie(old)).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/auth/me").cookie(fresh)).andExpect(status().isOk());
-        login(a.email(), "correct-horse-battery").andExpect(status().isUnauthorized());
-        login(a.email(), "a-brand-new-password").andExpect(status().isOk());
+        login(email, "correct-horse-battery").andExpect(status().isUnauthorized());
+        login(email, "a-brand-new-password").andExpect(status().isOk());
     }
 
     @Test
     void repeatedFailedLoginsAreSlowedDown() throws Exception {
-        Account a = signup("target");
-        for (int i = 0; i < 3; i++) login(a.email(), "wrong-password-" + i).andExpect(status().isUnauthorized());
-        login(a.email(), "correct-horse-battery").andExpect(status().isTooManyRequests());
+        String email = signup("target");
+        for (int i = 0; i < 3; i++) login(email, "wrong-password-" + i).andExpect(status().isUnauthorized());
+        login(email, "correct-horse-battery").andExpect(status().isTooManyRequests());
     }
 
     // ---- helpers ----
 
-    private Account signup(String name) throws Exception {
+    /** Signs up and returns the email. Sign-up itself never returns a session. */
+    private String signup(String name) throws Exception {
         String username = name + "_" + UUID.randomUUID().toString().substring(0, 8);
         String email = username + "@example.com";
-        Cookie cookie = mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"correct-horse-battery\",\"username\":\"" + username + "\",\"displayName\":\"Test\"}"))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getCookie("weyvo_session");
-        return new Account(cookie, email);
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.code").value("verify_email"))
+                .andExpect(header().doesNotExist("Set-Cookie"));
+        return email;
     }
 
-    private ResultActions verify(Account a, String code) throws Exception {
-        return mvc.perform(post("/api/auth/verify-email").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"" + code + "\"}"));
+    private ResultActions complete(String email, String code) throws Exception {
+        return mvc.perform(post("/api/auth/verify-email/complete").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"code\":\"" + code + "\"}"));
     }
 
-    private ResultActions createTrip(Account a) throws Exception {
-        return mvc.perform(post("/api/trips").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON)
+    private ResultActions sendCode(String email) throws Exception {
+        return mvc.perform(post("/api/auth/verify-email/send").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + email + "\"}"));
+    }
+
+    private ResultActions createTrip(Cookie session) throws Exception {
+        return mvc.perform(post("/api/trips").cookie(session).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"kind\":\"FULL\",\"title\":\"First\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\"One\"}]}"));
     }
 

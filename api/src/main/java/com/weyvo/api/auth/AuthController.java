@@ -43,6 +43,17 @@ public class AuthController {
 
     public record CodeRequest(@NotBlank String code) {}
 
+    public record EmailCodeRequest(@NotBlank @Email String email, @NotBlank String code) {}
+
+    public record EmailRequest(@NotBlank @Email String email) {}
+
+    /** Sign-up and sign-in reply while the email code is still needed: no session yet. */
+    public record PendingVerification(String error, String code, String email) {
+        static PendingVerification of(String email, String message) {
+            return new PendingVerification(message, "verify_email", email);
+        }
+    }
+
     public record ForgotRequest(@NotBlank @Email String email) {}
 
     public record ResetRequest(
@@ -86,7 +97,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     @Transactional
-    public ResponseEntity<MeResponse> signup(@Valid @RequestBody SignupRequest req, HttpServletRequest http) {
+    public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req, HttpServletRequest http) {
         limits.attempt("signup-ip", http.getRemoteAddr(), rules.signupsPerIpPerHour(), HOUR, SLOW_DOWN);
         emailPolicy.requireAcceptable(req.email());
         if (users.existsByEmailIgnoreCase(req.email())) throw ApiException.conflict("That email is already registered");
@@ -94,11 +105,15 @@ public class AuthController {
         User user = users.save(new User(req.email().trim(), passwords.encode(req.password()), req.username(), req.displayName().trim()));
         log.info("Account created userId={}", user.getId());
         sendCode(user, Purpose.VERIFY, false);
+        // No partial accounts: nothing is signed in until the emailed code is entered.
+        if (rules.requireVerifiedEmail()) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(PendingVerification.of(user.getEmail(), "Enter the code we emailed you"));
+        }
         return withSession(user, HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<MeResponse> login(@Valid @RequestBody LoginRequest req, HttpServletRequest http) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest http) {
         limits.attempt("login-ip", http.getRemoteAddr(), rules.loginPerIpPer15Min(), FIFTEEN_MIN, SLOW_DOWN);
         limits.attempt("login-email", req.email(), rules.loginPerEmailPer15Min(), FIFTEEN_MIN, SLOW_DOWN);
         User user = users.findByEmailIgnoreCase(req.email().trim())
@@ -109,6 +124,16 @@ public class AuthController {
             // Never log the email or password; a burst of these lines is the signal for a rate limit.
             log.warn("Failed sign-in attempt");
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect");
+        }
+        if (rules.requireVerifiedEmail() && !user.isEmailVerified()) {
+            // Right password, but the email was never confirmed: send a fresh code (unless one just went out).
+            try {
+                sendCode(user, Purpose.VERIFY, true);
+            } catch (ApiException e) {
+                log.info("Verification code not resent userId={} ({})", user.getId(), e.getStatus().value());
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(PendingVerification.of(user.getEmail(), "Enter the code we emailed you to finish signing in"));
         }
         log.info("Signed in userId={}", user.getId());
         return withSession(user, HttpStatus.OK);
@@ -140,6 +165,39 @@ public class AuthController {
             log.info("Email verified userId={}", user.getId());
         }
         return MeResponse.of(user);
+    }
+
+    /**
+     * Finishes sign-up (or a sign-in held back for verification): the emailed code proves the inbox, and
+     * only then is a session issued. Same limits as signing in; a wrong code counts as an attempt.
+     */
+    @PostMapping("/verify-email/complete")
+    @Transactional(noRollbackFor = ApiException.class)
+    public ResponseEntity<MeResponse> completeVerification(@Valid @RequestBody EmailCodeRequest req, HttpServletRequest http) {
+        limits.attempt("verify-ip", http.getRemoteAddr(), rules.loginPerIpPer15Min(), FIFTEEN_MIN, SLOW_DOWN);
+        // Each code already dies after 5 wrong tries; this only stops endless new-code-and-guess cycles.
+        limits.attempt("verify-email", req.email(), 20, FIFTEEN_MIN, SLOW_DOWN);
+        User user = users.findByEmailIgnoreCase(req.email().trim()).filter(User::isActive).filter(u -> !u.isEmailVerified())
+                .orElseThrow(() -> ApiException.badRequest("That code has expired. Ask for a new one"));
+        codes.consume(user.getId(), Purpose.VERIFY, req.code());
+        user.markEmailVerified(Instant.now());
+        users.saveAndFlush(user);
+        log.info("Email verified userId={}", user.getId());
+        return withSession(user, HttpStatus.OK);
+    }
+
+    /** A new code for an unfinished sign-up. Always the same reply, so it reveals nothing about accounts. */
+    @PostMapping("/verify-email/send")
+    public ResponseEntity<Void> sendVerification(@Valid @RequestBody EmailRequest req, HttpServletRequest http) {
+        limits.attempt("verify-send-ip", http.getRemoteAddr(), 10, HOUR, SLOW_DOWN);
+        users.findByEmailIgnoreCase(req.email().trim()).filter(User::isActive).filter(u -> !u.isEmailVerified()).ifPresent(user -> {
+            try {
+                sendCode(user, Purpose.VERIFY, true);
+            } catch (ApiException e) {
+                log.info("Verification code not sent userId={} ({})", user.getId(), e.getStatus().value());
+            }
+        });
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/verify-email/resend")

@@ -130,9 +130,13 @@ export function Profile() {
       <div style={{ margin: '20px 20px 0' }}><TravelMap username={p.username} /></div>
 
       <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', textAlign: 'center' }}>
-        {stats.map(([n, l]) => (
-          <div key={l}><p className="display" style={{ margin: 0, fontSize: 28 }}>{n}</p><p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>{l}</p></div>
-        ))}
+        {stats.map(([n, l]) => {
+          const inner = <><p className="display" style={{ margin: 0, fontSize: 28 }}>{n}</p><p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>{l}</p></>;
+          // Followers and following open their lists.
+          return l === 'followers' || l === 'following'
+            ? <Link key={l} to={`/u/${p.username}/${l}`} aria-label={`${n} ${l}`} style={{ color: 'var(--ink)', textDecoration: 'none', borderRadius: 12, padding: '4px 0' }}>{inner}</Link>
+            : <div key={l} style={{ padding: '4px 0' }}>{inner}</div>;
+        })}
       </div>
 
       {/* One shelf at a time, so long lists never push the others far down the page. */}

@@ -111,8 +111,7 @@ class BillingIntegrationTest {
     @Test
     void unverifiedAccountsCannotBuy() throws Exception {
         Account a = signup("early", false);
-        mvc.perform(post("/api/billing/orders").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON).content("{\"period\":\"MONTH\"}"))
-                .andExpect(status().isForbidden());
+        assertThat(a.cookie()).isNull(); // never signed in until the email is confirmed
         mvc.perform(post("/api/billing/orders").contentType(MediaType.APPLICATION_JSON).content("{\"period\":\"MONTH\"}"))
                 .andExpect(status().isUnauthorized());
     }
@@ -155,13 +154,21 @@ class BillingIntegrationTest {
 
     private Account signup(String name, boolean verified) throws Exception {
         String username = name + "_" + UUID.randomUUID().toString().substring(0, 8);
-        Cookie cookie = mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + username + "@example.com\",\"password\":\"correct-horse-battery\",\"username\":\"" + username + "\",\"displayName\":\"Test\"}"))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getCookie("weyvo_session");
-        if (verified) db.update("UPDATE users SET email_verified_at = now() WHERE username = ?", username);
-        return new Account(cookie, username);
+        String email = username + "@example.com";
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"correct-horse-battery\",\"username\":\"" + username + "\",\"displayName\":\"Test\"}"))
+                .andExpect(status().isAccepted());
+        if (!verified) return new Account(null, username);
+        db.update("UPDATE users SET email_verified_at = now() WHERE username = ?", username);
+        return new Account(login(email), username);
     }
+
+    /** Signs in and returns the session cookie (null when the server holds the sign-in back). */
+    private Cookie login(String email) throws Exception {
+        return mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"correct-horse-battery\"}")).andReturn().getResponse().getCookie("weyvo_session");
+    }
+
 
     private static String sign(String secret, String data) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");

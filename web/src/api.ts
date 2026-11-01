@@ -76,6 +76,7 @@ export interface SearchResults {
   places: { slug: string; name: string; country: string | null; stories: number }[];
   stories: TripCard[];
 }
+export interface FollowPerson { username: string; displayName: string; avatarUrl: string | null; followedByMe: boolean }
 export interface BlockedUser { username: string; displayName: string; avatarUrl: string | null }
 export interface AdminReport {
   kind: 'TRIP' | 'COMMENT' | 'QUESTION'; id: number; text: string | null; author: string; tripSlug: string; tripTitle: string;
@@ -95,10 +96,14 @@ export interface TripInput {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number, readonly fields: Record<string, string> = {}) {
+  /** `code` is set for errors the app acts on, e.g. 'verify_email' with the `email` to verify. */
+  constructor(message: string, readonly status: number, readonly fields: Record<string, string> = {}, readonly code?: string, readonly email?: string) {
     super(message);
   }
 }
+
+/** Sign-up (and a sign-in held back) waits for the emailed code: no session yet. */
+export interface PendingVerification { code: 'verify_email'; email: string }
 
 // ---- waking a sleeping server ----
 // The free API host sleeps when idle and takes up to a minute to start. Requests that are slow or hit a
@@ -160,13 +165,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(data.error ?? 'Something went wrong. Try again.', res.status, data.fields);
+  if (!res.ok) throw new ApiError(data.error ?? 'Something went wrong. Try again.', res.status, data.fields, data.code, data.email);
   return data as T;
 }
 
 export const api = {
   me: () => request<Me>('GET', '/auth/me'),
-  signup: (b: { email: string; password: string; username: string; displayName: string }) => request<Me>('POST', '/auth/signup', b),
+  signup: (b: { email: string; password: string; username: string; displayName: string }) => request<Me | PendingVerification>('POST', '/auth/signup', b),
+  completeVerification: (email: string, code: string) => request<Me>('POST', '/auth/verify-email/complete', { email, code }),
+  sendVerification: (email: string) => request<void>('POST', '/auth/verify-email/send', { email }),
   login: (b: { email: string; password: string }) => request<Me>('POST', '/auth/login', b),
   logout: () => request<void>('POST', '/auth/logout'),
   logoutEverywhere: () => request<void>('POST', '/auth/logout-everywhere'),
@@ -223,6 +230,7 @@ export const api = {
   adminRestore: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/restore`),
   recordShare: (tripId: number, kind: 'LINK' | 'IMAGE') => request<void>('POST', `/trips/${tripId}/shares`, { kind }),
   adminSuspend: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/suspend`),
+  followList: (username: string, which: 'followers' | 'following') => request<FollowPerson[]>('GET', `/users/${encodeURIComponent(username)}/${which}`),
   follow: (username: string, on: boolean) => request<FollowStats>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/follow`),
   createTrip: (b: TripInput) => request<TripView>('POST', '/trips', b),
   updateTrip: (id: number, b: TripInput) => request<TripView>('PUT', `/trips/${id}`, b),

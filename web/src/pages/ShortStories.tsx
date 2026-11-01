@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode, useRef } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, sceneFor, TAG_LABEL, type ShortTag } from '../api';
+import { api, sceneFor, TAG_LABEL, type ShortTag, type TripView } from '../api';
 import { Avatar } from '../components/Avatar';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
@@ -38,13 +38,31 @@ export function ShortStories() {
   }, [feed.data]);
 
   const card = list.length ? list[si % list.length] : null;
-  const detail = useApi(() => (card ? api.trip(card.slug) : Promise.resolve(null)), [card?.slug, user?.id]);
-  const story = detail.data && card && detail.data.id === card.id ? detail.data : null;
+  // Each story's photos and captions, loaded for this story and the ones either side of it ahead of time,
+  // so moving on never waits on the network.
+  const [details, setDetails] = useState<Record<string, TripView>>({});
+  const asked = useRef(new Set<string>());
+  useEffect(() => {
+    asked.current.clear();
+    setDetails({});
+  }, [user?.id]);
+  useEffect(() => {
+    if (!list.length) return;
+    const around = [si, si + 1, si + 2, si - 1].map((i) => list[((i % list.length) + list.length) % list.length]);
+    for (const c of around) {
+      if (!c || asked.current.has(c.slug)) continue;
+      asked.current.add(c.slug);
+      api.trip(c.slug).then((v) => setDetails((d) => ({ ...d, [c.slug]: v })), () => asked.current.delete(c.slug));
+      if (c.cover?.url) new Image().src = c.cover.url;
+    }
+  }, [si, list]);
+  const story = card ? details[card.slug] ?? null : null;
 
   const total = story ? story.totalSections : 1;
   const n = Math.max(1, list.length);
   const authorAt = (i: number) => list[((i % n) + n) % n]?.author.username;
   const nextStory = () => { setSi((i) => (i + 1) % n); setPi(0); };
+  const prevStory = () => { setSi((i) => (i - 1 + n) % n); setPi(0); };
   // The buttons move between people: skip the rest of this person's stories, or go back to the start of the previous person's.
   const nextPerson = () => {
     setSi((i) => {
@@ -64,9 +82,10 @@ export function ShortStories() {
     setPi(0);
   };
   const nextPhoto = () => (pi < total - 1 ? setPi(pi + 1) : nextStory());
-  const prevPhoto = () => pi > 0 && setPi(pi - 1);
+  const prevPhoto = () => (pi > 0 ? setPi(pi - 1) : prevStory());
 
-  // Swipe up for the next person's story, like Reels; swipe down to close.
+  // Swipe up for the next story, swipe down for the previous one; sideways swipes move between sections
+  // (handled app-wide). Closing is the × button only, so a stray pull never throws you out.
   const touch = useRef<{ x: number; y: number; t: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     const p = e.touches[0];
@@ -79,16 +98,36 @@ export function ShortStories() {
     const p = e.changedTouches[0];
     const dx = p.clientX - start.x;
     const dy = p.clientY - start.y;
-    if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(dx) * 1.5 || Date.now() - start.t > 800) return;
-    if (dy < 0) nextPerson();
-    else close();
+    if (Math.abs(dy) < 60 || Math.abs(dy) < Math.abs(dx) * 1.5 || Date.now() - start.t > 800) return;
+    if (dy < 0) nextStory();
+    else prevStory();
   };
+
+  // Tap anywhere on the photo: left third goes back a photo, the rest goes forward (then on to the next story).
+  const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!card || (e.target as HTMLElement).closest('a, button, input, label, [role="tab"]')) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    if (e.clientX - box.left < box.width * 0.35) prevPhoto();
+    else nextPhoto();
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') nextPhoto();
+      else if (e.key === 'ArrowLeft') prevPhoto();
+      else if (e.key === 'ArrowDown') nextStory();
+      else if (e.key === 'ArrowUp') prevStory();
+      else if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
   const close = () => (location.key !== 'default' ? navigate(-1) : navigate('/discover', { replace: true }));
 
   const shell = (children: ReactNode) => (
     <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
       style={{ position: 'fixed', inset: 0, background: '#0F0E0C', color: '#fff', display: 'flex', justifyContent: 'center', touchAction: 'pan-x', overscrollBehavior: 'none' }}>
-      <div style={{ position: 'relative', width: '100%', maxWidth: 480, height: '100%', overflow: 'hidden' }}>{children}</div>
+      <div onClick={onTap} style={{ position: 'relative', width: '100%', maxWidth: 480, height: '100%', overflow: 'hidden' }}>{children}</div>
     </div>
   );
 
@@ -163,8 +202,6 @@ export function ShortStories() {
         ))}
       </div>
 
-      <button type="button" onClick={prevPhoto} aria-label="Previous photo" style={{ position: 'absolute', left: 0, top: 130, width: '35%', bottom: 280, border: 0, background: 'transparent' }} />
-      <button type="button" onClick={nextPhoto} aria-label="Next photo" style={{ position: 'absolute', right: 72, top: 130, width: '45%', bottom: 280, border: 0, background: 'transparent' }} />
 
       {hidden && (
         <div style={{ position: 'absolute', left: 24, right: 24, top: '34%', textAlign: 'center' }}>

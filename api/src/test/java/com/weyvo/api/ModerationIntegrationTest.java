@@ -182,6 +182,20 @@ class ModerationIntegrationTest {
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("og:title")))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("Moderation test")));
 
+        // Follow lists: who follows whom, without blocked people.
+        mvc.perform(put("/api/users/" + writer.username() + "/follow").cookie(reader.cookie())).andExpect(status().isOk());
+        mvc.perform(get("/api/users/" + writer.username() + "/followers")).andExpect(jsonPath("$[0].username").value(reader.username()));
+        mvc.perform(get("/api/users/" + reader.username() + "/following").cookie(reader.cookie()))
+                .andExpect(jsonPath("$[0].username").value(writer.username())).andExpect(jsonPath("$[0].followedByMe").value(true));
+
+        // A short story's photos don't need a line each; a full trip's sections still need writing.
+        mvc.perform(post("/api/trips").cookie(writer.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"kind\":\"SHORT\",\"shortTag\":\"WEEKEND\",\"title\":\"Quiet\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\"\"},{\"body\":\"Sunset\"}]}"))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/trips").cookie(writer.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"kind\":\"FULL\",\"title\":\"Empty\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\" \"}]}"))
+                .andExpect(status().isBadRequest());
+
         // You can't react to your own story.
         mvc.perform(put("/api/trips/" + story.id() + "/reactions/been").cookie(writer.cookie())).andExpect(status().isBadRequest());
 

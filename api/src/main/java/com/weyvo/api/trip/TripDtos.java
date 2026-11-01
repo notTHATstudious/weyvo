@@ -17,7 +17,8 @@ public final class TripDtos {
 
     public record SectionInput(
             @Size(max = 60) String heading,
-            @NotBlank @Size(max = 500) String body,
+            // Required for full-trip sections (checked in TripService); a short story's photo may have no caption.
+            @Size(max = 500) String body,
             @Size(max = 120) String photoCaption) {}
 
     public record TripRequest(

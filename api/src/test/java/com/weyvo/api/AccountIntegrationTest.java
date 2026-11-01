@@ -51,7 +51,7 @@ class AccountIntegrationTest {
 
     @Test
     void profileCanBeEditedWithinLimits() throws Exception {
-        Account a = signup("profile", false);
+        Account a = signup("profile", true);
         mvc.perform(put("/api/me/profile").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"Asha Rao\",\"bio\":\"Hills and trains\"}"))
                 .andExpect(status().isOk());
@@ -108,11 +108,13 @@ class AccountIntegrationTest {
     }
 
     @Test
-    void unverifiedPeopleCanStillDeleteTheirAccountButCannotPost() throws Exception {
+    void anAccountWhoseEmailWasNeverConfirmedCannotSignIn() throws Exception {
         Account a = signup("unverified", false);
-        mvc.perform(post("/api/trips").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON).content(tripBody()))
+        assertThat(a.cookie()).isNull();
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + a.email() + "\",\"password\":\"correct-horse-battery\"}"))
                 .andExpect(status().isForbidden());
-        deleteAccount(a, "correct-horse-battery").andExpect(status().isNoContent());
+        mvc.perform(post("/api/trips").contentType(MediaType.APPLICATION_JSON).content(tripBody())).andExpect(status().isUnauthorized());
     }
 
     // ---- helpers ----
@@ -120,13 +122,21 @@ class AccountIntegrationTest {
     private Account signup(String name, boolean verified) throws Exception {
         String username = name + "_" + UUID.randomUUID().toString().substring(0, 8);
         String email = username + "@example.com";
-        Cookie cookie = mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\",\"password\":\"correct-horse-battery\",\"username\":\"" + username + "\",\"displayName\":\"Test\"}"))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getCookie("weyvo_session");
-        if (verified) db.update("UPDATE users SET email_verified_at = now() WHERE username = ?", username);
-        return new Account(cookie, username, email);
+                .andExpect(status().isAccepted());
+        // Signing in needs a confirmed email; tests confirm it directly instead of reading the emailed code.
+        if (!verified) return new Account(null, username, email);
+        db.update("UPDATE users SET email_verified_at = now() WHERE username = ?", username);
+        return new Account(login(email), username, email);
     }
+
+    /** Signs in and returns the session cookie (null when the server holds the sign-in back). */
+    private Cookie login(String email) throws Exception {
+        return mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"correct-horse-battery\"}")).andReturn().getResponse().getCookie("weyvo_session");
+    }
+
 
     private long createTrip(Account a) throws Exception {
         String res = mvc.perform(post("/api/trips").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON).content(tripBody()))

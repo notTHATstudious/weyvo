@@ -181,12 +181,12 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
-    const blank = items.findIndex((it) => !it.caption.trim());
-    if (blank >= 0 && (items.length > 1 || items[blank].file || items[blank].existing)) return needs(`cap${blank}`, `Add a line for photo ${blank + 1}, or remove it.`);
-    if (publish && !items.some((it) => it.caption.trim())) return needs('cap0', 'Add a photo with a line before posting. Save draft works without one.');
-    const input: TripInput = { kind: 'SHORT', shortTag: tag, title, place, visibility, sections: items.filter((it) => it.caption.trim()).map((it) => ({ body: it.caption })) };
-    const uploads = items.flatMap((it, position) => (it.file ? [{ file: it.file, role: 'SECTION' as const, position }] : []));
-    save(input, uploads, removedPhotos(original, items), publish);
+    // A photo's line is optional: keep every slot that has a photo or a line, drop empty ones.
+    const kept = items.filter((it) => it.caption.trim() || it.file || it.existing);
+    if (publish && kept.length === 0) return needs('cap0', 'Add at least one photo before posting. Save draft works without one.');
+    const input: TripInput = { kind: 'SHORT', shortTag: tag, title, place, visibility, sections: kept.map((it) => ({ body: it.caption.trim() })) };
+    const uploads = kept.flatMap((it, position) => (it.file ? [{ file: it.file, role: 'SECTION' as const, position }] : []));
+    save(input, uploads, removedPhotos(original, kept), publish);
   }
 
   const update = (i: number, patch: Partial<{ caption: string } & Slot>) =>
@@ -205,14 +205,14 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
       <TextField id="st" label="Title" value={title} onChange={setTitle} max={60} error={fields.title} placeholder="Sunday drive to Lonavala" display />
       <PlaceField id="sp" label="Where" value={place} onChange={setPlace} error={fields.place} placeholder="Lonavala, Maharashtra" />
 
-      <p className="field-label" style={{ marginTop: 4 }}>Photos <span>· up to {maxPhotos}, with a line each. JPEG or PNG</span></p>
+      <p className="field-label" style={{ marginTop: 4 }}>Photos <span>· up to {maxPhotos}; a line under each is optional. JPEG or PNG</span></p>
       {items.map((it, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
           <div style={{ flex: '0 0 88px' }}>
             <PhotoPicker file={it.file} existingUrl={it.existing?.thumbUrl} onChange={(file) => update(i, pick(file))} label={`photo ${i + 1}`} height={88} />
           </div>
           <label htmlFor={`cap${i}`} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Line for photo {i + 1}</label>
-          <textarea id={`cap${i}`} className="input" rows={3} maxLength={140} value={it.caption} placeholder={i === 0 ? 'Left at 5 am, chai at every bend' : 'Another moment'}
+          <textarea id={`cap${i}`} className="input" rows={3} maxLength={140} value={it.caption} placeholder={i === 0 ? 'Left at 5 am, chai at every bend (optional)' : 'A line about this photo (optional)'}
             onChange={(e) => update(i, { caption: e.target.value })} style={{ flex: 1 }} />
         </div>
       ))}

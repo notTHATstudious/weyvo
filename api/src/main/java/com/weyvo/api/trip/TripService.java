@@ -170,7 +170,7 @@ public class TripService {
     @Transactional
     public TripView publish(long ownerId, long tripId) {
         Trip trip = owned(ownerId, tripId);
-        if (trip.getSections().isEmpty()) throw ApiException.badRequest("Add at least one section or photo caption before publishing");
+        if (trip.getSections().isEmpty()) throw ApiException.badRequest("Add at least one photo or section before publishing");
         trip.publish();
         return view(trip.getSlug(), ownerId);
     }
@@ -207,7 +207,7 @@ public class TripService {
                 .mapToObj(i -> {
                     SectionInput s = sections.get(i);
                     String heading = req.kind() == Trip.Kind.FULL ? blankToNull(s.heading()) : null;
-                    return new TripSection(i, heading, s.body().trim(), blankToNull(s.photoCaption()));
+                    return new TripSection(i, heading, s.body() == null ? "" : s.body().trim(), blankToNull(s.photoCaption()));
                 })
                 .toList());
     }
@@ -221,10 +221,13 @@ public class TripService {
         if (req.kind() == Trip.Kind.FULL) {
             if (req.shortTag() != null) throw ApiException.badRequest("Only short stories have a tag");
             if (sections > limits.fullTripSections()) throw ApiException.badRequest("Your plan allows up to " + limits.fullTripSections() + " story sections");
+            if (req.sections() != null && req.sections().stream().anyMatch(s -> s.body() == null || s.body().isBlank())) {
+                throw ApiException.badRequest("Every story section needs some writing");
+            }
         } else {
             if (req.shortTag() == null) throw ApiException.badRequest("Pick what kind of escape this was");
             if (sections > limits.shortStoryPhotos()) throw ApiException.badRequest("Your plan allows up to " + limits.shortStoryPhotos() + " photos in a short story");
-            boolean longCaption = req.sections() != null && req.sections().stream().anyMatch(s -> s.body().trim().length() > MAX_SHORT_CAPTION);
+            boolean longCaption = req.sections() != null && req.sections().stream().anyMatch(s -> s.body() != null && s.body().trim().length() > MAX_SHORT_CAPTION);
             if (longCaption) throw ApiException.badRequest("Short story captions are up to " + MAX_SHORT_CAPTION + " characters");
             if (req.moments() != null && !req.moments().isEmpty()) throw ApiException.badRequest("Favourite moments are for full trips");
         }

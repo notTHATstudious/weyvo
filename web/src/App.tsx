@@ -5,6 +5,7 @@ import { Discover } from './pages/Discover';
 import { VerifyBanner } from './components/VerifyBanner';
 import { WakeBanner } from './components/WakeBanner';
 import { OfflineBanner } from './components/OfflineBanner';
+import { useSectionSwipe } from './sectionSwipe';
 
 const loaders: (() => Promise<unknown>)[] = [];
 
@@ -38,11 +39,13 @@ const Legal = page(() => import('./pages/Legal'), 'Legal');
 const Places = page(() => import('./pages/Places'), 'Places');
 const Search = page(() => import('./pages/Search'), 'Search');
 const Plan = page(() => import('./pages/Plan'), 'Plan');
+const FollowList = page(() => import('./pages/FollowList'), 'FollowList');
 
 // The saved theme is applied before first paint by the script in index.html; Settings changes it.
 export function App() {
   const { pathname } = useLocation();
   useEffect(preloadPages, []);
+  useSectionSwipe();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -62,6 +65,7 @@ export function App() {
         <Route path="/trips/:slug" element={<Story />} />
         <Route path="/trips/:slug/edit" element={<EditTrip />} />
         <Route path="/u/:handle" element={<Profile />} />
+        <Route path="/u/:handle/:list" element={<FollowList />} />
         <Route path="/create" element={<Create />} />
         <Route path="/search" element={<Search />} />
         <Route path="/plan" element={<Plan />} />

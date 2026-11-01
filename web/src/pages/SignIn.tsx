@@ -6,6 +6,7 @@ import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { Wordmark } from '../components/Wordmark';
+import { PasswordInput } from '../components/PasswordInput';
 
 /** Sign in and join on one page. ?mode=join opens the join form; ?next= returns the reader where they were. */
 export function SignIn() {
@@ -32,14 +33,17 @@ export function SignIn() {
     setFields({});
     try {
       if (mode === 'join') {
-        await signup(form);
-        navigate(`/verify?next=${encodeURIComponent(next)}`, { replace: true });
+        const pending = await signup(form);
+        navigate(pending ? `/verify?email=${encodeURIComponent(pending)}&next=${encodeURIComponent(next)}` : next, { replace: true });
       } else {
         await login(form.email, form.password);
         navigate(next, { replace: true });
       }
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (err instanceof ApiError && err.code === 'verify_email') {
+        // Right password, email never confirmed: a fresh code is on its way.
+        navigate(`/verify?email=${encodeURIComponent(err.email ?? form.email)}&next=${encodeURIComponent(next)}`, { replace: true });
+      } else if (err instanceof ApiError) {
         setError(err.message);
         setFields(err.fields);
       } else {
@@ -115,8 +119,11 @@ function Field(props: {
   return (
     <div style={{ marginBottom: 14 }}>
       <label htmlFor={id} className="field-label">{label}{hint && <span> · {hint}</span>}</label>
-      <input id={id} name={id} className="input" aria-invalid={!!error} aria-describedby={error ? `${id}-err` : undefined}
-        style={error ? { borderColor: '#B3261E' } : undefined} {...input} />
+      {input.type === 'password'
+        ? <PasswordInput id={id} name={id} aria-invalid={!!error} aria-describedby={error ? `${id}-err` : undefined}
+            style={error ? { borderColor: '#B3261E' } : undefined} {...input} />
+        : <input id={id} name={id} className="input" aria-invalid={!!error} aria-describedby={error ? `${id}-err` : undefined}
+            style={error ? { borderColor: '#B3261E' } : undefined} {...input} />}
       {error && <p id={`${id}-err`} style={{ margin: '6px 2px 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
   );

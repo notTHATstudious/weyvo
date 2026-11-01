@@ -4,6 +4,7 @@ import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { BackButton } from '../components/BackButton';
 import { Wordmark } from '../components/Wordmark';
+import { PasswordInput } from '../components/PasswordInput';
 
 /** Email → code + new password. The first step replies the same whether or not the account exists. */
 export function ForgotPassword() {
@@ -64,7 +65,7 @@ export function ForgotPassword() {
             <input id="code" className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} placeholder="123456" style={{ marginBottom: 14, letterSpacing: '0.3em' }} />
             <label htmlFor="password" className="field-label">New password <span>· at least 10 characters</span></label>
-            <input id="password" className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput id="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             {error && <p role="alert" style={{ margin: '8px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
             <button type="submit" className="btn btn-primary btn-block" disabled={busy || code.length !== 6 || password.length < 10} style={{ marginTop: 16 }}>
               {busy ? 'Saving…' : 'Reset password and sign in'}

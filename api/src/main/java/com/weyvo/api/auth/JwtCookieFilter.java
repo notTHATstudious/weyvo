@@ -28,10 +28,15 @@ public class JwtCookieFilter extends OncePerRequestFilter {
     private final JwtService jwt;
     private final NamedParameterJdbcTemplate jdbc;
 
-    public JwtCookieFilter(SessionCookie cookie, JwtService jwt, NamedParameterJdbcTemplate jdbc) {
+    /** When on, an account whose email was never confirmed is never signed in, even with an old cookie. */
+    private final boolean requireVerified;
+
+    public JwtCookieFilter(SessionCookie cookie, JwtService jwt, NamedParameterJdbcTemplate jdbc,
+                           @org.springframework.beans.factory.annotation.Value("${app.auth.require-verified-email:true}") boolean requireVerified) {
         this.cookie = cookie;
         this.jwt = jwt;
         this.jdbc = jdbc;
+        this.requireVerified = requireVerified;
     }
 
     @Override
@@ -67,8 +72,10 @@ public class JwtCookieFilter extends OncePerRequestFilter {
     private Optional<CurrentUser> load(JwtService.Claims claims) {
         return jdbc.query("""
                 SELECT id, username, email_verified_at IS NOT NULL AS verified, is_admin FROM users
-                WHERE id = :id AND status = 'ACTIVE' AND session_version = :sv""",
-                new MapSqlParameterSource().addValue("id", claims.userId()).addValue("sv", claims.sessionVersion()),
+                WHERE id = :id AND status = 'ACTIVE' AND session_version = :sv
+                  AND (email_verified_at IS NOT NULL OR NOT :requireVerified)""",
+                new MapSqlParameterSource().addValue("id", claims.userId()).addValue("sv", claims.sessionVersion())
+                        .addValue("requireVerified", requireVerified),
                 (rs, i) -> new CurrentUser(rs.getLong("id"), rs.getString("username"), rs.getBoolean("verified"), rs.getBoolean("is_admin")))
                 .stream().findFirst();
     }

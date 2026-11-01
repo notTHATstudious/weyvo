@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api, ApiError, photoProblem } from '../api';
 import { Avatar } from './Avatar';
 import { useAuth } from '../auth';
+import { PasswordInput } from './PasswordInput';
 
 /** Profile, password, data export and account deletion for the signed-in user. */
 export function AccountSettings() {
@@ -134,9 +135,9 @@ function PasswordCard() {
     <Card title="Password">
       <form onSubmit={submit}>
         <label htmlFor="pcur" className="field-label">Current password</label>
-        <input id="pcur" className="input" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} style={{ marginBottom: 12 }} />
+        <PasswordInput id="pcur" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} wrapStyle={{ marginBottom: 12 }} />
         <label htmlFor="pnew" className="field-label">New password <span>· at least 10 characters</span></label>
-        <input id="pnew" className="input" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        <PasswordInput id="pnew" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
         <button type="submit" className="btn btn-primary" disabled={busy || !current || next.length < 10} style={{ marginTop: 12, minHeight: 44 }}>{busy ? 'Saving…' : 'Change password'}</button>
         {status}
       </form>
@@ -183,7 +184,7 @@ function DeleteCard() {
       ) : (
         <form onSubmit={submit}>
           <label htmlFor="dpass" className="field-label">Enter your password to confirm</label>
-          <input id="dpass" className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordInput id="dpass" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button type="submit" className="btn" disabled={busy || !password} style={{ minHeight: 44, background: '#B3261E', color: '#fff' }}>{busy ? 'Deleting…' : 'Delete for good'}</button>
             <button type="button" className="btn btn-outline" style={{ minHeight: 44 }} onClick={() => { setOpen(false); setPassword(''); }}>Cancel</button>

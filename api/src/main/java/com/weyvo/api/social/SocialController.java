@@ -37,6 +37,16 @@ public class SocialController {
         return follows.suggestions(user == null ? null : user.id());
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/api/users/{username}/followers")
+    public java.util.List<FollowService.Person> followers(@AuthenticationPrincipal CurrentUser user, @PathVariable String username) {
+        return follows.list(username, true, user == null ? null : user.id());
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping("/api/users/{username}/following")
+    public java.util.List<FollowService.Person> following(@AuthenticationPrincipal CurrentUser user, @PathVariable String username) {
+        return follows.list(username, false, user == null ? null : user.id());
+    }
+
     @PutMapping("/api/users/{username}/follow")
     public FollowStats follow(@AuthenticationPrincipal CurrentUser user, @PathVariable String username) {
         return follows.set(user.id(), username, true);

@@ -8,7 +8,9 @@ interface Auth {
   loading: boolean;
   signedIn: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (b: { email: string; password: string; username: string; displayName: string }) => Promise<void>;
+  /** Resolves to the email waiting for its code (no session yet), or null when already signed in. */
+  signup: (b: { email: string; password: string; username: string; displayName: string }) => Promise<string | null>;
+  completeVerification: (email: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   verifyEmail: (code: string) => Promise<void>;
   /** Re-reads the signed-in user, e.g. after editing the profile. Signs out locally if the session is gone. */
@@ -51,7 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setUser]);
 
   const login = useCallback(async (email: string, password: string) => setUser(await api.login({ email, password })), []);
-  const signup = useCallback(async (b: Parameters<Auth['signup']>[0]) => setUser(await api.signup(b)), []);
+  const signup = useCallback(async (b: Parameters<Auth['signup']>[0]) => {
+    const res = await api.signup(b);
+    if ('code' in res && res.code === 'verify_email') return res.email;
+    setUser(res as Me);
+    return null;
+  }, [setUser]);
+  const completeVerification = useCallback(async (email: string, code: string) => setUser(await api.completeVerification(email, code)), [setUser]);
   const logout = useCallback(async () => {
     await api.logout();
     clearApiCache();
@@ -74,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(async (email: string, code: string, password: string) => setUser(await api.resetPassword(email, code, password)), []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signedIn: user !== null, login, signup, logout, verifyEmail, resetPassword, refresh }}>
+    <AuthContext.Provider value={{ user, loading, signedIn: user !== null, login, signup, completeVerification, logout, verifyEmail, resetPassword, refresh }}>
       {children}
     </AuthContext.Provider>
   );

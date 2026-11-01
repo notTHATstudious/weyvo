@@ -39,12 +39,12 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login", "/api/auth/logout",
-                                "/api/auth/password/forgot", "/api/auth/password/reset", "/api/billing/webhook", "/api/trips/*/shares").permitAll()
+                                "/api/auth/password/forgot", "/api/auth/password/reset", "/api/auth/verify-email/complete", "/api/auth/verify-email/send", "/api/billing/webhook", "/api/trips/*/shares").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/billing/plans").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").permitAll()
                         // Reads of public content; the service decides how much of each trip to return.
                         .requestMatchers(HttpMethod.GET, "/api/trips", "/api/trips/*", "/api/users/*", "/api/users/*/trips", "/api/users/*/avatar", "/api/photos/*/*", "/api/trips/*/questions", "/api/trips/*/comments",
-                                "/api/places", "/api/places/*", "/api/users/*/map", "/api/share/*", "/api/share/u/*", "/api/search", "/api/suggestions/travellers", "/api/push/key").permitAll()
+                                "/api/places", "/api/places/*", "/api/users/*/map", "/api/users/*/followers", "/api/users/*/following", "/api/share/*", "/api/share/u/*", "/api/search", "/api/suggestions/travellers", "/api/push/key").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())

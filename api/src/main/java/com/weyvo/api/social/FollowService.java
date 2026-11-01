@@ -51,6 +51,33 @@ public class FollowService {
         return new FollowStats(followers == null ? 0 : followers, following == null ? 0 : following, mine);
     }
 
+    public record Person(String username, String displayName, String avatarUrl, boolean followedByMe) {}
+
+    /**
+     * Who follows someone, or who they follow, newest first. Suspended accounts and anyone in a block with
+     * the viewer are left out; if the person themselves blocked the viewer, they aren't found at all.
+     */
+    @Transactional(readOnly = true)
+    public List<Person> list(String username, boolean followers, Long viewerId) {
+        User target = users.findByUsernameIgnoreCase(username).filter(User::isActive).orElseThrow(ApiException::notFound);
+        if (viewerId != null && viewerId != target.getId() && blocks.between(viewerId, target.getId()) && !blocks.blockedByMe(viewerId, target.getId())) {
+            throw ApiException.notFound();
+        }
+        String join = followers ? "f.follower_id" : "f.followee_id";
+        String where = followers ? "f.followee_id" : "f.follower_id";
+        return jdbc.query("""
+                SELECT u.username, u.display_name, u.avatar_version,
+                       EXISTS (SELECT 1 FROM follows m WHERE m.follower_id = CAST(:v AS BIGINT) AND m.followee_id = u.id) AS mine
+                FROM follows f JOIN users u ON u.id = %s AND u.status = 'ACTIVE'
+                WHERE %s = :t
+                  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = CAST(:v AS BIGINT) AND b.blocked_id = u.id)
+                                                              OR (b.blocker_id = u.id AND b.blocked_id = CAST(:v AS BIGINT)))
+                ORDER BY f.created_at DESC LIMIT 200""".formatted(join, where),
+                new MapSqlParameterSource().addValue("t", target.getId()).addValue("v", viewerId),
+                (rs, i) -> new Person(rs.getString("username"), rs.getString("display_name"),
+                        com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version")), rs.getBoolean("mine")));
+    }
+
     public record Suggestion(String username, String displayName, String avatarUrl, int stories) {}
 
     /**
