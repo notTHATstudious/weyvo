@@ -25,7 +25,7 @@ export function useSectionSwipe() {
     const onStart = (e: TouchEvent) => {
       const p = e.touches[0];
       const target = e.target as Element | null;
-      if (e.touches.length > 1 || p.clientX < EDGE || p.clientX > window.innerWidth - EDGE || target?.closest(OWN_SWIPES)) {
+      if (e.touches.length > 1 || (!target?.closest('[data-swipe-zone]') && (p.clientX < EDGE || p.clientX > window.innerWidth - EDGE)) || target?.closest(OWN_SWIPES)) {
         start = null;
         return;
       }

@@ -58,7 +58,7 @@ export function Profile() {
   const all = trips.data ?? [];
   const full = all.filter((t) => t.kind === 'FULL');
   const shorts = all.filter((t) => t.kind === 'SHORT');
-  const stats: [string, string][] = [[String(full.length), 'trips'], [String(shorts.length), 'short'], [String(f.followers), 'followers'], [String(f.following), 'following']];
+  const stats: [string, string][] = [[String(f.followers), 'followers'], [String(f.following), 'following']];
   const shelves: [Shelf, string, number | null][] = [
     ['issues', 'Issues', full.length],
     ['shorts', 'Short stories', shorts.length],
@@ -129,7 +129,7 @@ export function Profile() {
 
       <div style={{ margin: '20px 20px 0' }}><TravelMap username={p.username} /></div>
 
-      <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', textAlign: 'center' }}>
+      <div style={{ margin: '14px 20px 0', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', textAlign: 'center' }}>
         {stats.map(([n, l]) => {
           const inner = <><p className="display" style={{ margin: 0, fontSize: 28 }}>{n}</p><p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>{l}</p></>;
           // Followers and following open their lists.
