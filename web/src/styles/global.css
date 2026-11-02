@@ -141,3 +141,11 @@ a, button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* The big round close button on full-screen views (story viewer, Create): easy to see and to hit with a thumb. */
+.close-btn { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center;
+  background: var(--card); color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12); text-decoration: none; position: relative;
+  transition: transform .12s ease, background-color .2s; }
+.close-btn::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; } /* larger invisible tap area */
+.close-btn:active { transform: scale(.92); }
+.close-btn.on-dark { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.28); color: #fff; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }

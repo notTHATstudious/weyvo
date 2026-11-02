@@ -5,7 +5,6 @@ import { Discover } from './pages/Discover';
 import { VerifyBanner } from './components/VerifyBanner';
 import { WakeBanner } from './components/WakeBanner';
 import { OfflineBanner } from './components/OfflineBanner';
-import { useSectionSwipe } from './sectionSwipe';
 
 const loaders: (() => Promise<unknown>)[] = [];
 
@@ -45,7 +44,6 @@ const FollowList = page(() => import('./pages/FollowList'), 'FollowList');
 export function App() {
   const { pathname } = useLocation();
   useEffect(preloadPages, []);
-  useSectionSwipe();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, ApiError, TAG_LABEL, type PhotoRef, type PlanUsage, type ShortTag, type TripInput, type TripView, type Visibility } from '../api';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
@@ -23,6 +23,8 @@ interface Upload { file: File; role: 'COVER' | 'SECTION'; position: number }
 export function Create() {
   const { signedIn, loading, user } = useAuth();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const initial = params.get('type') === 'short' ? 'short' : params.get('type') === 'full' ? 'full' : 'pick';
   const [mode, setMode] = useState<'pick' | 'short' | 'full'>(initial);
   const plan = useApi(() => (signedIn ? api.myPlan() : Promise.resolve(null)), [signedIn]);
@@ -38,8 +40,8 @@ export function Create() {
     <div className="app" style={{ paddingBottom: 120 }}>
       <div className="topbar" style={{ padding: '12px 10px 4px' }}>
         {mode === 'pick'
-          ? <Link to="/discover" className="icon-btn" aria-label="Close"><Icon.close /></Link>
-          : <button type="button" className="icon-btn" aria-label="Back" onClick={() => setMode('pick')}><Icon.back /></button>}
+          ? <button type="button" className="close-btn" aria-label="Close" onClick={() => (location.key !== 'default' ? navigate(-1) : navigate('/discover', { replace: true }))}><Icon.close /></button>
+          : <button type="button" className="close-btn" aria-label="Back to choices" onClick={() => setMode('pick')}><Icon.back /></button>}
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>{mode === 'pick' ? 'Create' : mode === 'short' ? 'Short story' : 'Full trip'}</span>
         <span style={{ width: 44 }} />
       </div>
@@ -53,7 +55,7 @@ export function Create() {
               <div style={{ height: 170 }}><Photo scene="mountain" /></div>
               <div style={{ padding: '16px 18px 18px' }}>
                 <span className="display" style={{ fontSize: 28, display: 'block' }}>A full trip</span>
-                <span style={{ display: 'block', marginTop: 6, fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>A magazine issue. Cover photo, story sections with photos, favourite moments and a final note.</span>
+                <span style={{ display: 'block', marginTop: 6, fontSize: 14, lineHeight: 1.5, color: '#CFC8BA' }}>A magazine issue. Cover photo, story sections with photos, favourite moments and end credits.</span>
               </div>
             </button>
             <button type="button" onClick={() => setMode('short')} className="lift rise" style={{ width: '100%', textAlign: 'left', border: '1px solid var(--ink)', padding: 0, background: 'var(--card)', color: 'var(--ink)', borderRadius: 22, overflow: 'hidden', display: 'flex' }}>
@@ -238,7 +240,7 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
   const [f, setF] = useState({
     title: existing?.title ?? atlas?.title ?? '', place: existing?.place ?? atlas?.place ?? '',
     startDate: existing?.startDate ?? atlas?.start ?? '', endDate: existing?.endDate ?? atlas?.end ?? '',
-    intro: existing?.intro ?? atlas?.intro ?? '', finalNote: existing?.finalNote ?? '' });
+    finalNote: existing?.finalNote ?? '' });
   const [cover, setCover] = useState<Slot>({ file: null, existing: existing?.cover ?? null });
   const original = [existing?.cover ?? null, ...(existing?.sections.map((s) => s.photo) ?? [])];
   const [sections, setSections] = useState<({ heading: string; body: string; photoCaption: string } & Slot)[]>(
@@ -247,7 +249,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       : atlas?.sections.length
         ? atlas.sections.slice(0, maxSections).map((x) => ({ heading: x.heading, body: x.body, photoCaption: '', ...emptySlot() }))
         : [{ heading: '', body: '', photoCaption: '', ...emptySlot() }]);
-  const [moments, setMoments] = useState(() => [...(existing?.moments ?? []), '', '', ''].slice(0, 3));
+  const [moments, setMoments] = useState(() => (existing?.moments.length ? existing.moments.slice(0, 3) : ['']));
+  const [sectionLimit, setSectionLimit] = useState(false);
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
   useEffect(() => { if (atlas) forgetAtlasPrefill(); }, [atlas]);
   const fromAtlas = atlas ? { days: atlas.sections.length, kept: Math.min(atlas.sections.length, maxSections) } : null;
@@ -265,24 +268,22 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
-    const blank = sections.findIndex((s) => !s.body.trim());
-    if (blank >= 0 && (sections.length > 1 || sections[blank].file || sections[blank].existing)) {
-      return needs(`b${blank}`, `Write the story for section ${blank + 1}, or remove it.`);
-    }
-    if (publish && !sections.some((s) => s.body.trim())) {
+    // Sections left without writing are simply left out; only the filled ones are posted.
+    const filled = sections.filter((s) => s.body.trim());
+    if (publish && filled.length === 0) {
       return needs('b0', 'Write at least one story section before publishing. Save draft works without one.');
     }
     const input: TripInput = {
       kind: 'FULL', title: f.title, place: f.place, visibility,
-      startDate: f.startDate || null, endDate: f.endDate || null, intro: f.intro || null, finalNote: f.finalNote || null,
-      sections: sections.filter((s) => s.body.trim()).map((s) => ({ heading: s.heading || null, body: s.body, photoCaption: s.photoCaption || null })),
+      startDate: f.startDate || null, endDate: f.endDate || null, intro: existing?.intro ?? null, finalNote: f.finalNote || null,
+      sections: filled.map((s) => ({ heading: s.heading || null, body: s.body, photoCaption: s.photoCaption || null })),
       moments: moments.map((m) => m.trim()).filter(Boolean),
     };
     const uploads: Upload[] = [
       ...(cover.file ? [{ file: cover.file, role: 'COVER' as const, position: 0 }] : []),
-      ...sections.flatMap((s, position) => (s.file ? [{ file: s.file, role: 'SECTION' as const, position }] : [])),
+      ...filled.flatMap((s, position) => (s.file ? [{ file: s.file, role: 'SECTION' as const, position }] : [])),
     ];
-    save(input, uploads, removedPhotos(original, [cover, ...sections]), publish);
+    save(input, uploads, removedPhotos(original, [cover, ...filled]), publish);
   }
 
   const updateSection = (i: number, patch: Partial<(typeof sections)[number]>) =>
@@ -317,9 +318,7 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
         <TextField id="fs" label="From" type="date" value={f.startDate} onChange={set('startDate')} />
         <TextField id="fe" label="To" type="date" value={f.endDate} onChange={set('endDate')} />
       </div>
-      <TextField id="fi" label="Introduction · 250 characters" value={f.intro} onChange={set('intro')} max={250} error={fields.intro} placeholder="Set the scene in two sentences" multiline />
-
-      <p className="eyebrow" style={{ margin: '18px 0 10px', fontWeight: 600 }}>Story sections · up to {maxSections}</p>
+      <p className="eyebrow" style={{ margin: '18px 0 10px', fontWeight: 600 }}>Story sections</p>
       {sections.map((s, i) => (
         <div key={i} className="paper-card" style={{ marginBottom: 12 }}>
           <TextField id={`h${i}`} label={`Section ${i + 1} heading`} value={s.heading} onChange={(v) => updateSection(i, { heading: v })} max={60} placeholder="The road in" />
@@ -329,20 +328,36 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
             <PhotoPicker file={s.file} existingUrl={s.existing?.url} onChange={(file) => updateSection(i, pick(file))} label={`section ${i + 1} photo`} height={160} />
           </div>
           <TextField id={`c${i}`} label="Photo caption (optional)" value={s.photoCaption} onChange={(v) => updateSection(i, { photoCaption: v })} max={120} placeholder="Chandratal at dawn" />
-          {i === sections.length - 1 && sections.length > 1 && (
-            <button type="button" className="pill" onClick={() => setSections((ss) => ss.slice(0, -1))}>Remove this section</button>
+          {sections.length > 1 && (
+            <button type="button" className="pill" onClick={() => { setSections((ss) => ss.filter((_, j) => j !== i)); setSectionLimit(false); }}>Remove this section</button>
           )}
         </div>
       ))}
-      {sections.length < maxSections && (
-        <button type="button" className="pill" onClick={() => setSections((ss) => [...ss, { heading: '', body: '', photoCaption: '', ...emptySlot() }])} style={{ marginBottom: 18 }}><Icon.plus size={16} /> Add a section</button>
-      )}
+      <button type="button" className="pill" style={{ marginBottom: sectionLimit ? 6 : 18 }} onClick={() => {
+        if (sections.length >= maxSections) return setSectionLimit(true);
+        setSections((ss) => [...ss, { heading: '', body: '', photoCaption: '', ...emptySlot() }]);
+      }}><Icon.plus size={16} /> Add a section</button>
+      {sectionLimit && <p role="status" style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--ink-soft)' }}>You can tell up to {maxSections} stories in one issue.</p>}
 
-      <p className="eyebrow" style={{ margin: '8px 0 10px', fontWeight: 600 }}>Favourite moments · up to 3</p>
-      {moments.map((m, i) => (
-        <TextField key={i} id={`m${i}`} label={`Moment ${i + 1}`} value={m} onChange={(v) => setMoments((ms) => ms.map((x, j) => (j === i ? v : x)))} max={120} placeholder={['Butter tea at the monastery', 'The truck that rescued us', 'Dawn at the lake'][i]} />
-      ))}
-      <TextField id="fn" label="Final note · 200 characters" value={f.finalNote} onChange={set('finalNote')} max={200} error={fields.finalNote} placeholder="Go before the road gets paved." />
+      <p className="eyebrow" style={{ margin: '8px 0 10px', fontWeight: 600 }}>Favourite moments</p>
+      {moments.map((m, i) => {
+        const last = i === moments.length - 1;
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <TextField id={`m${i}`} label={`Moment ${i + 1}`} value={m} onChange={(v) => setMoments((ms) => ms.map((x, j) => (j === i ? v : x)))} max={120} placeholder={['Butter tea at the monastery', 'The truck that rescued us', 'Dawn at the lake'][i]} />
+            </div>
+            {last && moments.length < 3 ? (
+              <button type="button" className="icon-btn" aria-label="Add another moment" onClick={() => setMoments((ms) => [...ms, ''])}
+                style={{ marginBottom: 14, flex: '0 0 auto', background: 'var(--green)', color: 'var(--on-green)', borderRadius: 999 }}><Icon.plus size={18} /></button>
+            ) : moments.length > 1 ? (
+              <button type="button" className="icon-btn" aria-label={`Remove moment ${i + 1}`} onClick={() => setMoments((ms) => ms.filter((_, j) => j !== i))}
+                style={{ marginBottom: 14, flex: '0 0 auto', fontSize: 22, color: 'var(--muted)' }}>×</button>
+            ) : null}
+          </div>
+        );
+      })}
+      <TextField id="fn" label="End credits · 200 characters" value={f.finalNote} onChange={set('finalNote')} max={200} error={fields.finalNote} placeholder="Go before the road gets paved." />
 
       <VisibilityPicker value={visibility} onChange={setVisibility} />
       {error && <p role="alert" style={{ margin: '14px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}

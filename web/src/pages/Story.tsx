@@ -121,7 +121,12 @@ export function Story() {
               </ol>
             </>
           )}
-          {trip.finalNote && <p className="display" style={{ margin: '28px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>}
+          {trip.finalNote && (
+            <>
+              <h2 className="eyebrow" style={{ margin: '28px 0 0', fontWeight: 600, textAlign: 'center' }}>End credits</h2>
+              <p className="display" style={{ margin: '8px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>
+            </>
+          )}
           {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>}
           {trip.status === 'PUBLISHED' && <PlanLikeThis place={trip.place} start={trip.startDate} end={trip.endDate} back={`/trips/${trip.slug}`} />}
           {trip.status === 'PUBLISHED' && <QnA tripId={trip.id} isOwner={trip.owner} authorName={trip.author.displayName} />}

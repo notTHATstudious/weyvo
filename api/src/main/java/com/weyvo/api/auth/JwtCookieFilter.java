@@ -24,6 +24,8 @@ public class JwtCookieFilter extends OncePerRequestFilter {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtCookieFilter.class);
 
+    private static final java.time.Duration RENEW_AFTER = java.time.Duration.ofDays(1);
+
     private final SessionCookie cookie;
     private final JwtService jwt;
     private final NamedParameterJdbcTemplate jdbc;
@@ -42,12 +44,17 @@ public class JwtCookieFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        cookie.read(request).flatMap(jwt::verify).flatMap(this::load).ifPresent(user -> {
+        cookie.read(request).flatMap(jwt::verify).ifPresent(claims -> load(claims).ifPresent(user -> {
             var authorities = user.admin() ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN")) : List.<SimpleGrantedAuthority>of();
             var auth = new UsernamePasswordAuthenticationToken(user, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
             seen(user.id());
-        });
+            // Sliding session: anyone who keeps using Weyvo gets a fresh cookie once a day and never times out.
+            if (claims.issuedAt().isBefore(java.time.Instant.now().minus(RENEW_AFTER))) {
+                response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                        cookie.create(jwt.issue(user.id(), claims.sessionVersion())).toString());
+            }
+        }));
         chain.doFilter(request, response);
     }
 

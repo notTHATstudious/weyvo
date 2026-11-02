@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     api.me().then(setUser, (err) => {
       // Signed out for real only when the server says so; a slow or sleeping server keeps the remembered account.
-      if (err instanceof ApiError && err.status >= 400 && err.status < 500) setUser(null);
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) setUser(null);
     }).finally(() => setLoading(false));
   }, [setUser]);
 

@@ -64,10 +64,6 @@ export function Plan() {
         <iframe key={src} src={src} title="BubDub's Atlas trip planner" allow="clipboard-write; web-share"
           style={{ flex: 1, width: '100%', border: 0, display: 'block', background: ATLAS_BG[theme], marginBottom: 'calc(84px + env(safe-area-inset-bottom))' }} />
       </div>
-      {/* Touches inside the iframe never reach Weyvo, so thin strips down both sides keep section swipes working here. */}
-      {(['left', 'right'] as const).map((side) => (
-        <div key={side} data-swipe-zone aria-hidden style={{ position: 'fixed', top: 0, bottom: 'calc(84px + env(safe-area-inset-bottom))', [side]: 0, width: 36, zIndex: 5, touchAction: 'pan-y' }} />
-      ))}
       {prompt.show && (
         <div role="status" style={{ position: 'fixed', left: 0, right: 0, margin: '0 auto', bottom: 'calc(96px + env(safe-area-inset-bottom))', zIndex: 25,
           width: 'min(92vw, 440px)', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px 9px 14px', borderRadius: 16,

@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api, ApiError, type Comment, type ReportReason } from '../api';
 import { Avatar } from './Avatar';
 import { useAuth } from '../auth';
+import { TalkAction, TalkComposer, TalkHeading, ago } from './Talk';
 
 export const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'SPAM', label: 'Spam' },
@@ -27,17 +28,17 @@ export function Comments({ tripId, isOwner }: { tripId: number; isOwner: boolean
   const count = items.reduce((n, c) => n + 1 + c.replies.length, 0);
 
   return (
-    <section aria-labelledby="comments-title" style={{ marginTop: 32 }}>
-      <h2 id="comments-title" className="eyebrow" style={{ margin: '0 0 12px', fontWeight: 600 }}>Comments · {count}</h2>
-      {items.length === 0 && <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--ink-soft)' }}>No comments yet. Say what this story made you feel.</p>}
+    <section aria-labelledby="comments-title" style={{ marginTop: 36 }}>
+      <TalkHeading id="comments-title" title="Comments" count={count} />
+      {items.length === 0 && <p style={{ margin: '0 0 6px', fontSize: 14, color: 'var(--ink-soft)' }}>No comments yet. Say what this story made you feel.</p>}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {items.map((c) => (
           <div key={c.id}>
             <CommentRow c={c} tripId={tripId} isOwner={isOwner} signedIn={!!user} onChange={load} canReply />
             {c.replies.length > 0 && (
-              <div style={{ marginLeft: 34, marginTop: 8, paddingLeft: 12, borderLeft: '2px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {c.replies.map((r) => <CommentRow key={r.id} c={r} tripId={tripId} isOwner={isOwner} signedIn={!!user} onChange={load} />)}
+              <div style={{ marginLeft: 46, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {c.replies.map((r) => <CommentRow key={r.id} c={r} tripId={tripId} isOwner={isOwner} signedIn={!!user} onChange={load} small />)}
               </div>
             )}
           </div>
@@ -45,7 +46,8 @@ export function Comments({ tripId, isOwner }: { tripId: number; isOwner: boolean
       </div>
 
       {user ? (
-        <Composer tripId={tripId} onPosted={load} label="Add a comment" />
+        <TalkComposer id="comment" label="Add a comment" placeholder="Add a comment…" max={500} button="Post comment"
+          onSend={async (text) => { await send(() => api.postComment(tripId, text)); load(); }} />
       ) : (
         <p style={{ marginTop: 14, fontSize: 14 }}><Link to={`/signin?next=${encodeURIComponent(location.pathname)}`}>Sign in</Link> to comment.</p>
       )}
@@ -53,47 +55,17 @@ export function Comments({ tripId, isOwner }: { tripId: number; isOwner: boolean
   );
 }
 
-function Composer({ tripId, parentId, onPosted, label, onCancel }: {
-  tripId: number; parentId?: number; onPosted: () => void; label: string; onCancel?: () => void;
-}) {
-  const [text, setText] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const id = parentId ? `reply-${parentId}` : 'comment';
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      await api.postComment(tripId, text, parentId);
-      setText('');
-      onPosted();
-      onCancel?.();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
-    } finally {
-      setBusy(false);
-    }
+/** Turns API errors into plain messages for the message box. */
+async function send(action: () => Promise<unknown>) {
+  try {
+    await action();
+  } catch (err) {
+    throw new Error(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
   }
-
-  return (
-    <form onSubmit={submit} style={{ marginTop: 12 }}>
-      <label htmlFor={id} className="field-label" style={{ fontWeight: 400, color: 'var(--muted)' }}>{label} · {text.length} / 500</label>
-      <textarea id={id} className="input" rows={2} maxLength={500} value={text} onChange={(e) => { setText(e.target.value); setError(''); }} />
-      {error && <p role="alert" style={{ margin: '6px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button type="submit" className="btn btn-primary" disabled={busy || !text.trim()} style={{ minHeight: 40, opacity: busy || !text.trim() ? 0.6 : 1 }}>
-          {busy ? 'Posting…' : parentId ? 'Reply' : 'Comment'}
-        </button>
-        {onCancel && <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={onCancel}>Cancel</button>}
-      </div>
-    </form>
-  );
 }
 
-function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply }: {
-  c: Comment; tripId: number; isOwner: boolean; signedIn: boolean; onChange: () => void; canReply?: boolean;
+function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply, small }: {
+  c: Comment; tripId: number; isOwner: boolean; signedIn: boolean; onChange: () => void; canReply?: boolean; small?: boolean;
 }) {
   const [replying, setReplying] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -112,20 +84,25 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply }: {
   }
 
   return (
-    <article style={{ display: 'flex', gap: 10, opacity: hidden ? 0.6 : 1 }}>
-      <Link to={`/u/${c.author.username}`} aria-label={c.author.displayName}><Avatar name={c.author.displayName} url={c.author.avatarUrl} size={28} /></Link>
+    <article style={{ display: 'flex', gap: 12, opacity: hidden ? 0.6 : 1 }}>
+      <Link to={`/u/${c.author.username}`} aria-label={c.author.displayName} style={{ flex: '0 0 auto' }}>
+        <Avatar name={c.author.displayName} url={c.author.avatarUrl} size={small ? 28 : 34} />
+      </Link>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
-          <Link to={`/u/${c.author.username}`} style={{ fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>{c.author.username}</Link>{' '}
-          {hidden && <span className="tag" style={{ fontSize: 10, background: 'var(--line)' }}>{c.status === 'HIDDEN_BY_REPORTS' ? 'Hidden after reports' : 'Hidden'}</span>}{' '}
-          <span style={{ color: 'var(--ink-soft)', overflowWrap: 'anywhere' }}>{c.body}</span>
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-          {canReply && signedIn && !hidden && <Small onClick={() => setReplying(!replying)}>{replying ? 'Cancel' : 'Reply'}</Small>}
-          {isOwner && <Small onClick={() => run(() => api.setCommentHidden(c.id, !hidden))}>{hidden ? 'Show' : 'Hide'}</Small>}
-          {(isOwner || c.mine) && <Small onClick={() => run(() => api.deleteComment(c.id))}>Delete</Small>}
-          {signedIn && !c.mine && !isOwner && !reported && <Small onClick={() => setReporting(!reporting)}>{reporting ? 'Cancel' : 'Report'}</Small>}
-          {reported && <span style={{ fontSize: 12, color: 'var(--muted)', padding: '8px 6px' }}>Thanks, we'll take a look.</span>}
+        <div style={{ display: 'inline-block', maxWidth: '100%', padding: '9px 14px 10px', borderRadius: '4px 18px 18px 18px', background: 'var(--card)', border: '1px solid var(--line)' }}>
+          <p style={{ margin: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Link to={`/u/${c.author.username}`} style={{ fontWeight: 700, color: 'var(--ink)', textDecoration: 'none' }}>{c.author.username}</Link>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>· {ago(c.createdAt)}</span>
+            {hidden && <span className="tag" style={{ fontSize: 10, background: 'var(--line)' }}>{c.status === 'HIDDEN_BY_REPORTS' ? 'Hidden after reports' : 'Hidden'}</span>}
+          </p>
+          <p style={{ margin: '3px 0 0', fontSize: 15, lineHeight: 1.45, color: 'var(--ink)', overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{c.body}</p>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 14 }}>
+          {canReply && signedIn && !hidden && <TalkAction onClick={() => setReplying(!replying)}>{replying ? 'Cancel' : 'Reply'}</TalkAction>}
+          {isOwner && <TalkAction onClick={() => run(() => api.setCommentHidden(c.id, !hidden))}>{hidden ? 'Show' : 'Hide'}</TalkAction>}
+          {(isOwner || c.mine) && <TalkAction onClick={() => run(() => api.deleteComment(c.id))}>Delete</TalkAction>}
+          {signedIn && !c.mine && !isOwner && !reported && <TalkAction onClick={() => setReporting(!reporting)}>{reporting ? 'Cancel' : 'Report'}</TalkAction>}
+          {reported && <span style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 0' }}>Thanks, we'll take a look.</span>}
         </div>
         {reporting && (
           <div role="group" aria-label="Report reason" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -135,18 +112,12 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply }: {
             ))}
           </div>
         )}
-        {replying && <Composer tripId={tripId} parentId={c.id} onPosted={onChange} label={`Reply to ${c.author.displayName.split(' ')[0]}`} onCancel={() => setReplying(false)} />}
+        {replying && (
+          <TalkComposer id={`reply-${c.id}`} label={`Reply to ${c.author.displayName}`} placeholder={`Reply to ${c.author.username}…`} max={500} button="Post reply" autoFocus
+            onSend={async (text) => { await send(() => api.postComment(tripId, text, c.id)); setReplying(false); onChange(); }} onCancel={() => setReplying(false)} />
+        )}
         {error && <p role="alert" style={{ margin: '4px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
       </div>
     </article>
-  );
-}
-
-function Small({ children, onClick }: { children: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick}
-      style={{ border: 0, background: 'none', color: 'var(--muted)', fontSize: 12, fontWeight: 600, padding: '8px 6px', minHeight: 32 }}>
-      {children}
-    </button>
   );
 }

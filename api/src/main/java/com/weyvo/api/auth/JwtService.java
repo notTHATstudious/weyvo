@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 public class JwtService {
 
     /** What a valid token says; the filter still checks the version against the database. */
-    public record Claims(long userId, int sessionVersion) {}
+    public record Claims(long userId, int sessionVersion, Instant issuedAt) {}
 
     private final SecretKey key;
     private final AppProperties.Jwt config;
@@ -41,7 +41,8 @@ public class JwtService {
         try {
             var claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
             Integer sv = claims.get("sv", Integer.class);
-            return Optional.of(new Claims(Long.parseLong(claims.getSubject()), sv == null ? -1 : sv));
+            Instant iat = claims.getIssuedAt() == null ? Instant.EPOCH : claims.getIssuedAt().toInstant();
+            return Optional.of(new Claims(Long.parseLong(claims.getSubject()), sv == null ? -1 : sv, iat));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

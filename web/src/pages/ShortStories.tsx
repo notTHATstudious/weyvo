@@ -190,7 +190,7 @@ export function ShortStories() {
           <Avatar name={card.author.displayName} url={card.author.avatarUrl} size={36} ring="#fff" />
           <span><span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{card.author.username}</span><span style={{ display: 'block', fontSize: 12, opacity: 0.85 }}>{total} photo{total === 1 ? '' : 's'}</span></span>
         </Link>
-        <button type="button" className="icon-btn" aria-label="Close" style={{ color: '#fff' }} onClick={close}><Icon.close /></button>
+        <button type="button" className="close-btn on-dark" aria-label="Close stories" onClick={close}><Icon.close /></button>
       </div>
 
       <div className="scroll-x" style={{ position: 'absolute', top: 80, left: 14, right: 14 }}>
