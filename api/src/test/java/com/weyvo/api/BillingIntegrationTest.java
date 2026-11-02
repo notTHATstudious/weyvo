@@ -116,7 +116,44 @@ class BillingIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void weyPointsTakeMoneyOffPremiumOnlyAfterThreeMonths() throws Exception {
+        Account a = signup("saver", true);
+        // 210 earlier days opened (5 points each, one per week) plus today gives 1,055 points.
+        db.update("""
+                INSERT INTO user_activity_days (user_id, day)
+                SELECT u.id, current_date - (g * 7) FROM users u, generate_series(1, 210) g WHERE u.username = ?""", a.username());
+
+        mvc.perform(get("/api/me/points").cookie(a.cookie()))
+                .andExpect(jsonPath("$.balance").value(1055)).andExpect(jsonPath("$.unlocked").value(false));
+        order(a, "MONTH", true).andExpect(jsonPath("$.amountPaise").value(9900)).andExpect(jsonPath("$.pointsUsed").value(0));
+
+        db.update("UPDATE users SET created_at = now() - interval '4 months' WHERE username = ?", a.username());
+        mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.redeemableRupees").value(50));
+        // At most half the ₹99 price, in ₹25 steps: ₹25 off for 500 points.
+        order(a, "MONTH", true).andExpect(jsonPath("$.amountPaise").value(7400)).andExpect(jsonPath("$.pointsUsed").value(500));
+        mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.balance").value(555));
+    }
+
+    @Test
+    void weyPointsAreCappedEachDay() throws Exception {
+        Account a = signup("streak", true);
+        db.update("INSERT INTO user_activity_days (user_id, day) SELECT id, current_date FROM users WHERE username = ?", a.username());
+        db.update("""
+                INSERT INTO trips (owner_id, kind, title, place, slug, status, visibility, published_at)
+                SELECT u.id, 'FULL', 'Trip ' || g, 'Goa', 'cap-' || u.id || '-' || g, 'PUBLISHED', 'PUBLIC', now()
+                FROM users u, generate_series(1, 3) g WHERE u.username = ?""", a.username());
+        mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.balance").value(50));
+        db.update("UPDATE trips SET removed_at = now() WHERE slug LIKE 'cap-%'");
+        mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.balance").value(5));
+    }
+
     // ---- helpers ----
+
+    private OrderResult order(Account a, String period, boolean usePoints) throws Exception {
+        return new OrderResult(mvc.perform(post("/api/billing/orders").cookie(a.cookie()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"period\":\"" + period + "\",\"usePoints\":" + usePoints + "}")).andExpect(status().isOk()), json);
+    }
 
     private record OrderResult(ResultActions actions, ObjectMapper json) {
         OrderResult andExpect(org.springframework.test.web.servlet.ResultMatcher m) throws Exception {

@@ -9,6 +9,7 @@ import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { Empty, Loading } from '../components/States';
 import { TravelMap } from '../components/TravelMap';
+import { WeyPointsCard } from '../components/WeyPoints';
 import { useApi } from '../useApi';
 
 type Shelf = 'issues' | 'shorts' | 'want' | 'save';
@@ -126,6 +127,8 @@ export function Profile() {
             onChange={() => { setMenu(false); setFollow(null); setVersion((v) => v + 1); }} />
         </div>
       )}
+
+      {isMe && <WeyPointsCard />}
 
       <div style={{ margin: '20px 20px 0' }}><TravelMap username={p.username} /></div>
 

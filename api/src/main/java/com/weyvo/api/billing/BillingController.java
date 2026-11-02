@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class BillingController {
 
-    public record OrderRequest(@NotNull Period period) {}
+    public record OrderRequest(@NotNull Period period, Boolean usePoints) {}
 
     public record VerifyRequest(@NotBlank String orderId, @NotBlank String paymentId, @NotBlank String signature) {}
 
@@ -39,7 +39,7 @@ public class BillingController {
 
     @PostMapping("/api/billing/orders")
     public Order order(@AuthenticationPrincipal CurrentUser user, @Valid @RequestBody OrderRequest req) {
-        return billing.createOrder(user.id(), req.period());
+        return billing.createOrder(user.id(), req.period(), Boolean.TRUE.equals(req.usePoints()));
     }
 
     /** After a successful checkout: returns the updated plan. */

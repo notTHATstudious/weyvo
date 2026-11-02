@@ -40,6 +40,8 @@ export function Premium() {
   const [busy, setBusy] = useState<Period | null>(null);
   const [error, setError] = useState('');
   const [celebrate, setCelebrate] = useState(false);
+  const points = useApi(() => (user ? api.myPoints() : Promise.resolve(null)), [user?.id]);
+  const [usePoints, setUsePoints] = useState(true);
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin?next=/premium" replace />;
@@ -48,6 +50,10 @@ export function Premium() {
   const me = current ?? usage.data;
   const p = plans.data;
   const isPremium = me?.plan === 'PREMIUM';
+  const wp = points.data;
+  const canUse = !!wp?.unlocked && wp.redeemableRupees > 0;
+  /** What points take off a price: whole blocks, at most half. Matches the server, which decides the real amount. */
+  const off = (paise: number) => (canUse && usePoints && wp ? Math.min(Math.floor(wp.balance / wp.blockPoints), Math.floor(paise / 2 / (wp.blockRupees * 100))) * wp.blockRupees * 100 : 0);
 
   async function buy(period: Period) {
     if (!user?.emailVerified) return setError('Verify your email first, then come back to upgrade.');
@@ -55,7 +61,7 @@ export function Premium() {
     setError('');
     try {
       await loadCheckout();
-      const order = await api.createOrder(period);
+      const order = await api.createOrder(period, canUse && usePoints);
       await new Promise<void>((resolve, reject) => {
         const checkout = new window.Razorpay!({
           key: order.keyId,
@@ -136,11 +142,28 @@ export function Premium() {
                   <button key={o.period} type="button" onClick={() => buy(o.period)} disabled={busy !== null}
                     className={o.period === 'YEAR' ? 'btn btn-primary' : 'btn btn-outline'}
                     style={{ minHeight: 84, flexDirection: 'column', gap: 2, borderRadius: 18, opacity: busy && busy !== o.period ? 0.5 : 1 }}>
-                    <span className="display" style={{ fontSize: 26 }}>{rupees(o.amountPaise)}</span>
+                    <span className="display" style={{ fontSize: 26 }}>
+                      {off(o.amountPaise) > 0 && <s style={{ fontSize: 15, opacity: 0.6, marginRight: 6, fontWeight: 500 }}>{rupees(o.amountPaise)}</s>}
+                      {rupees(o.amountPaise - off(o.amountPaise))}
+                    </span>
                     <span style={{ fontSize: 12, fontWeight: 500 }}>{busy === o.period ? 'Opening…' : o.label}{o.period === 'YEAR' ? ' · best value' : ''}</span>
                   </button>
                 ))}
               </div>
+            )}
+            {p.available && wp && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, padding: '12px 14px', borderRadius: 16, cursor: canUse ? 'pointer' : 'default',
+                color: '#2A1E06', background: 'linear-gradient(135deg, #F7D58A, #E3A23B)', opacity: canUse ? 1 : 0.75 }}>
+                <input type="checkbox" checked={canUse && usePoints} disabled={!canUse} onChange={(e) => setUsePoints(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#2A1E06' }} />
+                <span style={{ flex: 1, fontSize: 14 }}>
+                  <strong>Use Wey points</strong>
+                  <span style={{ display: 'block', fontSize: 12 }}>
+                    {canUse ? `${wp.balance.toLocaleString('en-IN')} points · up to ₹${wp.redeemableRupees} off, at most half the price`
+                      : wp.unlocked ? `${wp.balance} points · ${wp.blockPoints} needed for ₹${wp.blockRupees} off`
+                      : `${wp.balance} points · usable from ${new Date(wp.unlocksAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                  </span>
+                </span>
+              </label>
             )}
             {error && <p role="alert" style={{ margin: '12px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weyvo.api.common.ApiException;
 import com.weyvo.api.config.AppProperties;
+import com.weyvo.api.points.PointsService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
@@ -34,7 +35,7 @@ public class BillingService {
     public record Plans(String keyId, boolean available, List<PlanOption> options,
                         AppProperties.PlanLimits free, AppProperties.PlanLimits premium) {}
 
-    public record Order(String orderId, int amountPaise, String currency, String keyId, Period period) {}
+    public record Order(String orderId, int amountPaise, String currency, String keyId, Period period, int pointsUsed, int discountPaise) {}
 
     private static final Logger log = LoggerFactory.getLogger(BillingService.class);
 
@@ -43,8 +44,10 @@ public class BillingService {
     private final RazorpayGateway razorpay;
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper json;
+    private final PointsService points;
 
-    public BillingService(AppProperties props, RazorpayGateway razorpay, NamedParameterJdbcTemplate jdbc, ObjectMapper json) {
+    public BillingService(AppProperties props, RazorpayGateway razorpay, NamedParameterJdbcTemplate jdbc, ObjectMapper json, PointsService points) {
+        this.points = points;
         this.cfg = props.payments();
         this.limits = props.plans();
         this.razorpay = razorpay;
@@ -59,14 +62,19 @@ public class BillingService {
     }
 
     @Transactional
-    public Order createOrder(long userId, Period period) {
-        int amount = period == Period.MONTH ? cfg.monthPricePaise() : cfg.yearPricePaise();
+    public Order createOrder(long userId, Period period, boolean usePoints) {
+        int price = period == Period.MONTH ? cfg.monthPricePaise() : cfg.yearPricePaise();
+        // One order at a time per person, so the same points can't go on two open checkouts.
+        jdbc.queryForObject("SELECT id FROM users WHERE id = :u FOR UPDATE", new MapSqlParameterSource("u", userId), Long.class);
+        int used = usePoints ? points.pointsFor(userId, price) : 0;
+        int discount = PointsService.discountPaise(used);
+        int amount = price - discount;
         String receipt = "u" + userId + "-" + UUID.randomUUID().toString().substring(0, 12);
         String orderId = razorpay.createOrder(amount, "INR", receipt, Map.of("userId", String.valueOf(userId), "period", period.name()));
-        jdbc.update("INSERT INTO payments (user_id, razorpay_order_id, period, amount_paise) VALUES (:u, :o, :p, :a)",
-                new MapSqlParameterSource().addValue("u", userId).addValue("o", orderId).addValue("p", period.name()).addValue("a", amount));
-        log.info("Order created userId={} period={} amount={}", userId, period, amount);
-        return new Order(orderId, amount, "INR", cfg.razorpayKeyId(), period);
+        jdbc.update("INSERT INTO payments (user_id, razorpay_order_id, period, amount_paise, points_used) VALUES (:u, :o, :p, :a, :pts)",
+                new MapSqlParameterSource().addValue("u", userId).addValue("o", orderId).addValue("p", period.name()).addValue("a", amount).addValue("pts", used));
+        log.info("Order created userId={} period={} amount={} points={}", userId, period, amount, used);
+        return new Order(orderId, amount, "INR", cfg.razorpayKeyId(), period, used, discount);
     }
 
     /** Called by the web app after checkout. The signature proves Razorpay issued this payment for this order. */

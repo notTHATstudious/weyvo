@@ -43,7 +43,11 @@ export interface BillingPlans {
   options: { period: Period; amountPaise: number; currency: string; label: string }[];
   free: PlanLimits; premium: PlanLimits;
 }
-export interface PaymentOrder { orderId: string; amountPaise: number; currency: string; keyId: string; period: Period }
+export interface PaymentOrder { orderId: string; amountPaise: number; currency: string; keyId: string; period: Period; pointsUsed: number; discountPaise: number }
+export interface WeyPoints {
+  balance: number; earned: number; spent: number; thisWeek: number; weekCap: number; unlocksAt: string; unlocked: boolean;
+  blockPoints: number; blockRupees: number; redeemableRupees: number;
+}
 export interface Reactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean; savedByMe: boolean }
 export interface Author { username: string; displayName: string; avatarUrl: string | null }
 export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
@@ -200,7 +204,8 @@ export const api = {
   markPlace: (slug: string, type: 'been' | 'want') => request<PlaceReactions>('PUT', `/places/${encodeURIComponent(slug)}/reactions/${type}`),
   unmarkPlace: (slug: string, type: 'been' | 'want') => request<PlaceReactions>('DELETE', `/places/${encodeURIComponent(slug)}/reactions/${type}`),
   billingPlans: () => request<BillingPlans>('GET', '/billing/plans'),
-  createOrder: (period: Period) => request<PaymentOrder>('POST', '/billing/orders', { period }),
+  createOrder: (period: Period, usePoints = false) => request<PaymentOrder>('POST', '/billing/orders', { period, usePoints }),
+  myPoints: () => request<WeyPoints>('GET', '/me/points'),
   verifyPayment: (orderId: string, paymentId: string, signature: string) => request<PlanUsage>('POST', '/billing/verify', { orderId, paymentId, signature }),
   questions: (tripId: number) => request<Questions>('GET', `/trips/${tripId}/questions`),
   ask: (tripId: number, text: string) => request<Question>('POST', `/trips/${tripId}/questions`, { text }),
