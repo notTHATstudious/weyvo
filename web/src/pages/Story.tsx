@@ -216,7 +216,7 @@ function OwnerBar({ id, slug, status, visibility }: { id: number; slug: string; 
       <span style={{ flex: '1 1 160px', fontSize: 13, color: 'var(--ink-soft)' }}>{label}</span>
       {!confirming ? (
         <>
-          <Link to={`/trips/${slug}/edit`} className="btn btn-primary" style={{ minHeight: 40 }}>Edit</Link>
+          <Link to={`/trips/${slug}/edit`} state={{ back: true }} className="btn btn-primary" style={{ minHeight: 40 }}>Edit</Link>
           <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={() => setConfirming(true)}>Delete</button>
         </>
       ) : (

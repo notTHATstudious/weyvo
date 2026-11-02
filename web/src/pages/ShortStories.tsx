@@ -17,7 +17,11 @@ export function ShortStories() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('ALL');
   const feed = useApi(() => api.feed('SHORT'), []);
-  const list = useMemo(() => (feed.data ?? []).filter((s) => filter === 'ALL' || s.shortTag === filter), [feed.data, filter]);
+  const [gone, setGone] = useState<Set<number>>(() => new Set());
+  const list = useMemo(() => (feed.data ?? []).filter((s) => !gone.has(s.id) && (filter === 'ALL' || s.shortTag === filter)), [feed.data, filter, gone]);
+  // The ⋯ menu on your own story: closed, open, or asking to confirm a delete.
+  const [menu, setMenu] = useState<'closed' | 'open' | 'confirm'>('closed');
+  const [menuError, setMenuError] = useState('');
 
   const [si, setSi] = useState(0);
   const [pi, setPi] = useState(0);
@@ -61,6 +65,7 @@ export function ShortStories() {
   const total = story ? story.totalSections : 1;
   const n = Math.max(1, list.length);
   const authorAt = (i: number) => list[((i % n) + n) % n]?.author.username;
+  useEffect(() => { setMenu('closed'); setMenuError(''); }, [si]);
   const nextStory = () => { setSi((i) => (i + 1) % n); setPi(0); };
   const prevStory = () => { setSi((i) => (i - 1 + n) % n); setPi(0); };
   // The buttons move between people: skip the rest of this person's stories, or go back to the start of the previous person's.
@@ -105,7 +110,7 @@ export function ShortStories() {
 
   // Tap anywhere on the photo: left third goes back a photo, the rest goes forward (then on to the next story).
   const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!card || (e.target as HTMLElement).closest('a, button, input, label, [role="tab"]')) return;
+    if (!card || (e.target as HTMLElement).closest('a, button, input, label, [role="tab"], [role="menu"]')) return;
     const box = e.currentTarget.getBoundingClientRect();
     if (e.clientX - box.left < box.width * 0.35) prevPhoto();
     else nextPhoto();
@@ -159,6 +164,19 @@ export function ShortStories() {
   const mine = !!user && user.username.toLowerCase() === card.author.username.toLowerCase();
   const next = encodeURIComponent(`/shorts?start=${card.slug}`);
 
+  async function removeMine() {
+    setMenuError('');
+    try {
+      await api.deleteTrip(card!.id);
+      const id = card!.id;
+      setGone((g) => new Set(g).add(id));
+      setPi(0);
+      setMenu('closed');
+    } catch (err) {
+      setMenuError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
+    }
+  }
+
   async function toggleWant() {
     if (!user) return navigate(`/signin?mode=join&next=${next}`);
     const id = card!.id;
@@ -190,8 +208,38 @@ export function ShortStories() {
           <Avatar name={card.author.displayName} url={card.author.avatarUrl} size={36} ring="#fff" />
           <span><span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{card.author.username}</span><span style={{ display: 'block', fontSize: 12, opacity: 0.85 }}>{total} photo{total === 1 ? '' : 's'}</span></span>
         </Link>
+        {mine && (
+          <button type="button" className="close-btn on-dark" aria-label="Options for your story" aria-expanded={menu !== 'closed'}
+            onClick={() => setMenu(menu === 'closed' ? 'open' : 'closed')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+          </button>
+        )}
         <button type="button" className="close-btn on-dark" aria-label="Close stories" onClick={close}><Icon.close /></button>
       </div>
+
+      {mine && menu !== 'closed' && (
+        <div role="menu" style={{ position: 'absolute', top: 80, right: 12, zIndex: 5, width: 230, padding: 8, borderRadius: 18,
+          background: 'rgba(20,18,15,.92)', border: '1px solid rgba(255,255,255,.18)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxShadow: '0 12px 30px rgba(0,0,0,.4)' }}>
+          {menu === 'open' ? (
+            <>
+              <Link role="menuitem" to={`/trips/${card.slug}/edit`} state={{ back: true }}
+                style={{ display: 'flex', alignItems: 'center', minHeight: 46, padding: '0 14px', borderRadius: 12, color: '#fff', textDecoration: 'none', fontSize: 15, fontWeight: 600 }}>Edit story</Link>
+              <button type="button" role="menuitem" onClick={() => setMenu('confirm')}
+                style={{ width: '100%', minHeight: 46, padding: '0 14px', borderRadius: 12, border: 0, background: 'transparent', color: '#FF8A80', fontSize: 15, fontWeight: 600, textAlign: 'left' }}>Delete story</button>
+            </>
+          ) : (
+            <div style={{ padding: 8 }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Delete this story and its photos?</p>
+              <p style={{ margin: '4px 0 10px', fontSize: 12, opacity: 0.75 }}>This can't be undone.</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={removeMine} style={{ flex: 1, minHeight: 40, borderRadius: 999, border: 0, background: '#B3261E', color: '#fff', fontWeight: 700 }}>Delete</button>
+                <button type="button" onClick={() => setMenu('closed')} style={{ flex: 1, minHeight: 40, borderRadius: 999, border: '1px solid rgba(255,255,255,.4)', background: 'transparent', color: '#fff', fontWeight: 600 }}>Keep</button>
+              </div>
+              {menuError && <p role="alert" style={{ margin: '8px 0 0', fontSize: 12, color: '#FF8A80' }}>{menuError}</p>}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="scroll-x" style={{ position: 'absolute', top: 80, left: 14, right: 14 }}>
         {FILTERS.map((f) => (
@@ -233,6 +281,8 @@ export function ShortStories() {
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="button" onClick={prevPerson} aria-label="Previous person" style={{ width: 56, height: 56, borderRadius: 18, border: '1px solid rgba(255,255,255,.4)', background: 'rgba(255,255,255,.08)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.chevronUp /></button>
           <button type="button" onClick={nextPerson} style={{ flex: 1, height: 56, borderRadius: 18, border: 0, background: '#FBF8F2', color: '#1C1B18', fontWeight: 600, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>Next short story <Icon.chevronDown /></button>
+          <Link to="/create?type=short" aria-label="Post a new short story"
+            style={{ width: 56, height: 56, flex: '0 0 56px', borderRadius: 18, background: 'var(--gold)', color: '#1C1B18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon.plus size={26} /></Link>
         </div>
       </div>
     </>,

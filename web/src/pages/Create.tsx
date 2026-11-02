@@ -81,6 +81,7 @@ export function Create() {
  */
 function useSave(existing?: TripView, onSaved?: () => void) {
   const navigate = useNavigate();
+  const cameFrom = (useLocation().state as { back?: boolean } | null)?.back;
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
@@ -128,7 +129,9 @@ function useSave(existing?: TripView, onSaved?: () => void) {
         await api.publishTrip(id);
       }
       onSaved?.();
-      navigate(`/trips/${created.current!.slug}`);
+      // The form never stays in history: Back after posting must not land on it again.
+      if (existing && cameFrom) navigate(-1);
+      else navigate(`/trips/${created.current!.slug}`, { replace: true });
     } catch (err) {
       const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
       const msg = offline
