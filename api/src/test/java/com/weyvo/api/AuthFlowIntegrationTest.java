@@ -192,4 +192,14 @@ class AuthFlowIntegrationTest {
     private static String wrong(String code) {
         return code.equals("000000") ? "111111" : "000000";
     }
+
+    @Test
+    void emptySignUpFieldsGetPlainMessages() throws Exception {
+        mvc.perform(post("/api/auth/signup").contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"\",\"password\":\"\",\"username\":\"\",\"displayName\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.displayName").value("Please enter your name"))
+                .andExpect(jsonPath("$.fields.email").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("must"))))
+                .andExpect(jsonPath("$.fields.username").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("must"))));
+    }
 }

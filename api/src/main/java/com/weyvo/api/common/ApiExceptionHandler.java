@@ -35,9 +35,40 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> handle(MethodArgumentNotValidException e, HttpServletRequest request) {
         Map<String, String> fields = e.getBindingResult().getFieldErrors().stream()
-                .collect(Collectors.toMap(f -> f.getField(), f -> String.valueOf(f.getDefaultMessage()), (a, b) -> a));
+                .collect(Collectors.toMap(f -> f.getField(), ApiExceptionHandler::friendly, (a, b) -> a));
         log.info("Rejected {} {}: 400 invalid fields {}", request.getMethod(), request.getRequestURI(), fields.keySet());
-        return ResponseEntity.badRequest().body(Map.of("error", "Check the highlighted fields", "fields", fields));
+        return ResponseEntity.badRequest().body(Map.of("error", "A few details are missing. Fill in the boxes marked in red", "fields", fields));
+    }
+
+    /** What each field is called in a sentence, for "Please enter …". */
+    private static final Map<String, String> LABELS = Map.ofEntries(
+            Map.entry("displayName", "your name"), Map.entry("username", "a username"), Map.entry("email", "your email"),
+            Map.entry("password", "a password"), Map.entry("newPassword", "a new password"), Map.entry("currentPassword", "your current password"),
+            Map.entry("code", "the 6-digit code"), Map.entry("title", "a title"), Map.entry("place", "a destination"),
+            Map.entry("body", "some text"), Map.entry("reason", "a reason"));
+
+    /**
+     * Our own messages pass through; the validator's defaults ("must not be blank", "size must be between…")
+     * become plain sentences.
+     */
+    static String friendly(org.springframework.validation.FieldError f) {
+        String code = f.getCode() == null ? "" : f.getCode();
+        String label = LABELS.getOrDefault(f.getField().replaceAll(".*\\.", ""), "this");
+        String message = String.valueOf(f.getDefaultMessage());
+        boolean ours = !(message.startsWith("must ") || message.startsWith("size must"));
+        if (ours) return message;
+        return switch (code) {
+            case "NotBlank", "NotNull", "NotEmpty" -> "Please enter " + label;
+            case "Email" -> "That doesn't look like an email address. Check for typos";
+            case "Size" -> {
+                var m = java.util.regex.Pattern.compile("between (\\d+) and (\\d+)").matcher(message);
+                yield !m.find() ? "That's not the right length"
+                        : m.group(1).equals("0") ? "Keep it to " + m.group(2) + " characters or fewer"
+                        : "Use " + m.group(1) + " to " + m.group(2) + " characters";
+            }
+            case "Pattern" -> "Some characters here aren't allowed";
+            default -> "Check this field";
+        };
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
