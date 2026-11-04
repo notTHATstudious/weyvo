@@ -38,9 +38,12 @@ public class CommentService {
     private final NotificationService notifications;
     private final AppProperties.Community rules;
     private final BlockService blocks;
+    private final com.weyvo.api.moderation.ContentFilter filter;
 
     public CommentService(NamedParameterJdbcTemplate jdbc, TripRepository trips, StoryGate gate,
-                          NotificationService notifications, AppProperties props, BlockService blocks) {
+                          NotificationService notifications, AppProperties props, BlockService blocks,
+                          com.weyvo.api.moderation.ContentFilter filter) {
+        this.filter = filter;
         this.blocks = blocks;
         this.jdbc = jdbc;
         this.trips = trips;
@@ -98,6 +101,7 @@ public class CommentService {
         Long id = jdbc.queryForObject("INSERT INTO trip_comments (trip_id, author_id, parent_id, body) VALUES (:t, :u, :p, :b) RETURNING id",
                 new MapSqlParameterSource().addValue("t", tripId).addValue("u", userId).addValue("p", parentId).addValue("b", text), Long.class);
         long ownerId = trip.getOwner().getId();
+        if (screen(id, text)) return one(id, userId, false);
         if (parentAuthor != null) {
             notifications.notify(parentAuthor, userId, NotificationService.Type.REPLY, tripId, null, id);
         }
@@ -168,7 +172,14 @@ public class CommentService {
                 new MapSqlParameterSource("id", commentId),
                 (rs, i) -> new Comment(rs.getLong("id"), (Long) rs.getObject("parent_id"), rs.getString("body"),
                         new Author(rs.getString("username"), rs.getString("display_name"), com.weyvo.api.user.Avatars.url(rs.getString("username"), (Integer) rs.getObject("avatar_version"))), rs.getTimestamp("created_at").toInstant(),
-                        owner ? rs.getString("status") : null, rs.getLong("author_id") == viewerId, new ArrayList<>())).get(0);
+                        owner || rs.getLong("author_id") == viewerId ? rs.getString("status") : null, rs.getLong("author_id") == viewerId, new ArrayList<>())).get(0);
+    }
+
+    /** Holds a flagged post for an admin to look at; true when it was held (and nobody should be notified). */
+    private boolean screen(long id, String text) {
+        return filter.check(text).map(r -> jdbc.update(
+                "UPDATE trip_comments SET status = 'HIDDEN_BY_REPORTS', held_reason = :r WHERE id = :id",
+                new MapSqlParameterSource().addValue("r", r.name()).addValue("id", id)) > 0).orElse(false);
     }
 
     private static String clean(String text) {

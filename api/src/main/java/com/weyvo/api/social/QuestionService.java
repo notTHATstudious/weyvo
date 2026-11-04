@@ -39,9 +39,12 @@ public class QuestionService {
     private final AppProperties.Community rules;
 
     private final BlockService blocks;
+    private final com.weyvo.api.moderation.ContentFilter filter;
 
     public QuestionService(NamedParameterJdbcTemplate jdbc, TripRepository trips, StoryGate gate,
-                           NotificationService notifications, AppProperties props, BlockService blocks) {
+                           NotificationService notifications, AppProperties props, BlockService blocks,
+                           com.weyvo.api.moderation.ContentFilter filter) {
+        this.filter = filter;
         this.jdbc = jdbc;
         this.trips = trips;
         this.gate = gate;
@@ -87,6 +90,7 @@ public class QuestionService {
         }
         Long id = jdbc.queryForObject("INSERT INTO trip_questions (trip_id, asker_id, body) VALUES (:t, :u, :b) RETURNING id",
                 new MapSqlParameterSource().addValue("t", tripId).addValue("u", userId).addValue("b", text), Long.class);
+        if (screen(id, text)) return one(id, userId, false);
         notifications.notify(trip.getOwner().getId(), userId, NotificationService.Type.QUESTION, tripId, id);
         return one(id, userId, false);
     }
@@ -96,6 +100,9 @@ public class QuestionService {
     public Question answer(long ownerId, long questionId, String answer) {
         Row q = ownedQuestion(ownerId, questionId);
         String text = clean(answer, MAX_ANSWER, "answer");
+        if (filter.check(text).isPresent()) {
+            throw ApiException.badRequest("Please keep answers about the trip, without links, phone numbers or rude words");
+        }
         jdbc.update("UPDATE trip_questions SET answer = :a, answered_at = now() WHERE id = :id",
                 new MapSqlParameterSource().addValue("a", text).addValue("id", questionId));
         notifications.notify(q.askerId(), ownerId, NotificationService.Type.ANSWER, q.tripId(), questionId);
@@ -170,8 +177,15 @@ public class QuestionService {
                         rs.getString("answer"),
                         rs.getTimestamp("answered_at") == null ? null : rs.getTimestamp("answered_at").toInstant(),
                         rs.getTimestamp("created_at").toInstant(),
-                        owner ? rs.getString("status") : null,
+                        owner || rs.getLong("asker_id") == viewerId ? rs.getString("status") : null,
                         rs.getLong("asker_id") == viewerId)).get(0);
+    }
+
+    /** Holds a flagged post for an admin to look at; true when it was held (and nobody should be notified). */
+    private boolean screen(long id, String text) {
+        return filter.check(text).map(r -> jdbc.update(
+                "UPDATE trip_questions SET status = 'HIDDEN_BY_REPORTS', held_reason = :r WHERE id = :id",
+                new MapSqlParameterSource().addValue("r", r.name()).addValue("id", id)) > 0).orElse(false);
     }
 
     private static String clean(String text, int max, String what) {

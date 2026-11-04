@@ -107,23 +107,25 @@ const PAGES: Record<string, { title: string; body: ReactNode }> = {
     title: 'Community Guidelines',
     body: (
       <>
-        <p>Weyvo is a calm place to share real journeys. These guidelines keep it that way.</p>
-        <h2>Do</h2>
+        <p>Weyvo is for travel. Share the places you went and what it was like. That's it.</p>
+        <h2>Good to post</h2>
         <ul>
-          <li>Share your own trips, photos and honest experiences.</li>
-          <li>Be kind in comments and questions. Disagree respectfully.</li>
-          <li>Credit others and ask before posting photos of people.</li>
+          <li>Your trips, weekends, drives and day outings, big or small.</li>
+          <li>Your own photos of places, food, roads, stays and the people you travelled with (ask them first).</li>
+          <li>Honest tips: costs, best time to go, what to skip.</li>
+          <li>Kind comments and questions about the trip.</li>
         </ul>
-        <h2>Don't</h2>
+        <h2>Please don't post</h2>
         <ul>
-          <li>Harass, threaten, or post hate based on who someone is.</li>
-          <li>Spam, advertise without disclosure, or fake engagement.</li>
-          <li>Post others' private information, or photos you don't have rights to.</li>
-          <li>Post sexual, violent or illegal content, or anything involving minors in a harmful way.</li>
-          <li>Encourage unsafe or illegal travel behaviour.</li>
+          <li>Anything sexual, or rude and abusive words.</li>
+          <li>Politics or fights about religion or groups of people.</li>
+          <li>Selling: phone numbers, links, prices, "DM for details" or discount codes. A space for travel promotions is coming later.</li>
+          <li>Photos that aren't yours, or other people's private details.</li>
+          <li>Anything dangerous or against the law.</li>
         </ul>
-        <h2>Reporting</h2>
-        <p>Use Report on any comment or question. Content reported by several people is hidden automatically while we review it. Authors can hide or delete comments on their own stories. Repeated or serious violations can lead to suspension.</p>
+        <h2>What happens</h2>
+        <p>If a post has words like these, the Weyvo team takes a quick look before others see it. Most posts are fine and go live. You don't need to do anything.</p>
+        <p>Anyone can tap Report on a story, comment or question. If we take a post down, that's one strike. After three strikes the account is paused.</p>
       </>
     ),
   },
@@ -156,9 +158,9 @@ export function Legal() {
         <Wordmark size={22} />
         <span style={{ width: 44 }} />
       </div>
-      <p role="note" className="paper-card" style={{ fontSize: 13, color: 'var(--chip-gold-fg)', background: 'var(--chip-gold-bg)' }}>
+      {page !== 'guidelines' && <p role="note" className="paper-card" style={{ fontSize: 13, color: 'var(--chip-gold-fg)', background: 'var(--chip-gold-bg)' }}>
         Draft for review. Highlighted parts are placeholders, and this text needs a legal review before launch.
-      </p>
+      </p>}
       <article className="legal">
         <h1 className="display" style={{ fontSize: 40, margin: '18px 0 4px' }}>{doc.title}</h1>
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Last updated: <Ph>{P.updated}</Ph></p>

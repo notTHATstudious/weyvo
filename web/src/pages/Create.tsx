@@ -17,6 +17,29 @@ const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
   { value: 'PRIVATE', label: 'Private', hint: 'Only you' },
 ];
 
+const SEEN_RULES = 'weyvo-rules-seen';
+
+/** Shown on the Create screen until dismissed: what belongs on Weyvo, in one line. */
+function TravelOnlyNote() {
+  const [show, setShow] = useState(() => {
+    try { return !localStorage.getItem(SEEN_RULES); } catch { return true; }
+  });
+  if (!show) return null;
+  const close = () => {
+    setShow(false);
+    try { localStorage.setItem(SEEN_RULES, '1'); } catch { /* storage unavailable */ }
+  };
+  return (
+    <div role="note" className="paper-card" style={{ margin: '10px 0 14px', display: 'flex', gap: 12, alignItems: 'flex-start', borderLeft: '4px solid var(--gold)' }}>
+      <p style={{ margin: 0, flex: 1, fontSize: 14, lineHeight: 1.5 }}>
+        <strong>Weyvo is for travel.</strong> Share places you went and how it felt. No selling, politics or rude words.{' '}
+        <Link to="/legal/guidelines">See the guidelines</Link>
+      </p>
+      <button type="button" onClick={close} aria-label="Got it" className="btn btn-outline" style={{ minHeight: 34, padding: '0 12px', fontSize: 13, flex: '0 0 auto' }}>Got it</button>
+    </div>
+  );
+}
+
 /** A photo waiting to be uploaded into a slot once the trip exists. */
 interface Upload { file: File; role: 'COVER' | 'SECTION'; position: number }
 
@@ -50,6 +73,7 @@ export function Create() {
         {mode === 'pick' && (
           <>
             <h1 className="display rise" style={{ margin: '10px 0 6px', fontSize: 44 }}>What are we making today?</h1>
+            <TravelOnlyNote />
             <p style={{ margin: '0 0 22px', fontSize: 15, color: 'var(--ink-soft)' }}>Pick one. You can save a draft any time.</p>
             <button type="button" onClick={() => setMode('full')} className="lift rise" style={{ width: '100%', textAlign: 'left', border: 0, padding: 0, background: '#1C1B18', color: '#FBF8F2', borderRadius: 22, overflow: 'hidden', display: 'block', marginBottom: 14 }}>
               <div style={{ height: 170 }}><Photo scene="mountain" /></div>

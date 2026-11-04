@@ -77,6 +77,7 @@ export function App() {
         <Route path="/forgot" element={<ForgotPassword />} />
         <Route path="/premium" element={<Premium />} />
         <Route path="/legal/:page" element={<Legal />} />
+        <Route path="/guidelines" element={<Navigate to="/legal/guidelines" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

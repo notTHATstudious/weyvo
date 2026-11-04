@@ -8,7 +8,7 @@ import { TalkAction, TalkComposer, TalkHeading, ago } from './Talk';
 export const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'SPAM', label: 'Spam' },
   { value: 'ABUSE', label: 'Abusive' },
-  { value: 'OFF_TOPIC', label: 'Off topic' },
+  { value: 'OFF_TOPIC', label: 'Not about travel' },
   { value: 'OTHER', label: 'Something else' },
 ];
 
@@ -17,6 +17,7 @@ export function Comments({ tripId, isOwner }: { tripId: number; isOwner: boolean
   const { user } = useAuth();
   const location = useLocation();
   const [items, setItems] = useState<Comment[] | null>(null);
+  const [held, setHeld] = useState(false);
 
   const load = () => api.comments(tripId).then((c) => setItems(c.items), () => setItems([]));
   useEffect(() => {
@@ -47,12 +48,20 @@ export function Comments({ tripId, isOwner }: { tripId: number; isOwner: boolean
 
       {user ? (
         <TalkComposer id="comment" label="Add a comment" placeholder="Add a comment…" max={500} button="Post comment"
-          onSend={async (text) => { await send(() => api.postComment(tripId, text)); load(); }} />
+          onSend={async (text) => { setHeld(await post(tripId, text)); load(); }} />
       ) : (
         <p style={{ marginTop: 14, fontSize: 14 }}><Link to={`/signin?next=${encodeURIComponent(location.pathname)}`}>Sign in</Link> to comment.</p>
       )}
+      {held && <p role="status" style={{ margin: '0 4px', fontSize: 13, color: 'var(--ink-soft)' }}>Thanks! It'll show here after a quick check by the Weyvo team.</p>}
     </section>
   );
+}
+
+/** Posts a comment or reply; true when it's held for a quick check before others see it. */
+async function post(tripId: number, text: string, parentId?: number) {
+  let held = false;
+  await send(async () => { const c = await api.postComment(tripId, text, parentId); held = !!c.status && c.status !== 'VISIBLE'; });
+  return held;
 }
 
 /** Turns API errors into plain messages for the message box. */
@@ -68,6 +77,7 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply, small }:
   c: Comment; tripId: number; isOwner: boolean; signedIn: boolean; onChange: () => void; canReply?: boolean; small?: boolean;
 }) {
   const [replying, setReplying] = useState(false);
+  const [heldReply, setHeldReply] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [error, setError] = useState('');
@@ -114,8 +124,9 @@ function CommentRow({ c, tripId, isOwner, signedIn, onChange, canReply, small }:
         )}
         {replying && (
           <TalkComposer id={`reply-${c.id}`} label={`Reply to ${c.author.displayName}`} placeholder={`Reply to ${c.author.username}…`} max={500} button="Post reply" autoFocus
-            onSend={async (text) => { await send(() => api.postComment(tripId, text, c.id)); setReplying(false); onChange(); }} onCancel={() => setReplying(false)} />
+            onSend={async (text) => { setHeldReply(await post(tripId, text, c.id)); setReplying(false); onChange(); }} onCancel={() => setReplying(false)} />
         )}
+        {heldReply && <p role="status" style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-soft)' }}>Thanks! It'll show here after a quick check by the Weyvo team.</p>}
         {error && <p role="alert" style={{ margin: '4px 0 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
       </div>
     </article>

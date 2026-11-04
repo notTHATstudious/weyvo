@@ -7,7 +7,11 @@ import { useApi } from '../useApi';
 import { BackButton } from '../components/BackButton';
 
 const KIND_LABEL: Record<AdminReport['kind'], string> = { TRIP: 'Story', COMMENT: 'Comment', QUESTION: 'Question' };
-const REASON_LABEL: Record<string, string> = { SPAM: 'Spam', ABUSE: 'Abusive', OFF_TOPIC: 'Off topic', OTHER: 'Something else' };
+const REASON_LABEL: Record<string, string> = {
+  SPAM: 'Spam', ABUSE: 'Abusive', OFF_TOPIC: 'Not about travel', OTHER: 'Something else',
+  // Held by the word filter rather than reported by a reader.
+  AUTO_SEXUAL: 'Auto-check: sexual words', AUTO_ABUSE: 'Auto-check: abusive words', AUTO_POLITICS: 'Auto-check: politics', AUTO_PROMOTION: 'Auto-check: selling or links',
+};
 
 type Tab = 'overview' | 'reports' | 'users';
 
@@ -351,7 +355,7 @@ function ReportCard({ r, onDone }: { r: AdminReport; onDone: () => void }) {
         <span className="tag tag-gold">{KIND_LABEL[r.kind]}</span>
         {r.hidden && <span className="tag">Hidden now</span>}
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-          {r.reports} {r.reports === 1 ? 'report' : 'reports'} · {r.reasons.map((x) => REASON_LABEL[x] ?? x).join(', ')} · {new Date(r.lastReportedAt).toLocaleString()}
+          {r.reports > 0 ? `${r.reports} ${r.reports === 1 ? 'report' : 'reports'} · ` : 'Held before going live · '}{r.reasons.map((x) => REASON_LABEL[x] ?? x).join(', ')} · {new Date(r.lastReportedAt).toLocaleString()}
         </span>
       </div>
       {r.kind !== 'TRIP' && <p style={{ margin: '10px 0 0', fontSize: 15, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{r.text}</p>}

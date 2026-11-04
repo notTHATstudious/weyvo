@@ -64,6 +64,16 @@ export function Story() {
       </div>
 
       {trip.owner && <OwnerBar id={trip.id} slug={trip.slug} status={trip.status} visibility={trip.visibility} />}
+      {trip.owner && trip.review && (
+        <div role="status" className="paper-card" style={{ margin: '10px 16px 0', borderLeft: `4px solid ${trip.review === 'CHECKING' ? 'var(--gold)' : '#B3261E'}` }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{trip.review === 'CHECKING' ? 'Quick check in progress' : 'This story was taken down'}</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+            {trip.review === 'CHECKING'
+              ? "Something in it looked like selling, links, politics or rude words, so the Weyvo team will take a quick look before others see it. Usually within a day. You don't need to do anything."
+              : <>It didn't follow the <Link to="/guidelines">community guidelines</Link>. Only you can see it now.</>}
+          </p>
+        </div>
+      )}
 
       {trip.intro && (
         <div style={{ padding: '26px 22px 0' }}>

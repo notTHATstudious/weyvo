@@ -1,6 +1,7 @@
 package com.weyvo.api.trip;
 
 import com.weyvo.api.common.ApiException;
+import com.weyvo.api.moderation.ContentFilter;
 import com.weyvo.api.config.AppProperties.PlanLimits;
 import com.weyvo.api.photo.PhotoService;
 import com.weyvo.api.plan.PlanService;
@@ -41,9 +42,11 @@ public class TripService {
     private final FollowService follows;
     private final PlanService plans;
     private final BlockService blocks;
+    private final ContentFilter filter;
 
     public TripService(TripRepository trips, UserRepository users, StoryGate gate, PhotoService photos,
-                       ReactionService reactions, FollowService follows, PlanService plans, BlockService blocks) {
+                       ReactionService reactions, FollowService follows, PlanService plans, BlockService blocks, ContentFilter filter) {
+        this.filter = filter;
         this.blocks = blocks;
         this.plans = plans;
         this.trips = trips;
@@ -76,7 +79,8 @@ public class TripService {
                 trip.getStartDate(), trip.getEndDate(), trip.getIntro(), author(trip.getOwner()),
                 trip.getVisibility(), trip.getStatus(), trip.getPublishedAt(), pics.cover(),
                 shown, all.size(), locked ? List.of() : List.copyOf(trip.getMoments()), locked ? null : trip.getFinalNote(),
-                locked, trip.isOwnedBy(viewerId), reactions.forTrips(List.of(trip.getId()), viewerId).get(trip.getId()));
+                locked, trip.isOwnedBy(viewerId), reactions.forTrips(List.of(trip.getId()), viewerId).get(trip.getId()),
+                trip.isOwnedBy(viewerId) ? trip.getReview() : null);
     }
 
     @Transactional(readOnly = true)
@@ -149,6 +153,7 @@ public class TripService {
         User owner = users.findById(ownerId).orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Sign in again"));
         Trip trip = new Trip(owner, uniqueSlug(req.title()), req.kind());
         apply(trip, req);
+        screen(trip, req);
         trips.save(trip);
         return view(trip.getSlug(), ownerId);
     }
@@ -162,6 +167,7 @@ public class TripService {
         trip.replaceSections(List.of());
         trips.flush();
         apply(trip, req);
+        screen(trip, req);
         trip.touch();
         photos.pruneSections(trip.getId(), trip.getSections().size());
         return view(trip.getSlug(), ownerId);
@@ -210,6 +216,18 @@ public class TripService {
                     return new TripSection(i, heading, s.body() == null ? "" : s.body().trim(), blankToNull(s.photoCaption()));
                 })
                 .toList());
+    }
+
+    /** Words that don't belong in a travel story hold it for a quick admin look; nothing is rejected. */
+    private void screen(Trip trip, TripRequest req) {
+        var texts = new java.util.ArrayList<String>(List.of(nz(req.title()), nz(req.place()), nz(req.intro()), nz(req.finalNote())));
+        if (req.moments() != null) texts.addAll(req.moments());
+        if (req.sections() != null) req.sections().forEach(s -> texts.addAll(java.util.Arrays.asList(nz(s.heading()), nz(s.body()), nz(s.photoCaption()))));
+        filter.check(texts).ifPresent(r -> trip.hold(r.name()));
+    }
+
+    private static String nz(String s) {
+        return s == null ? "" : s;
     }
 
     /** Template rules, with section and photo counts taken from the owner's plan. */

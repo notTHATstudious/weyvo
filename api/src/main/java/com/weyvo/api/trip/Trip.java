@@ -85,9 +85,13 @@ public class Trip {
     @Column(name = "published_at")
     private Instant publishedAt;
 
-    /** Set when an admin takes the story down after reports. Only its author still sees it. */
-    @Column(name = "removed_at", insertable = false, updatable = false)
+    /** Set when an admin takes the story down, or while the word filter holds it for a check. Only its author still sees it. */
+    @Column(name = "removed_at")
     private Instant removedAt;
+
+    /** Why the word filter held this story; cleared once an admin has looked. */
+    @Column(name = "held_reason")
+    private String heldReason;
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
@@ -120,6 +124,16 @@ public class Trip {
     }
 
     public boolean isRemoved() { return removedAt != null; }
+
+    /** "CHECKING" while held for a look, "REMOVED" once taken down, otherwise null. */
+    public String getReview() { return heldReason != null ? "CHECKING" : removedAt != null ? "REMOVED" : null; }
+
+    /** Hides the story until an admin has looked. A story already taken down stays as it is. */
+    public void hold(String reason) {
+        if (removedAt != null) return;
+        removedAt = Instant.now();
+        heldReason = reason;
+    }
 
     public void replaceSections(List<TripSection> next) {
         sections.clear();

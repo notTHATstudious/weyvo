@@ -69,27 +69,57 @@ public class ModerationService {
                        count(*), string_agg(DISTINCT r.reason, ','), max(r.created_at)
                 FROM question_reports r JOIN trip_questions q ON q.id = r.question_id JOIN trips t ON t.id = q.trip_id JOIN users u ON u.id = q.asker_id
                 WHERE r.reviewed_at IS NULL GROUP BY q.id, u.username, t.slug, t.title
+                UNION ALL
+                SELECT 'TRIP', t.id, left(COALESCE(t.title || ' · ' || (SELECT s.body FROM trip_sections s WHERE s.trip_id = t.id ORDER BY s.position LIMIT 1), t.title), 300),
+                       u.username, t.slug, t.title, true, 0, 'AUTO_' || t.held_reason, t.updated_at
+                FROM trips t JOIN users u ON u.id = t.owner_id
+                WHERE t.held_reason IS NOT NULL AND NOT EXISTS (SELECT 1 FROM trip_reports r WHERE r.trip_id = t.id AND r.reviewed_at IS NULL)
+                UNION ALL
+                SELECT 'COMMENT', c.id, c.body, u.username, t.slug, t.title, true, 0, 'AUTO_' || c.held_reason, c.created_at
+                FROM trip_comments c JOIN trips t ON t.id = c.trip_id JOIN users u ON u.id = c.author_id
+                WHERE c.held_reason IS NOT NULL AND NOT EXISTS (SELECT 1 FROM comment_reports r WHERE r.comment_id = c.id AND r.reviewed_at IS NULL)
+                UNION ALL
+                SELECT 'QUESTION', q.id, q.body, u.username, t.slug, t.title, true, 0, 'AUTO_' || q.held_reason, q.created_at
+                FROM trip_questions q JOIN trips t ON t.id = q.trip_id JOIN users u ON u.id = q.asker_id
+                WHERE q.held_reason IS NOT NULL AND NOT EXISTS (SELECT 1 FROM question_reports r WHERE r.question_id = q.id AND r.reviewed_at IS NULL)
                 ORDER BY last DESC LIMIT 100""", new MapSqlParameterSource(),
                 (rs, i) -> new Report(Kind.valueOf(rs.getString("kind")), rs.getLong("id"), rs.getString("text"), rs.getString("author"),
                         rs.getString("slug"), rs.getString("title"), rs.getBoolean("hidden"), rs.getInt("n"),
                         Arrays.asList(rs.getString("reasons").split(",")), rs.getTimestamp("last").toInstant()));
     }
 
-    /** Hide takes the item down; keep restores it. Either way its open reports are marked reviewed. */
+    /** Strikes that suspend an account. */
+    static final int STRIKE_LIMIT = 3;
+
+    /**
+     * Hide takes the item down and gives its author a strike (three suspend the account); keep puts it back.
+     * Either way its open reports, and any word-filter hold, are cleared.
+     */
     @Transactional
     public void decide(Kind kind, long id, boolean hide) {
         var p = new MapSqlParameterSource().addValue("id", id).addValue("hide", hide);
-        int changed = switch (kind) {
-            case TRIP -> jdbc.update("UPDATE trips SET removed_at = CASE WHEN :hide THEN COALESCE(removed_at, now()) END WHERE id = :id", p);
+        Long author = switch (kind) {
+            case TRIP -> one("""
+                    UPDATE trips SET removed_at = CASE WHEN :hide THEN COALESCE(removed_at, now()) END, held_reason = NULL
+                    WHERE id = :id RETURNING owner_id""", p);
             // A comment or question its trip's author hid stays hidden when the admin keeps it.
-            case COMMENT -> jdbc.update("""
+            case COMMENT -> one("""
                     UPDATE trip_comments SET status = CASE WHEN :hide THEN 'HIDDEN_BY_REPORTS'
-                        WHEN status = 'HIDDEN_BY_REPORTS' THEN 'VISIBLE' ELSE status END WHERE id = :id""", p);
-            case QUESTION -> jdbc.update("""
+                        WHEN status = 'HIDDEN_BY_REPORTS' THEN 'VISIBLE' ELSE status END, held_reason = NULL
+                    WHERE id = :id RETURNING author_id""", p);
+            case QUESTION -> one("""
                     UPDATE trip_questions SET status = CASE WHEN :hide THEN 'HIDDEN_BY_REPORTS'
-                        WHEN status = 'HIDDEN_BY_REPORTS' THEN 'VISIBLE' ELSE status END WHERE id = :id""", p);
+                        WHEN status = 'HIDDEN_BY_REPORTS' THEN 'VISIBLE' ELSE status END, held_reason = NULL
+                    WHERE id = :id RETURNING asker_id""", p);
         };
-        if (changed == 0) throw ApiException.notFound();
+        if (author == null) throw ApiException.notFound();
+        if (hide) {
+            jdbc.update("""
+                    UPDATE users SET strikes = strikes + 1,
+                           status = CASE WHEN strikes + 1 >= :limit AND NOT is_admin THEN 'SUSPENDED' ELSE status END,
+                           session_version = CASE WHEN strikes + 1 >= :limit AND NOT is_admin THEN session_version + 1 ELSE session_version END
+                    WHERE id = :u""", new MapSqlParameterSource().addValue("u", author).addValue("limit", STRIKE_LIMIT));
+        }
         String reports = switch (kind) {
             case TRIP -> "UPDATE trip_reports SET reviewed_at = now() WHERE trip_id = :id";
             case COMMENT -> "UPDATE comment_reports SET reviewed_at = now() WHERE comment_id = :id";
@@ -98,10 +128,14 @@ public class ModerationService {
         jdbc.update(reports + " AND reviewed_at IS NULL", p);
     }
 
+    private Long one(String sql, MapSqlParameterSource p) {
+        return jdbc.query(sql, p, (rs, i) -> rs.getLong(1)).stream().findFirst().orElse(null);
+    }
+
     /** Lifts a suspension. The person signs in again as normal. */
     @Transactional
     public void restore(String username) {
-        int n = jdbc.update("UPDATE users SET status = 'ACTIVE' WHERE lower(username) = lower(:n) AND status = 'SUSPENDED'",
+        int n = jdbc.update("UPDATE users SET status = 'ACTIVE', strikes = 0 WHERE lower(username) = lower(:n) AND status = 'SUSPENDED'",
                 new MapSqlParameterSource("n", username));
         if (n == 0) throw ApiException.notFound();
     }

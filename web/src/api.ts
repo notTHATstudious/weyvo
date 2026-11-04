@@ -91,6 +91,8 @@ export interface TripView extends TripCard {
   startDate: string | null; endDate: string | null; intro: string | null;
   sections: Section[]; totalSections: number; moments: string[]; finalNote: string | null;
   locked: boolean; owner: boolean;
+  /** Only for the author: being checked by the Weyvo team, or taken down. */
+  review?: 'CHECKING' | 'REMOVED' | null;
 }
 
 export interface TripInput {

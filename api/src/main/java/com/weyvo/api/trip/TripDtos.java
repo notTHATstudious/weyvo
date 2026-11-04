@@ -45,7 +45,9 @@ public final class TripDtos {
             LocalDate startDate, LocalDate endDate, String intro, Author author,
             Trip.Visibility visibility, Trip.Status status, Instant publishedAt, PhotoRef cover,
             List<Section> sections, int totalSections, List<String> moments, String finalNote,
-            boolean locked, boolean owner, Reactions reactions) {}
+            boolean locked, boolean owner, Reactions reactions,
+            /** Only for the author: "CHECKING" while held for a quick look, "REMOVED" if taken down. */
+            String review) {}
 
     public record TripCard(
             long id, String slug, Trip.Kind kind, Trip.ShortTag shortTag, String title, String place,

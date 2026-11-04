@@ -8,7 +8,7 @@ import { TalkAction, TalkComposer, TalkHeading, ago } from './Talk';
 const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'SPAM', label: 'Spam' },
   { value: 'ABUSE', label: 'Abusive' },
-  { value: 'OFF_TOPIC', label: 'Off topic' },
+  { value: 'OFF_TOPIC', label: 'Not about travel' },
   { value: 'OTHER', label: 'Something else' },
 ];
 
@@ -17,6 +17,7 @@ export function QnA({ tripId, isOwner, authorName }: { tripId: number; isOwner: 
   const { user } = useAuth();
   const location = useLocation();
   const [items, setItems] = useState<Question[] | null>(null);
+  const [held, setHeld] = useState(false);
   const firstName = authorName.split(' ')[0];
 
   useEffect(() => {
@@ -49,7 +50,9 @@ export function QnA({ tripId, isOwner, authorName }: { tripId: number; isOwner: 
           onSend={async (text) => {
             try {
               const q = await api.ask(tripId, text);
-              setItems((xs) => [...(xs ?? []), q]);
+              const waiting = !!q.status && q.status !== 'VISIBLE';
+              setHeld(waiting);
+              if (!waiting) setItems((xs) => [...(xs ?? []), q]);
             } catch (err) {
               throw new Error(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
             }
@@ -59,6 +62,7 @@ export function QnA({ tripId, isOwner, authorName }: { tripId: number; isOwner: 
           <Link to={`/signin?next=${encodeURIComponent(location.pathname)}`}>Sign in</Link> to ask {firstName} a question.
         </p>
       ))}
+      {held && <p role="status" style={{ margin: '0 4px', fontSize: 13, color: 'var(--ink-soft)' }}>Thanks! It'll show here after a quick check by the Weyvo team.</p>}
     </section>
   );
 }
