@@ -93,7 +93,7 @@ export function Profile() {
       <div style={{ padding: '8px 20px 0', display: 'flex', gap: 18, alignItems: 'center' }}>
         <span style={{ flex: '0 0 auto', borderRadius: '50%', padding: p.premium ? 3 : 0, background: p.premium ? 'linear-gradient(135deg, #F6D58B, #E3A23B 55%, #B87A1E)' : 'none' }}>
           {isMe
-            ? <Link to="/settings" aria-label="Change profile picture" style={{ display: 'block', borderRadius: '50%' }}><Avatar name={p.displayName} url={p.avatarUrl} size={84} ring="var(--card)" /></Link>
+            ? <Link to="/profile/edit" aria-label="Edit profile" style={{ display: 'block', borderRadius: '50%' }}><Avatar name={p.displayName} url={p.avatarUrl} size={84} ring="var(--card)" /></Link>
             : <Avatar name={p.displayName} url={p.avatarUrl} size={84} ring="var(--card)" />}
         </span>
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -104,18 +104,18 @@ export function Profile() {
       </div>
       {p.bio
         ? <p style={{ margin: '16px 20px 0', fontSize: 15, lineHeight: 1.55, color: 'var(--ink-soft)', whiteSpace: 'pre-line' }}>{p.bio}</p>
-        : isMe && <div style={{ padding: '14px 20px 0' }}><Link to="/settings" className="btn btn-outline" style={{ minHeight: 36, padding: '0 14px', fontSize: 13 }}>Add a short bio</Link></div>}
+        : isMe && <div style={{ padding: '14px 20px 0' }}><Link to="/profile/edit" className="btn btn-outline" style={{ minHeight: 36, padding: '0 14px', fontSize: 13 }}>Add a short bio</Link></div>}
 
       <div style={{ padding: '16px 20px 0', display: 'flex', gap: 10 }}>
         {isMe ? (
-          <Link to="/create" className="btn btn-primary" style={{ flex: 1, minHeight: 44 }}>New story</Link>
+          <Link to="/profile/edit" className="btn btn-outline" style={{ flex: 1, minHeight: 44, borderColor: 'var(--line-strong)' }}>Edit profile</Link>
         ) : (
           <button type="button" className={f.followedByMe ? 'btn btn-outline' : 'btn btn-primary'} onClick={toggleFollow} disabled={busy}
             aria-pressed={f.followedByMe} style={{ flex: 1, minHeight: 44 }}>
             {f.followedByMe ? 'Following' : 'Follow'}
           </button>
         )}
-        <button type="button" className="btn btn-outline" style={{ minHeight: 44, borderColor: 'var(--line-strong)' }}
+        <button type="button" className="btn btn-outline" style={{ minHeight: 44, borderColor: 'var(--line-strong)', ...(isMe ? { flex: 1 } : {}) }}
           onClick={async () => setShared(await shareLink(`/s/u/${p.username}`, `${p.displayName} on Weyvo`))}>
           {shared === 'copied' ? 'Link copied' : 'Share profile'}
         </button>

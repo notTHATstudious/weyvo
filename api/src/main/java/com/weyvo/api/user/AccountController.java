@@ -44,6 +44,18 @@ public class AccountController {
 
     public record Profile(String username, String displayName, String bio) {}
 
+    public record UsernameRequest(@NotBlank String username) {}
+
+    /** Whether you can change your username now, and when you next can. available is for the name in ?check=. */
+    public record UsernameStatus(boolean canChange, java.time.Instant nextChangeAt, Boolean available, String problem) {}
+
+    static final java.time.Duration USERNAME_COOLDOWN = java.time.Duration.ofDays(90);
+    private static final java.util.regex.Pattern USERNAME = java.util.regex.Pattern.compile("^[a-zA-Z0-9_.]{3,30}$");
+    /** Names that would look official or clash with app pages. */
+    private static final java.util.Set<String> RESERVED = java.util.Set.of(
+            "weyvo", "admin", "administrator", "support", "help", "team", "official", "moderator", "staff", "me", "settings",
+            "premium", "atlas", "bubdub", "root", "system", "null", "undefined");
+
     private static final Logger log = LoggerFactory.getLogger(AccountController.class);
 
     private final UserRepository users;
@@ -75,6 +87,59 @@ public class AccountController {
         user.setDisplayName(req.displayName().strip());
         user.setBio(req.bio() == null || req.bio().isBlank() ? null : req.bio().strip());
         return new Profile(user.getUsername(), user.getDisplayName(), user.getBio());
+    }
+
+    /** Can you change your username yet; with ?check=name, also whether that name is free. */
+    @GetMapping("/api/me/username")
+    public UsernameStatus usernameStatus(@AuthenticationPrincipal CurrentUser current,
+                                         @org.springframework.web.bind.annotation.RequestParam(required = false) String check) {
+        java.time.Instant next = nextUsernameChange(current.id());
+        boolean can = next == null || !next.isAfter(java.time.Instant.now());
+        if (check == null || check.isBlank()) return new UsernameStatus(can, next, null, null);
+        limits.attempt("username-check", "user:" + current.id(), 60, Duration.ofMinutes(5), "Slow down a little and try again");
+        String problem = usernameProblem(current, check.strip());
+        return new UsernameStatus(can, next, problem == null, problem);
+    }
+
+    /** A new username: free, allowed, and at most once every 90 days. Old profile links stop working. */
+    @PutMapping("/api/me/username")
+    @Transactional
+    public Profile changeUsername(@AuthenticationPrincipal CurrentUser current, @Valid @RequestBody UsernameRequest req) {
+        limits.attempt("username-change", "user:" + current.id(), 10, Duration.ofHours(1), "Too many tries. Wait a little and try again");
+        String name = req.username().strip();
+        java.time.Instant next = nextUsernameChange(current.id());
+        if (next != null && next.isAfter(java.time.Instant.now())) {
+            throw ApiException.badRequest("You can change your username again on "
+                    + java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy").withZone(java.time.ZoneId.of("Asia/Kolkata")).format(next));
+        }
+        String problem = usernameProblem(current, name);
+        if (problem != null) throw problem.contains("taken") ? ApiException.conflict(problem) : ApiException.badRequest(problem);
+        try {
+            jdbc.update("UPDATE users SET username = :n, username_changed_at = now() WHERE id = :u",
+                    new MapSqlParameterSource().addValue("n", name).addValue("u", current.id()));
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw ApiException.conflict("That username is taken");
+        }
+        log.info("Username changed userId={}", current.id());
+        User user = me(current);
+        return new Profile(name, user.getDisplayName(), user.getBio());
+    }
+
+    private java.time.Instant nextUsernameChange(long userId) {
+        java.sql.Timestamp at = jdbc.queryForObject("SELECT username_changed_at FROM users WHERE id = :u",
+                new MapSqlParameterSource("u", userId), java.sql.Timestamp.class);
+        return at == null ? null : at.toInstant().plus(USERNAME_COOLDOWN);
+    }
+
+    /** Why a name can't be used, in plain words, or null when it's fine. */
+    private String usernameProblem(CurrentUser current, String name) {
+        if (!USERNAME.matcher(name).matches()) return "Use 3 to 30 letters, numbers, dots or underscores";
+        if (name.equals(current.username())) return "That's already your username";
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        if (RESERVED.contains(lower) || lower.startsWith("weyvo")) return "That username isn't available";
+        Integer others = jdbc.queryForObject("SELECT count(*) FROM users WHERE lower(username) = :n AND id <> :u",
+                new MapSqlParameterSource().addValue("n", lower).addValue("u", current.id()), Integer.class);
+        return others != null && others > 0 ? "That username is taken" : null;
     }
 
     /** Signs out every other device; this one gets a fresh session. */

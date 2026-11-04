@@ -249,6 +249,9 @@ export const api = {
     return request<{ avatarUrl: string }>('PUT', '/me/avatar', form);
   },
   removeAvatar: () => request<void>('DELETE', '/me/avatar'),
+  usernameStatus: (check?: string) => request<{ canChange: boolean; nextChangeAt: string | null; available: boolean | null; problem: string | null }>(
+    'GET', `/me/username${check ? `?check=${encodeURIComponent(check)}` : ''}`),
+  changeUsername: (username: string) => request<{ username: string }>('PUT', '/me/username', { username }),
   updateProfile: (displayName: string, bio: string) => request<{ username: string; displayName: string; bio: string | null }>('PUT', '/me/profile', { displayName, bio }),
   changePassword: (currentPassword: string, newPassword: string) => request<void>('POST', '/auth/password/change', { currentPassword, newPassword }),
   deleteAccount: (password: string) => request<void>('DELETE', '/me', { password }),

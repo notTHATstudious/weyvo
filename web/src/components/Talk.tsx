@@ -85,3 +85,9 @@ export function ago(iso: string) {
   if (s < 7 * 86400) return `${Math.floor(s / 86400)}d`;
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
+
+/** "Posted 3h ago", "Posted just now", or "Posted 4 Nov" for older stories. */
+export function postedLabel(iso: string) {
+  const a = ago(iso);
+  return a === 'now' ? 'Posted just now' : /^\d+[mhd]$/.test(a) ? `Posted ${a} ago` : `Posted ${a}`;
+}

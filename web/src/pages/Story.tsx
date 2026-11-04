@@ -12,6 +12,7 @@ import { Empty, Loading } from '../components/States';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { BackButton } from '../components/BackButton';
+import { postedLabel } from '../components/Talk';
 import { likeThisTrip, planLink } from '../atlas';
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
@@ -58,7 +59,7 @@ export function Story() {
           <h1 className="display rise" style={{ margin: '8px 0 0', fontSize: 'clamp(44px, 8vw, 72px)' }}>{trip.title}</h1>
           <Link to={`/u/${trip.author.username}`} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none' }}>
             <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} size={32} ring="#fff" />
-            <span style={{ fontSize: 13 }}>by <strong>{trip.author.username}</strong></span>
+            <span style={{ fontSize: 13 }}>by <strong>{trip.author.username}</strong>{trip.publishedAt && <span style={{ opacity: 0.8 }}> · {postedLabel(trip.publishedAt)}</span>}</span>
           </Link>
         </div>
       </div>

@@ -24,6 +24,11 @@ export function Settings() {
       </div>
       <div style={{ padding: '0 20px' }}>
         <h1 className="display" style={{ margin: '8px 0 20px', fontSize: 40 }}>Settings</h1>
+        {user && (
+          <Link to="/profile/edit" className="paper-card" style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 52, padding: '0 16px', color: 'var(--ink)', textDecoration: 'none' }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>Edit profile</span><Icon.chevronRight />
+          </Link>
+        )}
 
         <div className="paper-card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
           <Icon.moon />

@@ -149,3 +149,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .close-btn::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; } /* larger invisible tap area */
 .close-btn:active { transform: scale(.92); }
 .close-btn.on-dark { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.28); color: #fff; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+/* Settings rows open in place; hide the default triangle and turn the chevron when open. */
+.settings-row summary::-webkit-details-marker { display: none; }
+.settings-row[open] .settings-chevron { transform: rotate(90deg); }
+
+/* Edit profile: the field you're typing in gets a green label. */
+.edit-row:focus-within label { color: var(--green) !important; }

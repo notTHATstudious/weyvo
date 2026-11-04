@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { Avatar } from './Avatar';
+import { Card } from './AccountSettings';
 import { useApi } from '../useApi';
 
 /** The people you blocked, with Unblock. Shown in Settings. */
@@ -10,8 +11,7 @@ export function BlockedList() {
   const { data } = useApi(() => api.blocked(), [version]);
 
   return (
-    <div className="paper-card" style={{ marginTop: 20, padding: '14px 16px' }}>
-      <h2 className="display" style={{ margin: 0, fontSize: 22 }}>Blocked accounts</h2>
+    <Card title={`Blocked accounts${data?.length ? ` · ${data.length}` : ''}`}>
       {!data?.length ? (
         <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--muted)' }}>No one. Block someone from their profile.</p>
       ) : (
@@ -26,6 +26,6 @@ export function BlockedList() {
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

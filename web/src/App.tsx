@@ -35,6 +35,7 @@ const ForgotPassword = page(() => import('./pages/ForgotPassword'), 'ForgotPassw
 const EditTrip = page(() => import('./pages/EditTrip'), 'EditTrip');
 const Premium = page(() => import('./pages/Premium'), 'Premium');
 const Legal = page(() => import('./pages/Legal'), 'Legal');
+const EditProfile = page(() => import('./pages/EditProfile'), 'EditProfile');
 const Places = page(() => import('./pages/Places'), 'Places');
 const Search = page(() => import('./pages/Search'), 'Search');
 const Plan = page(() => import('./pages/Plan'), 'Plan');
@@ -77,6 +78,7 @@ export function App() {
         <Route path="/forgot" element={<ForgotPassword />} />
         <Route path="/premium" element={<Premium />} />
         <Route path="/legal/:page" element={<Legal />} />
+        <Route path="/profile/edit" element={<EditProfile />} />
         <Route path="/guidelines" element={<Navigate to="/legal/guidelines" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

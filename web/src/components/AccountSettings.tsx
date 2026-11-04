@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, ApiError, photoProblem } from '../api';
-import { Avatar } from './Avatar';
+import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
 import { PasswordInput } from './PasswordInput';
 
@@ -15,7 +14,6 @@ export function AccountSettings() {
         <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--ink-soft)' }}>See your limits, or get more room with Premium.</p>
         <Link to="/premium" className="btn btn-primary" style={{ minHeight: 44 }}>View plans</Link>
       </Card>
-      <ProfileCard />
       <PasswordCard />
       <Card title="Your data">
         <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--ink-soft)' }}>
@@ -29,12 +27,17 @@ export function AccountSettings() {
   );
 }
 
-function Card({ title, children, danger }: { title: string; children: ReactNode; danger?: boolean }) {
+/** One Settings row: just its title until tapped, then the controls. Keeps the page short. */
+export function Card({ title, children, danger }: { title: string; children: ReactNode; danger?: boolean }) {
   return (
-    <section className="paper-card" style={{ marginTop: 20, padding: '16px', border: danger ? '1px solid #E8B4AE' : undefined }}>
-      <h2 className="display" style={{ margin: '0 0 12px', fontSize: 22, color: danger ? '#B3261E' : undefined }}>{title}</h2>
-      {children}
-    </section>
+    <details className="paper-card settings-row" style={{ marginTop: 10, padding: 0, border: danger ? '1px solid #E8B4AE' : undefined }}>
+      <summary style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 52, padding: '0 16px', cursor: 'pointer',
+        fontSize: 15, fontWeight: 600, color: danger ? '#B3261E' : 'var(--ink)', listStyle: 'none' }}>
+        {title}
+        <span aria-hidden="true" className="settings-chevron" style={{ fontSize: 18, color: 'var(--muted)', transition: 'transform .2s' }}>›</span>
+      </summary>
+      <div style={{ padding: '0 16px 16px' }}>{children}</div>
+    </details>
   );
 }
 
@@ -62,63 +65,6 @@ function useAction() {
     </>
   );
   return { busy, run, status };
-}
-
-function ProfileCard() {
-  const { user, refresh } = useAuth();
-  const [name, setName] = useState(user?.displayName ?? '');
-  const [bio, setBio] = useState(user?.bio ?? '');
-  const { busy, run, status } = useAction();
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    run(async () => { await api.updateProfile(name, bio); await refresh(); }, 'Profile saved');
-  };
-
-  return (
-    <Card title="Profile">
-      <PictureEditor />
-      <form onSubmit={submit}>
-        <label htmlFor="pname" className="field-label">Name</label>
-        <input id="pname" className="input" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} style={{ marginBottom: 12 }} />
-        <label htmlFor="pbio" className="field-label">Bio <span>· {bio.length} / 160</span></label>
-        <textarea id="pbio" className="input" rows={2} maxLength={160} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Mountains, slow trains and bad selfies." />
-        <button type="submit" className="btn btn-primary" disabled={busy || !name.trim()} style={{ marginTop: 12, minHeight: 44 }}>{busy ? 'Saving…' : 'Save profile'}</button>
-        {status}
-      </form>
-    </Card>
-  );
-}
-
-/** Profile picture: JPEG or PNG, cropped square on the server with location data removed. */
-function PictureEditor() {
-  const { user, refresh } = useAuth();
-  const { busy, run, status } = useAction();
-  if (!user) return null;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-      <Avatar name={user.displayName} url={user.avatarUrl} size={64} />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <label className="btn btn-outline" style={{ minHeight: 40, cursor: busy ? 'default' : 'pointer' }}>
-          {busy ? 'Saving…' : user.avatarUrl ? 'Change photo' : 'Add photo'}
-          <input type="file" accept="image/jpeg,image/png" disabled={busy} style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              const problem = photoProblem(f);
-              if (problem) return run(async () => { throw new ApiError(problem, 400); }, '');
-              run(async () => { await api.uploadAvatar(f); await refresh(); }, 'Photo updated');
-            }} />
-        </label>
-        {user.avatarUrl && (
-          <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} disabled={busy}
-            onClick={() => run(async () => { await api.removeAvatar(); await refresh(); }, 'Photo removed')}>Remove</button>
-        )}
-        <div style={{ flexBasis: '100%' }}>{status}</div>
-      </div>
-    </div>
-  );
 }
 
 function PasswordCard() {
