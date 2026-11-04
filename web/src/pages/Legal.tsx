@@ -23,7 +23,7 @@ const Ph = ({ children }: { children: ReactNode }) => (
   <mark style={{ background: 'var(--chip-gold-bg)', color: 'var(--chip-gold-fg)', padding: '0 4px', borderRadius: 4 }}>{children}</mark>
 );
 
-const PAGES: Record<string, { title: string; body: ReactNode }> = {
+const PAGES: Record<string, { title: string; body: ReactNode; updated?: string }> = {
   terms: {
     title: 'Terms of Use',
     body: (
@@ -105,6 +105,7 @@ const PAGES: Record<string, { title: string; body: ReactNode }> = {
   },
   guidelines: {
     title: 'Community Guidelines',
+    updated: '4 November 2026',
     body: (
       <>
         <p>Weyvo is for travel. Share the places you went and what it was like. That's it.</p>
@@ -163,7 +164,7 @@ export function Legal() {
       </p>}
       <article className="legal">
         <h1 className="display" style={{ fontSize: 40, margin: '18px 0 4px' }}>{doc.title}</h1>
-        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Last updated: <Ph>{P.updated}</Ph></p>
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Last updated: {doc.updated ?? <Ph>{P.updated}</Ph>}</p>
         {doc.body}
       </article>
       <Footer />
