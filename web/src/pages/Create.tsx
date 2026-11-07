@@ -24,6 +24,8 @@ const today = () => {
 };
 const pastOnly = (date?: string | null) => (date && date <= today() ? date : '');
 
+const futureNote = (date: string) => (date > today() ? "Can't be a future date" : undefined);
+
 const SEEN_RULES = 'weyvo-rules-seen';
 
 /** Shown on the Create screen until dismissed: what belongs on Weyvo, in one line. */
@@ -304,8 +306,9 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
-    if (f.startDate > today()) return needs('fs', "The trip dates can't be in the future.");
-    if (f.endDate > today()) return needs('fe', "The trip dates can't be in the future.");
+    // The box itself is already red and says why; just bring it into view.
+    const future = f.startDate > today() ? 'fs' : f.endDate > today() ? 'fe' : null;
+    if (future) return document.getElementById(future)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // Sections left without writing are simply left out; only the filled ones are posted.
     const filled = sections.filter((s) => s.body.trim());
     if (publish && filled.length === 0) {
@@ -353,8 +356,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       <TextField id="ft" label={`Trip title · ${f.title.length} / 60`} value={f.title} onChange={set('title')} max={60} error={fields.title} placeholder="The beach we had to ourselves" display />
       <PlaceField id="fd" label="Destination" value={f.place} onChange={set('place')} error={fields.place} placeholder="Gokarna, Karnataka" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-        <TextField id="fs" label="From" type="date" value={f.startDate} onChange={set('startDate')} latest={f.endDate && f.endDate < today() ? f.endDate : today()} />
-        <TextField id="fe" label="To" type="date" value={f.endDate} onChange={set('endDate')} latest={today()} />
+        <TextField id="fs" label="From" type="date" value={f.startDate} onChange={set('startDate')} error={futureNote(f.startDate)} latest={f.endDate && f.endDate < today() ? f.endDate : today()} />
+        <TextField id="fe" label="To" type="date" value={f.endDate} onChange={set('endDate')} error={futureNote(f.endDate)} latest={today()} />
       </div>
       <p className="eyebrow" style={{ margin: '18px 0 10px', fontWeight: 600 }}>Story sections</p>
       {sections.map((s, i) => (
@@ -438,7 +441,7 @@ function TextField(props: {
   max?: number; error?: string; placeholder?: string; type?: string; multiline?: boolean; display?: boolean; latest?: string;
 }) {
   const { id, label, value, onChange, max, error, placeholder, type = 'text', multiline, display, latest } = props;
-  const style = { ...(display ? { fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 } : {}), ...(error ? { borderColor: '#B3261E' } : {}) };
+  const style = { ...(display ? { fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 } : {}), ...(error ? { borderColor: '#B3261E', boxShadow: '0 0 0 1px #B3261E', background: 'color-mix(in srgb, #B3261E 8%, var(--card))' } : {}) };
   return (
     <div style={{ marginBottom: 14, minWidth: 0 }}>
       <label htmlFor={id} className="field-label">{label}</label>
