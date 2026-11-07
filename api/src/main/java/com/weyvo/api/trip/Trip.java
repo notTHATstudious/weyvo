@@ -124,8 +124,11 @@ public class Trip {
      * unless the author's account is suspended.
      */
     public boolean isVisibleTo(Long userId) {
-        return isOwnedBy(userId) || (status == Status.PUBLISHED && visibility != Visibility.PRIVATE && removedAt == null && owner.isActive());
+        return isOwnedBy(userId) || (status == Status.PUBLISHED && visibility != Visibility.PRIVATE && removedAt == null && !isExpired() && owner.isActive());
     }
+
+    /** Past its 7 days: gone for everyone at once, even before the cleanup job deletes it. */
+    public boolean isExpired() { return expiresAt != null && !expiresAt.isAfter(Instant.now()); }
 
     public boolean isRemoved() { return removedAt != null; }
 

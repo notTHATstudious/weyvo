@@ -28,7 +28,7 @@ public class ShortStoryExpiry {
         this.tx = tx;
     }
 
-    @Scheduled(fixedDelay = 3_600_000, initialDelay = 300_000)
+    @Scheduled(fixedDelay = 900_000, initialDelay = 30_000)
     public void run() {
         List<Long> due = jdbc.queryForList("SELECT id FROM trips WHERE expires_at <= now() ORDER BY expires_at LIMIT 500",
                 new MapSqlParameterSource(), Long.class);
@@ -36,7 +36,7 @@ public class ShortStoryExpiry {
             try {
                 tx.executeWithoutResult(s -> expire(id));
             } catch (RuntimeException e) {
-                // One bad story never stops the rest; it's tried again next hour.
+                // One bad story never stops the rest; it's tried again next run.
                 log.warn("Could not expire story id={}: {}", id, e.getClass().getSimpleName());
             }
         }
