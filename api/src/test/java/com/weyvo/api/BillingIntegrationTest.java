@@ -55,6 +55,7 @@ class BillingIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired JdbcTemplate db;
+    @Autowired com.weyvo.api.trip.ShortStoryExpiry expiry;
 
     private final AtomicInteger orders = new AtomicInteger();
 
@@ -146,6 +147,25 @@ class BillingIntegrationTest {
         mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.balance").value(50));
         db.update("UPDATE trips SET removed_at = now() WHERE slug LIKE 'cap-%'");
         mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.balance").value(5));
+    }
+
+    @Test
+    void shortStoriesExpireAfterSevenDaysAndKeepTheirPoints() throws Exception {
+        Account a = signup("fleeting", true);
+        String insert = """
+                INSERT INTO trips (owner_id, kind, short_tag, title, place, slug, status, visibility, published_at, expires_at)
+                SELECT id, 'SHORT', 'WEEKEND', 'Trip', 'Goa', ?, 'PUBLISHED', 'PUBLIC', now() - interval '8 days', %s FROM users WHERE username = ?""";
+        String done = "done-" + a.username().toLowerCase();
+        String fresh = "fresh-" + a.username().toLowerCase();
+        db.update(insert.formatted("now() - interval '1 day'"), done, a.username());
+        db.update(insert.formatted("now() + interval '1 day'"), fresh, a.username());
+
+        expiry.run();
+
+        assertThat(db.queryForObject("SELECT count(*) FROM trips WHERE slug = ?", Integer.class, done)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM trips WHERE slug = ?", Integer.class, fresh)).isOne();
+        // Both stories fell on the same day: 40, plus 5 for opening the app today.
+        mvc.perform(get("/api/me/points").cookie(a.cookie())).andExpect(jsonPath("$.balance").value(45));
     }
 
     // ---- helpers ----

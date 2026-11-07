@@ -70,7 +70,7 @@ const PAGES: Record<string, { title: string; body: ReactNode; updated?: string }
         <h2>Who processes it for us</h2>
         <p>Supabase (database and photo storage), Render (hosting), Resend (email), Razorpay (payments), and, if you allow analytics, PostHog (usage analytics) and Sentry (error reports). They process data only to provide their service to us.</p>
         <h2>How long we keep it</h2>
-        <p>While your account is active. When you delete your account, your stories, photos, comments, reactions and follows are deleted straight away; payment records are kept as long as tax law requires; security logs are kept for <Ph>[90 days]</Ph>.</p>
+        <p>Short stories and their photos are deleted automatically 7 days after posting. Everything else is kept while your account is active. When you delete your account, your stories, photos, comments, reactions and follows are deleted straight away; payment records are kept as long as tax law requires; security logs are kept for <Ph>[90 days]</Ph>.</p>
         <h2>Your rights</h2>
         <ul>
           <li><strong>Access:</strong> download all your data in Settings → Your data.</li>
@@ -105,13 +105,13 @@ const PAGES: Record<string, { title: string; body: ReactNode; updated?: string }
   },
   guidelines: {
     title: 'Community Guidelines',
-    updated: '4 November 2026',
+    updated: '7 November 2026',
     body: (
       <>
         <p>Weyvo is for travel. Share the places you went and what it was like. That's it.</p>
         <h2>Good to post</h2>
         <ul>
-          <li>Your trips, weekends, drives and day outings, big or small.</li>
+          <li>Your trips, weekends, drives and day outings, big or small. Short stories are deleted automatically after 7 days; full issues stay.</li>
           <li>Your own photos of places, food, roads, stays and the people you travelled with (ask them first).</li>
           <li>Honest tips: costs, best time to go, what to skip.</li>
           <li>Kind comments and questions about the trip.</li>

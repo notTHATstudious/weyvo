@@ -236,6 +236,11 @@ public class TripService {
         if (req.startDate() != null && req.endDate() != null && req.startDate().isAfter(req.endDate())) {
             throw ApiException.badRequest("The trip can't end before it starts");
         }
+        // Stories are about trips already taken. Earliest-to-latest time zone on Earth, so nobody's "today" is refused.
+        java.time.LocalDate latest = java.time.LocalDate.now(java.time.ZoneOffset.ofHours(14));
+        if ((req.startDate() != null && req.startDate().isAfter(latest)) || (req.endDate() != null && req.endDate().isAfter(latest))) {
+            throw ApiException.badRequest("Trip dates can't be in the future");
+        }
         if (req.kind() == Trip.Kind.FULL) {
             if (req.shortTag() != null) throw ApiException.badRequest("Only short stories have a tag");
             if (sections > limits.fullTripSections()) throw ApiException.badRequest("Your plan allows up to " + limits.fullTripSections() + " story sections");

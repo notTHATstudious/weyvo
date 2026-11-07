@@ -89,6 +89,10 @@ public class Trip {
     @Column(name = "removed_at")
     private Instant removedAt;
 
+    /** When a posted short story gets deleted; full issues and drafts have none. */
+    @Column(name = "expires_at")
+    private Instant expiresAt;
+
     /** Why the word filter held this story; cleared once an admin has looked. */
     @Column(name = "held_reason")
     private String heldReason;
@@ -150,6 +154,7 @@ public class Trip {
         if (status != Status.PUBLISHED) {
             status = Status.PUBLISHED;
             publishedAt = Instant.now();
+            if (kind == Kind.SHORT) expiresAt = publishedAt.plus(java.time.Duration.ofDays(7));
         }
         touch();
     }

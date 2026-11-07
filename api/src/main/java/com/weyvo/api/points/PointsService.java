@@ -29,6 +29,8 @@ public class PointsService {
                 UNION ALL
                 SELECT (published_at AT TIME ZONE 'Asia/Kolkata')::date, CASE WHEN kind = 'FULL' THEN 50 ELSE 20 END, 1
                 FROM trips WHERE owner_id = :u AND status = 'PUBLISHED' AND removed_at IS NULL AND published_at IS NOT NULL
+                UNION ALL
+                SELECT (published_at AT TIME ZONE 'Asia/Kolkata')::date, 20, 1 FROM expired_short_stories WHERE user_id = :u
             ), per_day AS (
                 SELECT day, LEAST(:dayCap, sum(pts)) AS pts, sum(stories) AS stories FROM days GROUP BY day
             ), per_week AS (

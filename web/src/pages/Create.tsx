@@ -17,6 +17,13 @@ const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
   { value: 'PRIVATE', label: 'Private', hint: 'Only you' },
 ];
 
+/** Today on this device, as a date field writes it. */
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const pastOnly = (date?: string | null) => (date && date <= today() ? date : '');
+
 const SEEN_RULES = 'weyvo-rules-seen';
 
 /** Shown on the Create screen until dismissed: what belongs on Weyvo, in one line. */
@@ -224,6 +231,7 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
   return (
     <form onSubmit={submit}>
       <h1 className="display rise" style={{ margin: '6px 0 18px', fontSize: 36 }}>{existing ? 'Edit short story' : 'New short story'}</h1>
+      <p style={{ margin: '-10px 0 16px', fontSize: 14, color: 'var(--ink-soft)' }}>Short stories are deleted automatically 7 days after posting.</p>
       {draft.offer && <DraftOffer savedAt={draft.offer.savedAt} onRestore={restore} onDiscard={draft.discard} />}
       <p className="field-label">What kind of escape?</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
@@ -266,7 +274,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
   const [atlas] = useState(() => (existing ? null : readAtlasPrefill()));
   const [f, setF] = useState({
     title: existing?.title ?? atlas?.title ?? '', place: existing?.place ?? atlas?.place ?? '',
-    startDate: existing?.startDate ?? atlas?.start ?? '', endDate: existing?.endDate ?? atlas?.end ?? '',
+    // A plan's dates may still be ahead; a story's can't be, so those start empty.
+    startDate: existing?.startDate ?? pastOnly(atlas?.start), endDate: existing?.endDate ?? pastOnly(atlas?.end),
     finalNote: existing?.finalNote ?? '' });
   const [cover, setCover] = useState<Slot>({ file: null, existing: existing?.cover ?? null });
   const original = [existing?.cover ?? null, ...(existing?.sections.map((s) => s.photo) ?? [])];
@@ -295,6 +304,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
 
   function submit(e: FormEvent, publish = true) {
     e.preventDefault();
+    if (f.startDate > today()) return needs('fs', "The trip dates can't be in the future.");
+    if (f.endDate > today()) return needs('fe', "The trip dates can't be in the future.");
     // Sections left without writing are simply left out; only the filled ones are posted.
     const filled = sections.filter((s) => s.body.trim());
     if (publish && filled.length === 0) {
@@ -342,8 +353,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       <TextField id="ft" label={`Trip title · ${f.title.length} / 60`} value={f.title} onChange={set('title')} max={60} error={fields.title} placeholder="The beach we had to ourselves" display />
       <PlaceField id="fd" label="Destination" value={f.place} onChange={set('place')} error={fields.place} placeholder="Gokarna, Karnataka" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-        <TextField id="fs" label="From" type="date" value={f.startDate} onChange={set('startDate')} />
-        <TextField id="fe" label="To" type="date" value={f.endDate} onChange={set('endDate')} />
+        <TextField id="fs" label="From" type="date" value={f.startDate} onChange={set('startDate')} latest={f.endDate && f.endDate < today() ? f.endDate : today()} />
+        <TextField id="fe" label="To" type="date" value={f.endDate} onChange={set('endDate')} latest={today()} />
       </div>
       <p className="eyebrow" style={{ margin: '18px 0 10px', fontWeight: 600 }}>Story sections</p>
       {sections.map((s, i) => (
@@ -424,16 +435,16 @@ function PlanNote({ usage }: { usage: PlanUsage }) {
 
 function TextField(props: {
   id: string; label: string; value: string; onChange: (v: string) => void;
-  max?: number; error?: string; placeholder?: string; type?: string; multiline?: boolean; display?: boolean;
+  max?: number; error?: string; placeholder?: string; type?: string; multiline?: boolean; display?: boolean; latest?: string;
 }) {
-  const { id, label, value, onChange, max, error, placeholder, type = 'text', multiline, display } = props;
+  const { id, label, value, onChange, max, error, placeholder, type = 'text', multiline, display, latest } = props;
   const style = { ...(display ? { fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 } : {}), ...(error ? { borderColor: '#B3261E' } : {}) };
   return (
     <div style={{ marginBottom: 14, minWidth: 0 }}>
       <label htmlFor={id} className="field-label">{label}</label>
       {multiline
         ? <textarea id={id} className="input" rows={3} maxLength={max} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={style} aria-invalid={!!error} />
-        : <input id={id} className="input" type={type} maxLength={max} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={style} aria-invalid={!!error} />}
+        : <input id={id} className="input" type={type} max={latest} maxLength={max} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={style} aria-invalid={!!error} />}
       {error && <p style={{ margin: '6px 2px 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
   );
