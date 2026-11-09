@@ -48,6 +48,11 @@ public class ChatController {
         return chats.inbox(user.id());
     }
 
+    @GetMapping("/api/chats/unread")
+    public Map<String, Integer> unread(@AuthenticationPrincipal CurrentUser user) {
+        return Map.of("count", chats.unread(user.id()));
+    }
+
     @GetMapping("/api/chats/with/{username}")
     public Status status(@AuthenticationPrincipal CurrentUser user, @PathVariable String username) {
         return chats.status(user.id(), username);

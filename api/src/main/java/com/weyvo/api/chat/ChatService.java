@@ -80,6 +80,16 @@ public class ChatService {
         return new Inbox(requests, sent, chats);
     }
 
+    /** Unread messages plus waiting requests: the dot on the Chats button. */
+    @Transactional(readOnly = true)
+    public int unread(long me) {
+        Integer n = jdbc.queryForObject("""
+                SELECT (SELECT count(*) FROM chat_messages m JOIN chat_requests r ON r.id = m.chat_id
+                        WHERE m.read_at IS NULL AND m.sender_id <> :me AND r.status = 'ACCEPTED' AND (r.from_id = :me OR r.to_id = :me))
+                     + (SELECT count(*) FROM chat_requests WHERE to_id = :me AND status = 'PENDING')""", new MapSqlParameterSource("me", me), Integer.class);
+        return n == null ? 0 : n;
+    }
+
     /** What the Message button on someone's profile should do. */
     @Transactional(readOnly = true)
     public Status status(long me, String username) {

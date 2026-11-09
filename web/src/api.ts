@@ -247,6 +247,7 @@ export const api = {
   adminRestore: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/restore`),
   recordShare: (tripId: number, kind: 'LINK' | 'IMAGE') => request<void>('POST', `/trips/${tripId}/shares`, { kind }),
   chatInbox: () => request<ChatInbox>('GET', '/chats'),
+  chatUnread: () => request<{ count: number }>('GET', '/chats/unread'),
   chatWith: (username: string) => request<ChatStatus>('GET', `/chats/with/${encodeURIComponent(username)}`),
   chatRequest: (username: string) => request<ChatStatus>('POST', '/chats/requests', { username }),
   chatAccept: (id: number) => request<ChatStatus>('POST', `/chats/requests/${id}/accept`),

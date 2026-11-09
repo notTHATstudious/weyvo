@@ -1,4 +1,5 @@
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
@@ -9,13 +10,23 @@ import { useNewShorts } from '../shortsSeen';
 /** A bottom bar on phones; on wide screens CSS turns it into a labelled left sidebar. */
 export function BottomNav() {
   const { user } = useAuth();
+  const location = useLocation();
   const newShorts = useNewShorts(user?.username);
   const unread = useApi(() => (user ? api.unreadCount() : Promise.resolve({ count: 0 })), [user?.id]);
+  // New chat messages or requests: a dot on Chats. Checked every 30 seconds, and whenever a page opens.
+  const [chatTick, setChatTick] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    const t = setInterval(() => { if (document.visibilityState === 'visible') setChatTick((n) => n + 1); }, 30_000);
+    return () => clearInterval(t);
+  }, [user?.id]);
+  const chats = useApi(() => (user ? api.chatUnread() : Promise.resolve({ count: 0 })), [user?.id, chatTick]);
+  const onChat = location.pathname.startsWith('/chat');
   const items = [
     { to: '/discover', label: 'Discover', icon: <Icon.compass /> },
     { to: '/shorts', label: newShorts ? 'Short Stories, new' : 'Short Stories', icon: <Icon.play />, dot: newShorts },
     { to: '/create', label: 'Create', icon: <Icon.plus />, create: true },
-    { to: user ? '/chat' : '/signin?next=/chat', label: 'Chats', icon: <Icon.chats /> },
+    { to: user ? '/chat' : '/signin?next=/chat', label: chats.data?.count && !onChat ? 'Chats, new' : 'Chats', icon: <Icon.chats />, dot: !!chats.data?.count && !onChat },
     { to: '/plan', label: 'Plan a trip', icon: <Icon.route /> },
     { to: user ? `/u/${user.username}` : '/signin?next=/discover', label: 'Your magazine', icon: <Icon.user /> },
   ];
