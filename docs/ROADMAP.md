@@ -15,8 +15,9 @@ Decisions so far and the order of work to a tested public launch. Update this fi
 | Monitoring | Sentry (errors), PostHog (product analytics, with consent) |
 | Preview gate | Signed-out readers get the first 60% of a public story, enforced by the API |
 | Plans | Free and Premium limits from configuration (`app.plans.*`); low values while testing |
-| Short stories lifetime | Kept permanently on the profile, map and destination pages. Feeds favour the last 7 days, older ones fall back to search and profiles. No auto-delete |
-| Not in Phase One | DMs, photo import, SMS OTP, itinerary integration, print |
+| Short stories lifetime | Deleted automatically 7 days after posting; full issues stay. Points earned are kept |
+| Chat | Private, Snapchat-style chat for followers, see [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Not in Phase One | Photo import, SMS OTP, itinerary integration, print |
 
 ## Milestones
 

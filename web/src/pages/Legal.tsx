@@ -105,7 +105,7 @@ const PAGES: Record<string, { title: string; body: ReactNode; updated?: string }
   },
   guidelines: {
     title: 'Community Guidelines',
-    updated: '7 November 2026',
+    updated: '9 November 2026',
     body: (
       <>
         <p>Weyvo is for travel. Share the places you went and what it was like. That's it.</p>
@@ -115,6 +115,7 @@ const PAGES: Record<string, { title: string; body: ReactNode; updated?: string }
           <li>Your own photos of places, food, roads, stays and the people you travelled with (ask them first).</li>
           <li>Honest tips: costs, best time to go, what to skip.</li>
           <li>Kind comments and questions about the trip.</li>
+          <li>Private chat: only your followers can ask to chat. Messages vanish once you've both left the chat (read ones after 2 hours, unread after 12). Text and emoji only, no links or phone numbers.</li>
         </ul>
         <h2>Please don't post</h2>
         <ul>

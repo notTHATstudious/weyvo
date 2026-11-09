@@ -37,6 +37,8 @@ public class BlockService {
         var p = new MapSqlParameterSource().addValue("a", blockerId).addValue("b", target.getId());
         jdbc.update("INSERT INTO user_blocks (blocker_id, blocked_id) VALUES (:a, :b) ON CONFLICT DO NOTHING", p);
         jdbc.update("DELETE FROM follows WHERE (follower_id = :a AND followee_id = :b) OR (follower_id = :b AND followee_id = :a)", p);
+        // Blocking ends any chat between the two, with everything in it.
+        jdbc.update("DELETE FROM chat_requests WHERE (from_id = :a AND to_id = :b) OR (from_id = :b AND to_id = :a)", p);
     }
 
     @Transactional

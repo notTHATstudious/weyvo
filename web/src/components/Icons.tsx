@@ -21,6 +21,8 @@ export const Icon = {
   close: ({ size = 22 }: P) => svg(size, <path d="M6 6l12 12M18 6L6 18" />, 2),
   share: ({ size = 20 }: P) => svg(size, <path d="M4 12v7h16v-7M12 3v12M7 8l5-5 5 5" />),
   check: ({ size = 22 }: P) => svg(size, <path d="M5 12l5 5L20 7" />),
+  /** Two speech bubbles: Travel Live Chat. */
+  chats: ({ size = 22 }: P) => svg(size, <><path d="M15 10a2 2 0 0 1-2 2H7l-4 3.5V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" /><path d="M18.5 9H19a2 2 0 0 1 2 2v10l-3.5-3H12a2 2 0 0 1-2-2v-1" /></>),
   chat: ({ size = 22 }: P) => svg(size, <path d="M4 5h16v11H9l-5 4z" />),
   bookmark: ({ size = 18, filled }: P & { filled?: boolean }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor"

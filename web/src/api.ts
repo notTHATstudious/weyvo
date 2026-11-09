@@ -44,6 +44,16 @@ export interface BillingPlans {
   free: PlanLimits; premium: PlanLimits;
 }
 export interface PaymentOrder { orderId: string; amountPaise: number; currency: string; keyId: string; period: Period; pointsUsed: number; discountPaise: number }
+/** Private chat. Messages vanish once read and both people have left, or after 2h read / 12h unread. */
+export interface ChatPerson { username: string; displayName: string; avatarUrl: string | null }
+export interface ChatInbox {
+  requests: { id: number; from: ChatPerson; createdAt: string }[];
+  sent: ChatPerson[];
+  chats: { id: number; with: ChatPerson; unread: number; lastAt: string | null }[];
+}
+export interface ChatMessage { id: number; chatId: number; sender: string; body: string; createdAt: string; readAt: string | null }
+export type ChatState = 'NONE' | 'CAN_REQUEST' | 'REQUESTED' | 'INCOMING' | 'CHAT' | 'NEEDS_FOLLOW';
+export interface ChatStatus { state: ChatState; chatId: number | null }
 export interface WeyPoints {
   balance: number; earned: number; spent: number; thisWeek: number; weekCap: number; unlocksAt: string; unlocked: boolean;
   blockPoints: number; blockRupees: number; redeemableRupees: number;
@@ -236,6 +246,17 @@ export const api = {
   adminDeletePhotos: (username: string, confirm: string) => request<{ deleted: number }>('POST', '/admin/photos/delete', { username: username || null, confirm }),
   adminRestore: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/restore`),
   recordShare: (tripId: number, kind: 'LINK' | 'IMAGE') => request<void>('POST', `/trips/${tripId}/shares`, { kind }),
+  chatInbox: () => request<ChatInbox>('GET', '/chats'),
+  chatWith: (username: string) => request<ChatStatus>('GET', `/chats/with/${encodeURIComponent(username)}`),
+  chatRequest: (username: string) => request<ChatStatus>('POST', '/chats/requests', { username }),
+  chatAccept: (id: number) => request<ChatStatus>('POST', `/chats/requests/${id}/accept`),
+  chatDecline: (id: number) => request<void>('POST', `/chats/requests/${id}/decline`),
+  chatOpen: (id: number) => request<ChatMessage[]>('GET', `/chats/${id}/messages`),
+  chatSend: (id: number, text: string) => request<ChatMessage>('POST', `/chats/${id}/messages`, { text }),
+  chatReport: (id: number) => request<void>('POST', `/chats/${id}/report`),
+  chatEnd: (id: number) => request<void>('DELETE', `/chats/${id}`),
+  adminChatReports: () => request<{ id: number; reporter: string; reported: string; transcript: string; createdAt: string }[]>('GET', '/admin/chat-reports'),
+  adminChatReportDone: (id: number) => request<void>('POST', `/admin/chat-reports/${id}/done`),
   adminSuspend: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/suspend`),
   followList: (username: string, which: 'followers' | 'following') => request<FollowPerson[]>('GET', `/users/${encodeURIComponent(username)}/${which}`),
   follow: (username: string, on: boolean) => request<FollowStats>(on ? 'PUT' : 'DELETE', `/users/${encodeURIComponent(username)}/follow`),

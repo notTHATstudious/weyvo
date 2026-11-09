@@ -34,7 +34,7 @@ export function Admin() {
           ))}
         </div>
         {tab === 'overview' && <Overview onReports={() => setTab('reports')} />}
-        {tab === 'reports' && <Reports />}
+        {tab === 'reports' && <><Reports /><ChatReports /></>}
         {tab === 'users' && <Users />}
       </div>
     </div>
@@ -266,6 +266,32 @@ function Reports() {
   );
 }
 
+/** Reported private chats: only the copy saved at the moment of the report; chats themselves can't be read. */
+function ChatReports() {
+  const [version, setVersion] = useState(0);
+  const { data } = useApi(() => api.adminChatReports(), [version]);
+  if (!data?.length) return null;
+  return (
+    <>
+      <h2 className="eyebrow" style={{ margin: '24px 0 10px', fontWeight: 600 }}>Reported chats</h2>
+      {data.map((r) => (
+        <article key={r.id} className="paper-card" style={{ marginBottom: 14, padding: '14px 16px' }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
+            <Link to={`/u/${r.reporter}`}>{r.reporter}</Link> reported <Link to={`/u/${r.reported}`}>{r.reported}</Link> · {new Date(r.createdAt).toLocaleString()}
+          </p>
+          <pre style={{ margin: '10px 0 0', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.transcript}</pre>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <button type="button" className="btn" style={{ minHeight: 38, background: '#1C1B18', color: '#fff' }}
+              onClick={async () => { await api.adminSuspend(r.reported); await api.adminChatReportDone(r.id); setVersion((v) => v + 1); }}>Suspend {r.reported}</button>
+            <button type="button" className="btn btn-outline" style={{ minHeight: 38 }}
+              onClick={async () => { await api.adminChatReportDone(r.id); setVersion((v) => v + 1); }}>Done</button>
+          </div>
+        </article>
+      ))}
+    </>
+  );
+}
+
 function Users() {
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
@@ -315,6 +341,7 @@ function Users() {
                   ? <button type="button" className="btn btn-outline" style={{ minHeight: 34, marginTop: 8, fontSize: 13 }} onClick={() => run(() => api.adminRestore(u.username))}>Restore account</button>
                   : <SuspendButton onConfirm={() => run(() => api.adminSuspend(u.username))} />
               )}
+
             </li>
           ))}
         </ul>

@@ -2,6 +2,8 @@
 
 A social travel magazine: turn trips into magazine-style stories, post short stories (weekends, one-night stays, long drives), and build a personal travel map.
 
+How it's built (stack, structure, data rules, future ideas): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 | Folder | What it is |
 | --- | --- |
 | `web/` | React + Vite + TypeScript frontend |

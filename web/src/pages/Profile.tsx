@@ -10,6 +10,7 @@ import { Photo } from '../components/Photo';
 import { Empty, Loading } from '../components/States';
 import { TravelMap } from '../components/TravelMap';
 import { WeyPointsCard } from '../components/WeyPoints';
+import { MessageButton } from '../components/MessageButton';
 import { useApi } from '../useApi';
 
 type Shelf = 'issues' | 'shorts' | 'want' | 'save';
@@ -115,6 +116,7 @@ export function Profile() {
             {f.followedByMe ? 'Following' : 'Follow'}
           </button>
         )}
+        {!isMe && user && <MessageButton username={p.username} following={f.followedByMe} />}
         <button type="button" className="btn btn-outline" style={{ minHeight: 44, borderColor: 'var(--line-strong)', ...(isMe ? { flex: 1 } : {}) }}
           onClick={async () => setShared(await shareLink(`/s/u/${p.username}`, `${p.displayName} on Weyvo`))}>
           {shared === 'copied' ? 'Link copied' : 'Share profile'}
