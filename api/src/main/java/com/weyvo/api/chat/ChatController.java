@@ -83,7 +83,18 @@ public class ChatController {
         return chats.send(user.id(), user.username(), id, body == null ? null : body.text());
     }
 
-    /** The chat screen is open and visible; sent every 15 seconds. Anything waiting is now read. */
+    /**
+     * The cheap check an open chat makes every few seconds: a change counter from memory, and "I'm still here".
+     * Only members who opened the chat may ask. When the number changes, the screen reloads the messages.
+     */
+    @GetMapping("/api/chats/{id}/pulse")
+    public Map<String, Long> pulse(@AuthenticationPrincipal CurrentUser user, @PathVariable long id) {
+        if (!hub.isMember(user.id(), id)) throw com.weyvo.api.common.ApiException.notFound();
+        hub.here(user.id(), id);
+        return Map.of("v", hub.version(id));
+    }
+
+    /** The chat screen is open and visible. Anything waiting is now read. */
     @PostMapping("/api/chats/{id}/here")
     public ResponseEntity<Void> here(@AuthenticationPrincipal CurrentUser user, @PathVariable long id) {
         chats.viewing(user.id(), id);

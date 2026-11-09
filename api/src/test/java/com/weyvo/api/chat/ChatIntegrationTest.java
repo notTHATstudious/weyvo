@@ -112,6 +112,20 @@ class ChatIntegrationTest {
         say(g, chat, "hello?").andExpect(status().isNotFound());
     }
 
+    @Test
+    void thePulseChangesWhenSomethingHappensAndOnlyMembersCanAsk() throws Exception {
+        Account i = signup("i");
+        Account j = signup("j");
+        Account stranger = signup("k");
+        long chat = openChat(i, j);
+        mvc.perform(get("/api/chats/" + chat + "/messages").cookie(j.cookie())).andExpect(status().isOk());
+        long before = json.readTree(mvc.perform(get("/api/chats/" + chat + "/pulse").cookie(j.cookie())).andReturn().getResponse().getContentAsString()).get("v").asLong();
+        say(i, chat, "on my way").andExpect(status().isOk());
+        long after = json.readTree(mvc.perform(get("/api/chats/" + chat + "/pulse").cookie(j.cookie())).andReturn().getResponse().getContentAsString()).get("v").asLong();
+        assertThat(after).isGreaterThan(before);
+        mvc.perform(get("/api/chats/" + chat + "/pulse").cookie(stranger.cookie())).andExpect(status().isNotFound());
+    }
+
     // ---- helpers ----
 
     private Account lastFrom, lastTo;

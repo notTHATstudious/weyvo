@@ -6,38 +6,64 @@ import { Avatar } from '../components/Avatar';
 import { BottomNav } from '../components/BottomNav';
 import { ago } from '../components/Talk';
 
-/** How often to check for news when the live stream can't get through. */
-const POLL_MS = 4000;
-
 /**
- * One live stream for the chat screens while they're open and visible. open is the chat on screen (null for the
- * inbox). Falls back to calling poll every few seconds if the stream can't connect.
+ * Keeps a chat screen current, without lag and without loading the server:
+ * - a live stream (instant) while it gets through; then a backup check only every `quietMs`;
+ * - if a proxy holds the stream back, checks every `activeMs` while the chat is busy (see `busy`), slowing to
+ *   `idleMs` after a quiet minute and speeding up again the moment anything happens.
+ * `busy()` says whether something happened recently; `poll` is the (cheap) check.
  */
-export function useChatStream(open: number | null, onEvent: (name: string, data: unknown) => void, poll: () => void) {
-  const handlers = useRef({ onEvent, poll });
-  handlers.current = { onEvent, poll };
+export function useChatStream(
+  onEvent: (name: string, data: unknown) => void,
+  poll: () => void,
+  speeds: { activeMs: number; idleMs: number; quietMs: number; busy: () => boolean },
+) {
+  const handlers = useRef({ onEvent, poll, speeds });
+  handlers.current = { onEvent, poll, speeds };
   useEffect(() => {
     let source: EventSource | null = null;
-    let timer: ReturnType<typeof setInterval> | null = null;
-    let failures = 0;
-    const stop = () => { source?.close(); source = null; if (timer) { clearInterval(timer); timer = null; } };
-    const fallback = () => { if (!timer) timer = setInterval(() => handlers.current.poll(), POLL_MS); };
+    let live = false;
+    let next: ReturnType<typeof setTimeout> | null = null;
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
+    let running = false;
+
+    const schedule = () => {
+      if (!running) return;
+      const s = handlers.current.speeds;
+      next = setTimeout(() => { handlers.current.poll(); schedule(); }, live ? s.quietMs : s.busy() ? s.activeMs : s.idleMs);
+    };
+    // No "hello" within 4 s, or silence for 40 s (pings come every 25 s): the stream is held back somewhere.
+    const expect = (ms: number) => {
+      if (watchdog) clearTimeout(watchdog);
+      watchdog = setTimeout(() => { live = false; source?.close(); source = null; }, ms);
+    };
+    const alive = () => { live = true; expect(40_000); };
+    const stop = () => {
+      running = false;
+      source?.close(); source = null; live = false;
+      if (next) { clearTimeout(next); next = null; }
+      if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+    };
     const start = () => {
       stop();
+      running = true;
       handlers.current.poll();
-      if (typeof EventSource === 'undefined') return fallback();
+      schedule();
+      if (typeof EventSource === 'undefined') return;
       source = new EventSource('/api/chats/stream');
-      source.addEventListener('open', () => { failures = 0; });
+      expect(4000);
+      source.addEventListener('hello', alive);
+      source.addEventListener('ping', alive);
       for (const name of ['request', 'accepted', 'message', 'seen', 'vanished', 'ended']) {
-        source.addEventListener(name, (e) => handlers.current.onEvent(name, JSON.parse((e as MessageEvent).data)));
+        source.addEventListener(name, (e) => { alive(); handlers.current.onEvent(name, JSON.parse((e as MessageEvent).data)); });
       }
-      source.addEventListener('error', () => { if (++failures >= 3) { source?.close(); source = null; fallback(); } });
+      source.addEventListener('error', () => { if (source?.readyState === EventSource.CLOSED) { live = false; source = null; } });
     };
     const onVisible = () => (document.visibilityState === 'visible' ? start() : stop());
     start();
     document.addEventListener('visibilitychange', onVisible);
     return () => { document.removeEventListener('visibilitychange', onVisible); stop(); };
-  }, [open]);
+  }, []);
 }
 
 /** The Chat tab: requests from your followers, then your chats. No message text here, like Snapchat. */
@@ -49,7 +75,7 @@ export function Chat() {
   const [error, setError] = useState('');
 
   const load = () => api.chatInbox().then(setInbox, () => setInbox((x) => x ?? { requests: [], sent: [], chats: [] }));
-  useChatStream(null, () => load(), load);
+  useChatStream(() => load(), load, { activeMs: 10_000, idleMs: 10_000, quietMs: 30_000, busy: () => false });
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin?next=/chat" replace />;

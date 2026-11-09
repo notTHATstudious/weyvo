@@ -33,6 +33,10 @@ public class ChatHub {
     private record Seat(long userId, long chatId) {}
 
     private final List<Listener> listeners = new CopyOnWriteArrayList<>();
+    /** A counter per chat that goes up whenever anything in it changes, so a screen can ask cheaply. */
+    private final Map<Long, java.util.concurrent.atomic.AtomicLong> versions = new ConcurrentHashMap<>();
+    /** People confirmed as members of a chat (when they opened it), so the cheap check needs no database. */
+    private final Map<Seat, Boolean> members = new ConcurrentHashMap<>();
     /** Who is in which chat, and when they last said so. */
     private final Map<Seat, Long> here = new ConcurrentHashMap<>();
     /** Called with (userId, chatId) when someone leaves a chat. */
@@ -40,6 +44,32 @@ public class ChatHub {
 
     void onLeave(BiConsumer<Long, Long> callback) {
         this.onLeave = callback;
+    }
+
+    // ---- change counter ----
+
+    public void bump(long chatId) {
+        versions.computeIfAbsent(chatId, k -> new java.util.concurrent.atomic.AtomicLong()).incrementAndGet();
+    }
+
+    public long version(long chatId) {
+        var v = versions.get(chatId);
+        return v == null ? 0 : v.get();
+    }
+
+    void member(long userId, long chatId) {
+        members.put(new Seat(userId, chatId), Boolean.TRUE);
+    }
+
+    public boolean isMember(long userId, long chatId) {
+        return members.containsKey(new Seat(userId, chatId));
+    }
+
+    /** A chat that ended or was blocked: nobody may check it any more. */
+    void forgetChat(long chatId) {
+        members.keySet().removeIf(s -> s.chatId() == chatId);
+        here.keySet().removeIf(s -> s.chatId() == chatId);
+        versions.remove(chatId);
     }
 
     // ---- presence ----
@@ -82,6 +112,15 @@ public class ChatHub {
         emitter.onCompletion(drop);
         emitter.onTimeout(drop);
         emitter.onError(e -> drop.run());
+        // Some proxies hold small streams back; a little padding up front, then "hello", lets the screen see
+        // straight away whether live delivery works or it should check every few seconds instead.
+        try {
+            emitter.send(SseEmitter.event().comment(" ".repeat(2048)));
+            emitter.send(SseEmitter.event().name("hello").data(0, MediaType.APPLICATION_JSON));
+        } catch (IOException | IllegalStateException e) {
+            close(l);
+            return null;
+        }
         return emitter;
     }
 

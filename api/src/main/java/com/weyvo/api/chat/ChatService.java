@@ -158,6 +158,7 @@ public class ChatService {
     public void end(long me, long chatId) {
         Chat c = chat(me, chatId);
         jdbc.update("DELETE FROM chat_requests WHERE id = :id", new MapSqlParameterSource("id", chatId));
+        hub.forgetChat(chatId);
         hub.send(c.other(me), "ended", Map.of("chatId", chatId));
     }
 
@@ -167,6 +168,7 @@ public class ChatService {
     @Transactional
     public List<Message> open(long me, long chatId) {
         Chat c = chat(me, chatId);
+        hub.member(me, chatId);
         hub.here(me, chatId);
         markRead(c, me);
         return jdbc.query("SELECT m.id, m.chat_id, u.username, m.body, m.created_at, m.read_at FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.chat_id = :c ORDER BY m.id",
@@ -191,6 +193,7 @@ public class ChatService {
                 p.addValue("b", text).addValue("seen", seenNow));
         Message m = new Message((Long) row.get("id"), chatId, myUsername, text, ((java.sql.Timestamp) row.get("created_at")).toInstant(),
                 row.get("read_at") == null ? null : ((java.sql.Timestamp) row.get("read_at")).toInstant());
+        hub.bump(chatId);
         hub.send(them, "message", m);
         if (!hub.isOnline(them)) push.sendLater(them, new PushService.Message("New message", "You have a new message on Weyvo", "/chat/" + chatId));
         return m;
@@ -240,6 +243,7 @@ public class ChatService {
     private void vanish(Chat c, String where, MapSqlParameterSource p) {
         List<Long> ids = jdbc.queryForList("DELETE FROM chat_messages WHERE " + where + " RETURNING id", p, Long.class);
         if (ids.isEmpty()) return;
+        hub.bump(c.id());
         Map<String, Object> event = Map.of("chatId", c.id(), "ids", ids);
         hub.send(c.fromId(), "vanished", event);
         hub.send(c.toId(), "vanished", event);
@@ -248,13 +252,17 @@ public class ChatService {
     private void markRead(Chat c, long me) {
         List<Long> ids = jdbc.queryForList("UPDATE chat_messages SET read_at = now() WHERE chat_id = :c AND sender_id <> :me AND read_at IS NULL RETURNING id",
                 new MapSqlParameterSource().addValue("c", c.id()).addValue("me", me), Long.class);
-        if (!ids.isEmpty()) hub.send(c.other(me), "seen", Map.of("chatId", c.id(), "ids", ids));
+        if (!ids.isEmpty()) {
+            hub.bump(c.id());
+            hub.send(c.other(me), "seen", Map.of("chatId", c.id(), "ids", ids));
+        }
     }
 
     /** The chat is on your screen: you're present, and anything that arrived meanwhile is now read. */
     @Transactional
     public void viewing(long me, long chatId) {
         Chat c = chat(me, chatId);
+        hub.member(me, chatId);
         hub.here(me, chatId);
         markRead(c, me);
     }

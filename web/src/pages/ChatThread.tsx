@@ -30,18 +30,33 @@ export function ChatThread() {
   const input = useRef<HTMLTextAreaElement>(null);
 
   const load = () => {
-    api.chatOpen(chatId).then(setMessages, (err) => { if (err instanceof ApiError && err.status === 404) setGone(true); });
+    api.chatOpen(chatId).then((ms) => {
+      setMessages(ms);
+      if (version.current < 0) api.chatPulse(chatId).then(({ v }) => { version.current = v; }, () => {});
+    }, (err) => { if (err instanceof ApiError && err.status === 404) setGone(true); });
     if (!other) api.chatInbox().then((i) => setOther(i.chats.find((c) => c.id === chatId)?.with ?? null), () => {});
   };
 
-  useChatStream(chatId, (name, data) => {
+  // Something happened in the last minute (a message either way, or you're typing): check fast.
+  const lastActivity = useRef(Date.now());
+  const version = useRef(-1);
+  const touch = () => { lastActivity.current = Date.now(); };
+  // The cheap check: a counter from the server's memory; only when it changes are the messages reloaded.
+  const pulse = () => api.chatPulse(chatId).then(({ v }) => {
+    if (v !== version.current) { version.current = v; touch(); load(); }
+  }, (err) => { if (err instanceof ApiError && err.status === 404) load(); });
+
+  useChatStream((name, data) => {
     const d = data as { chatId?: number; ids?: number[] } & Partial<ChatMessage>;
     if (d.chatId !== chatId) return;
-    if (name === 'message') setMessages((ms) => (ms ?? []).some((m) => m.id === d.id) ? ms : [...(ms ?? []), d as ChatMessage]);
+    touch();
+    if (name === 'message') { setMessages((ms) => (ms ?? []).some((m) => m.id === d.id) ? ms : [...(ms ?? []), d as ChatMessage]); api.chatHere(chatId).catch(() => {}); }
     if (name === 'seen') setMessages((ms) => (ms ?? []).map((m) => (d.ids!.includes(m.id) ? { ...m, readAt: new Date().toISOString() } : m)));
     if (name === 'vanished') { setMessages((ms) => (ms ?? []).filter((m) => !d.ids!.includes(m.id))); setVanished(true); }
     if (name === 'ended') setGone(true);
-  }, load);
+  }, () => (version.current < 0 ? load() : pulse()), {
+    activeMs: 2000, idleMs: 8000, quietMs: 15_000, busy: () => Date.now() - lastActivity.current < 60_000,
+  });
 
   useLayoutEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [messages?.length]);
 
@@ -54,10 +69,11 @@ export function ChatThread() {
       if (timer) { clearInterval(timer); timer = null; }
       navigator.sendBeacon?.(`/api/chats/${chatId}/leave`) || fetch(`/api/chats/${chatId}/leave`, { method: 'POST', keepalive: true, credentials: 'same-origin' }).catch(() => {});
     };
+    // While the stream is live the pulse runs every 15 s; this keeps presence fresh in between.
     const arrive = () => {
       if (timer) return;
       api.chatHere(chatId).catch(() => {});
-      timer = setInterval(() => api.chatHere(chatId).catch(() => {}), 15_000);
+      timer = setInterval(() => api.chatHere(chatId).catch(() => {}), 25_000);
     };
     const onVisibility = () => (document.visibilityState === 'visible' ? arrive() : leave());
     if (document.visibilityState === 'visible') arrive();
@@ -95,6 +111,7 @@ export function ChatThread() {
       setMessages((ms) => (ms ?? []).some((x) => x.id === m.id) ? ms : [...(ms ?? []), m]);
       setText('');
       setEmoji(false);
+      touch();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
     } finally {
@@ -158,7 +175,7 @@ export function ChatThread() {
           <button type="button" className="chat-emoji-toggle" aria-label={emoji ? 'Hide emoji' : 'Show emoji'} aria-pressed={emoji} onClick={() => setEmoji(!emoji)}>😊</button>
           <label htmlFor="chat-input" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Message</label>
           <textarea id="chat-input" ref={input} rows={1} maxLength={MAX} value={text} placeholder="Message…"
-            onChange={(e) => { setText(e.target.value); setError(''); }}
+            onChange={(e) => { setText(e.target.value); setError(''); touch(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
           <button type="submit" className="chat-send" aria-label="Send" disabled={!text.trim() || sending}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>

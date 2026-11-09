@@ -254,6 +254,7 @@ export const api = {
   chatDecline: (id: number) => request<void>('POST', `/chats/requests/${id}/decline`),
   chatOpen: (id: number) => request<ChatMessage[]>('GET', `/chats/${id}/messages`),
   chatSend: (id: number, text: string) => request<ChatMessage>('POST', `/chats/${id}/messages`, { text }),
+  chatPulse: (id: number) => request<{ v: number }>('GET', `/chats/${id}/pulse`),
   chatHere: (id: number) => request<void>('POST', `/chats/${id}/here`),
   chatReport: (id: number) => request<void>('POST', `/chats/${id}/report`),
   chatEnd: (id: number) => request<void>('DELETE', `/chats/${id}`),

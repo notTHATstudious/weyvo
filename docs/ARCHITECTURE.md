@@ -83,7 +83,9 @@ Snapchat-style one-to-one chat. Signed-in, verified accounts only.
   - Sending is a normal request. The message waits in Postgres (`chat_messages`) until it's read.
   - Delivery is live over **Server-Sent Events**: one stream per signed-in user while the Chat tab is open.
     It carries new messages, "seen", vanished messages and new requests.
-  - If the stream can't connect, the app checks every 4 seconds instead.
+  - If a proxy holds the stream back (no "hello" within 4 s), an open chat checks a tiny in-memory change counter
+    (`/pulse`): every 2 s while busy (a message or typing in the last minute), 8 s when quiet, 15 s while the
+    stream works. The messages are only reloaded when the counter changes. The chats list checks every 10–30 s.
   - Who has which chat open is kept in server memory, from the screen's own signals: "here" every 15 s while the
     chat is visible, "left" (sendBeacon) on back, app switch or lock; no signal for 35 s counts as left. The stream
     is never used for this, because proxies keep dead streams looking alive. A cleanup job runs every 5 minutes.
