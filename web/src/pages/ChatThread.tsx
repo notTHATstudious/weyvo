@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, type ChatMessage, type ChatPerson } from '../api';
 import { useAuth } from '../auth';
@@ -44,6 +44,31 @@ export function ChatThread() {
   }, load);
 
   useLayoutEffect(() => { end.current?.scrollIntoView({ block: 'end' }); }, [messages?.length]);
+
+  // Presence: "here" every 15 seconds while this chat is on screen, "left" the moment it isn't (back, app switch,
+  // lock). Messages are only marked seen while you're here, and read ones vanish once you've both left.
+  useEffect(() => {
+    if (!user || !chatId) return;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const leave = () => {
+      if (timer) { clearInterval(timer); timer = null; }
+      navigator.sendBeacon?.(`/api/chats/${chatId}/leave`) || fetch(`/api/chats/${chatId}/leave`, { method: 'POST', keepalive: true, credentials: 'same-origin' }).catch(() => {});
+    };
+    const arrive = () => {
+      if (timer) return;
+      api.chatHere(chatId).catch(() => {});
+      timer = setInterval(() => api.chatHere(chatId).catch(() => {}), 15_000);
+    };
+    const onVisibility = () => (document.visibilityState === 'visible' ? arrive() : leave());
+    if (document.visibilityState === 'visible') arrive();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', leave);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', leave);
+      leave();
+    };
+  }, [user?.id, chatId]);
 
   if (loading) return null;
   if (!user) return <Navigate to={`/signin?next=/chat/${id}`} replace />;

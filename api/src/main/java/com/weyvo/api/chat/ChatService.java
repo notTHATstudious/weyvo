@@ -167,6 +167,7 @@ public class ChatService {
     @Transactional
     public List<Message> open(long me, long chatId) {
         Chat c = chat(me, chatId);
+        hub.here(me, chatId);
         markRead(c, me);
         return jdbc.query("SELECT m.id, m.chat_id, u.username, m.body, m.created_at, m.read_at FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.chat_id = :c ORDER BY m.id",
                 new MapSqlParameterSource("c", chatId), (rs, i) -> message(rs));
@@ -250,10 +251,12 @@ public class ChatService {
         if (!ids.isEmpty()) hub.send(c.other(me), "seen", Map.of("chatId", c.id(), "ids", ids));
     }
 
-    /** Called when a stream opens on a chat: anything that arrived meanwhile is now read. */
+    /** The chat is on your screen: you're present, and anything that arrived meanwhile is now read. */
     @Transactional
     public void viewing(long me, long chatId) {
-        markRead(chat(me, chatId), me);
+        Chat c = chat(me, chatId);
+        hub.here(me, chatId);
+        markRead(c, me);
     }
 
     // ---- helpers ----

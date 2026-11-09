@@ -67,9 +67,16 @@ class ChatIntegrationTest {
         long chat = openChat(signup("c"), signup("d"));
         Account c = member(chat, true);
         Account d = member(chat, false);
-        say(c, chat, "see you in Goa").andExpect(status().isOk());
+        // d isn't in the chat: the message waits unread, so it isn't "Seen" and d gets the dot.
+        say(c, chat, "see you in Goa").andExpect(status().isOk()).andExpect(jsonPath("$.readAt").isEmpty());
+        mvc.perform(get("/api/chats/unread").cookie(d.cookie())).andExpect(jsonPath("$.count").value(1));
+        // d opens it: now it's read, and while d stays, new messages are read on arrival.
         mvc.perform(get("/api/chats/" + chat + "/messages").cookie(d.cookie())).andExpect(jsonPath("$[0].readAt").isNotEmpty());
-        chats.left(d.id(), chat);
+        Thread.sleep(1100);
+        say(c, chat, "bring snacks").andExpect(jsonPath("$.readAt").isNotEmpty());
+        assertThat(count(chat)).isEqualTo(2);
+        // d leaves and c isn't in it either: everything read is gone.
+        mvc.perform(post("/api/chats/" + chat + "/leave").cookie(d.cookie())).andExpect(status().isNoContent());
         assertThat(count(chat)).isZero();
 
         Thread.sleep(1100);

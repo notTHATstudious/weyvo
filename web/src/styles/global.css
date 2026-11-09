@@ -207,8 +207,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
   font: inherit; font-size: 15px; font-weight: 600; text-align: left; padding: 0 16px; }
 @media (max-width: 400px) { .bottom-nav a { width: 42px; } }
 
-.chat-page.thread { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
-.chat-dock.no-nav { bottom: calc(10px + env(safe-area-inset-bottom)); }
+.chat-page.thread { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+/* In a conversation the box sits at the very bottom on a solid backdrop, so messages never show through or under it. */
+.chat-dock.no-nav { bottom: 0; padding: 18px 12px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--paper) 18px); }
 .chat-info { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid currentColor; background: transparent; color: inherit;
   font: italic 700 15px/1 Georgia, serif; opacity: .85; display: inline-flex; align-items: center; justify-content: center; }
 .chat-info[aria-expanded="true"] { background: rgba(255,255,255,.18); }

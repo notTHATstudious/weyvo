@@ -26,7 +26,7 @@ export function useChatStream(open: number | null, onEvent: (name: string, data:
       stop();
       handlers.current.poll();
       if (typeof EventSource === 'undefined') return fallback();
-      source = new EventSource(`/api/chats/stream${open ? `?open=${open}` : ''}`);
+      source = new EventSource('/api/chats/stream');
       source.addEventListener('open', () => { failures = 0; });
       for (const name of ['request', 'accepted', 'message', 'seen', 'vanished', 'ended']) {
         source.addEventListener(name, (e) => handlers.current.onEvent(name, JSON.parse((e as MessageEvent).data)));

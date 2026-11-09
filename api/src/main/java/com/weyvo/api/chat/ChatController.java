@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -84,6 +83,20 @@ public class ChatController {
         return chats.send(user.id(), user.username(), id, body == null ? null : body.text());
     }
 
+    /** The chat screen is open and visible; sent every 15 seconds. Anything waiting is now read. */
+    @PostMapping("/api/chats/{id}/here")
+    public ResponseEntity<Void> here(@AuthenticationPrincipal CurrentUser user, @PathVariable long id) {
+        chats.viewing(user.id(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** The chat screen closed (back, app switch, lock). Sent with sendBeacon, so it arrives even as the page goes. */
+    @PostMapping("/api/chats/{id}/leave")
+    public ResponseEntity<Void> leave(@AuthenticationPrincipal CurrentUser user, @PathVariable long id) {
+        hub.left(user.id(), id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/api/chats/{id}/report")
     public ResponseEntity<Void> report(@AuthenticationPrincipal CurrentUser user, @PathVariable long id) {
         chats.report(user.id(), id);
@@ -96,11 +109,10 @@ public class ChatController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Live events: request, accepted, message, seen, vanished, ended, ping. ?open= the chat on screen. */
+    /** Live events: request, accepted, message, seen, vanished, ended, ping. */
     @GetMapping(value = "/api/chats/stream", produces = "text/event-stream")
-    public ResponseEntity<SseEmitter> stream(@AuthenticationPrincipal CurrentUser user, @RequestParam(required = false) Long open) {
-        if (open != null) chats.viewing(user.id(), open);
-        SseEmitter emitter = hub.listen(user.id(), open);
+    public ResponseEntity<SseEmitter> stream(@AuthenticationPrincipal CurrentUser user) {
+        SseEmitter emitter = hub.listen(user.id());
         if (emitter == null) return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         return ResponseEntity.ok().header("X-Accel-Buffering", "no").header("Cache-Control", "no-cache, no-transform").body(emitter);
     }

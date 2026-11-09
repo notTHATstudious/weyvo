@@ -84,7 +84,9 @@ Snapchat-style one-to-one chat. Signed-in, verified accounts only.
   - Delivery is live over **Server-Sent Events**: one stream per signed-in user while the Chat tab is open.
     It carries new messages, "seen", vanished messages and new requests.
   - If the stream can't connect, the app checks every 4 seconds instead.
-  - Who has which chat open is kept in server memory. A cleanup job runs every 5 minutes.
+  - Who has which chat open is kept in server memory, from the screen's own signals: "here" every 15 s while the
+    chat is visible, "left" (sendBeacon) on back, app switch or lock; no signal for 35 s counts as left. The stream
+    is never used for this, because proxies keep dead streams looking alive. A cleanup job runs every 5 minutes.
   - A web push says "New message" (never the text) when the app is closed.
 
 ## Testing
