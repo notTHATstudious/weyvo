@@ -44,6 +44,13 @@ export interface BillingPlans {
   free: PlanLimits; premium: PlanLimits;
 }
 export interface PaymentOrder { orderId: string; amountPaise: number; currency: string; keyId: string; period: Period; pointsUsed: number; discountPaise: number }
+/** The Today card: daily quiz, streak and question. */
+export interface DailyQuiz { photoUrl: string; options: string[]; myAnswer: string | null; correct: boolean | null; answer: string | null; tripSlug: string | null; percentCorrect: number | null }
+export interface DailyToday {
+  quiz: DailyQuiz | null; streak: { days: number; nextBonusAt: number };
+  question: { today: string; myAnswer: string | null; yesterday: string; yesterdayAnswers: { username: string; body: string; place: string | null }[] };
+  reminder: boolean;
+}
 /** Private chat. Messages vanish once read and both people have left, or after 2h read / 12h unread. */
 export interface ChatPerson { username: string; displayName: string; avatarUrl: string | null }
 export interface ChatInbox {
@@ -252,6 +259,10 @@ export const api = {
   adminDeletePhotos: (username: string, confirm: string) => request<{ deleted: number }>('POST', '/admin/photos/delete', { username: username || null, confirm }),
   adminRestore: (username: string) => request<void>('POST', `/admin/users/${encodeURIComponent(username)}/restore`),
   recordShare: (tripId: number, kind: 'LINK' | 'IMAGE') => request<void>('POST', `/trips/${tripId}/shares`, { kind }),
+  daily: () => request<DailyToday>('GET', '/daily'),
+  dailyGuess: (option: string) => request<DailyQuiz>('POST', '/daily/guess', { option }),
+  dailyAnswer: (text: string, place: string) => request<void>('POST', '/daily/answer', { text, place }),
+  dailyReminder: (on: boolean) => request<void>('PUT', '/me/daily-reminder', { on }),
   chatInbox: () => request<ChatInbox>('GET', '/chats'),
   chatUnread: () => request<{ count: number }>('GET', '/chats/unread'),
   chatWith: (username: string) => request<ChatStatus>('GET', `/chats/with/${encodeURIComponent(username)}`),

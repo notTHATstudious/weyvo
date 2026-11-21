@@ -337,3 +337,51 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .thumb-minimal { background: var(--card); }
 .thumb-minimal i { inset: 10px 10px 50% 10px; border-radius: 3px; }
 .thumb-minimal b:nth-of-type(1) { height: 4px; width: 40%; }
+
+/* ---- Today card (Discover) ---- */
+.today { position: relative; margin: 4px 0 10px; padding: 16px; border-radius: 26px; overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 16%, var(--card)) 0%, var(--card) 45%);
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--line)); box-shadow: 0 14px 34px rgba(120,80,20,.12); }
+.today-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
+.today-kicker { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.today-head h2 { margin: 2px 0 0; font-size: 30px; line-height: 1; letter-spacing: -.02em; }
+.today-streak { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 800;
+  background: var(--paper); border: 1px solid var(--line); }
+.today-streak.hot { background: linear-gradient(135deg, #FFB547, #F2762E); color: #fff; border: 0; box-shadow: 0 6px 16px rgba(242,118,46,.35); }
+.today-photo { position: relative; aspect-ratio: 16 / 10; border-radius: 20px; overflow: hidden; background: var(--line); }
+.today-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.today-photo-label { position: absolute; left: 12px; top: 12px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .04em;
+  background: rgba(20,18,15,.55); color: #fff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.today-verdict { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 10px 14px; border-radius: 14px; font-weight: 800; font-size: 15px; color: #fff;
+  animation: verdictIn .35s cubic-bezier(.2,.8,.2,1); }
+/* Slides in, but is fully visible even if the animation never runs. */
+@keyframes verdictIn { from { transform: translateY(10px) scale(.97); } to { transform: none; } }
+.today-verdict.yes { background: linear-gradient(135deg, #2B6A50, #1F4D3A); }
+.today-verdict.no { background: rgba(20,18,15,.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.today-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.today-option { min-height: 46px; padding: 0 12px; border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--paper); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 700; transition: transform .12s; }
+.today-option:not(:disabled):active { transform: scale(.96); }
+.today-option.right { background: var(--green); color: var(--on-green); border-color: var(--green); animation: pop .35s ease-out; }
+.today-option.wrong { background: #B3261E; color: #fff; border-color: #B3261E; }
+.today-option.dim { opacity: .45; }
+.today-foot { margin: 10px 2px 0; font-size: 12.5px; color: var(--ink-soft); }
+.today-error { margin: 8px 2px 0; font-size: 13px; color: #B3261E; }
+.today-question-toggle { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 14px; padding: 12px; border-radius: 18px; border: 1px solid var(--line);
+  background: var(--paper); color: var(--ink); font: inherit; text-align: left; }
+.today-q-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+  background: color-mix(in srgb, var(--green) 12%, var(--card)); }
+.today-question-toggle small { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.today-question-toggle strong { display: block; margin-top: 2px; font-size: 14.5px; }
+.today-chev { font-size: 22px; color: var(--muted); transition: transform .2s; }
+.today-chev.open { transform: rotate(90deg); }
+.today-panel { padding: 12px 4px 2px; animation: chatIn .25s ease both; }
+.today-answer { display: grid; gap: 8px; }
+.today-done { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+.today-yesterday { margin-top: 12px; }
+.today-yesterday small { font-size: 11px; font-weight: 700; color: var(--muted); }
+.today-yesterday ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.today-yesterday li { font-size: 13.5px; padding: 8px 12px; border-radius: 14px; background: var(--paper); }
+.today-yesterday a { font-weight: 700; color: var(--ink); text-decoration: none; }
+.today-yesterday em { color: var(--muted); font-style: normal; }
+.today-reminder { display: block; margin: 12px auto 0; border: 0; background: none; color: var(--green); font: inherit; font-size: 13px; font-weight: 700; min-height: 32px; }

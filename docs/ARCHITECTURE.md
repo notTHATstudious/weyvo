@@ -77,6 +77,18 @@ render.yaml          Render blueprint, security headers, /api rewrite
   photo strip and colophon). Sized in container units so the preview and the paper match; the browser's "Save as
   PDF" makes the file, so the server does nothing extra. Premium (`print-issues`).
 
+## Daily hooks (Today card on Discover)
+
+- **"Where in the world?"**: one cover or first-place photo from a public issue per day (India time), its place
+  and three other places; one guess per person per day, +10 Wey points when right, "% got it" counted in memory.
+  Chosen once a day and kept in memory (`DailyService`); no AI, the place is what the author wrote.
+- **Wander streak**: days in a row with Weyvo opened, from `user_activity_days`; +20 points at 7 days, +50 at 30
+  (`daily_bonuses`, counted in Wey points).
+- **Question of the day**: a fixed list of prompts in code; one answer per person per day, checked by the word
+  filter; yesterday's answers are shown (5, in a stable random order). Answers are deleted after 30 days.
+- **Reminder**: opt-in push at 9 am India time (`users.daily_reminder`).
+- Load: about one request per person per day for the card, plus one each to play or answer.
+
 ## Private chat
 
 Snapchat-style one-to-one chat. Signed-in, verified accounts only.

@@ -11,6 +11,7 @@ import { Reactions } from '../components/Reactions';
 import { Empty, ErrorNote, Loading } from '../components/States';
 import { PlaceList } from './Places';
 import { useApi } from '../useApi';
+import { TodayCard } from '../components/TodayCard';
 import { Wordmark } from '../components/Wordmark';
 
 const ALL_TABS = [
@@ -43,6 +44,8 @@ export function Discover() {
           <Link to="/settings" className="icon-btn" aria-label="Settings"><Icon.settings /></Link>
         </div>
       </div>
+
+ <div style={{ padding: '0 20px 6px' }}><TodayCard /></div>
 
       <div role="tablist" aria-label="Discover sections" className="scroll-x" style={{ padding: '6px 20px 14px' }}>
         {TABS.map((t) => (

@@ -31,6 +31,10 @@ public class PointsService {
                 FROM trips WHERE owner_id = :u AND status = 'PUBLISHED' AND removed_at IS NULL AND published_at IS NOT NULL
                 UNION ALL
                 SELECT (published_at AT TIME ZONE 'Asia/Kolkata')::date, 20, 1 FROM expired_short_stories WHERE user_id = :u
+                UNION ALL
+                SELECT day, 10, 0 FROM daily_guesses WHERE user_id = :u AND correct
+                UNION ALL
+                SELECT day, points, 0 FROM daily_bonuses WHERE user_id = :u
             ), per_day AS (
                 SELECT day, LEAST(:dayCap, sum(pts)) AS pts, sum(stories) AS stories FROM days GROUP BY day
             ), per_week AS (
