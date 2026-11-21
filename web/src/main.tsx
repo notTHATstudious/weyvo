@@ -13,6 +13,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { AuthProvider } from './auth';
 import './styles/global.css';
+import './styles/premium.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

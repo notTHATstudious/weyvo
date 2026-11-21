@@ -9,7 +9,7 @@ export function Avatar({ name, url, size = 34, ring }: { name: string; url?: str
   };
   if (url) return <img src={url} alt="" aria-hidden="true" loading="lazy" style={{ ...style, background: 'var(--line)' }} />;
   return (
-    <span aria-hidden="true" style={{ ...style, background: fallback.color, color: '#FBF8F2', fontSize: Math.round(size * 0.4), fontWeight: 600 }}>
+    <span aria-hidden="true" style={{ ...style, background: fallback.color, color: '#FBF8F2', fontSize: Math.round(size * 0.4), fontWeight: 600, textDecoration: 'none', display: 'inline-flex' }}>
       {fallback.initial}
     </span>
   );

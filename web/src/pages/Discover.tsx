@@ -78,7 +78,7 @@ function ThisWeek() {
   const fmt = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   return (
     <div className="rise">
-      <div style={{ background: '#1C1B18', color: '#FBF8F2', borderRadius: 'var(--radius-sm)', padding: '18px 18px 16px' }}>
+      <div className="week-hero">
         <p style={{ margin: 0, fontSize: 10, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--gold)' }}>Weyvo · This week · {fmt(from)} – {fmt(now)}</p>
         <p className="display" style={{ margin: '8px 0 0', fontSize: 34 }}>Most loved this week</p>
         <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.5, color: '#CFC8BA' }}>Ranked by Been there, Want to go, saves and comments from the last 7 days.</p>
@@ -212,22 +212,27 @@ function LatestTrips() {
 
 function TripFeedCard({ trip }: { trip: TripCard }) {
   return (
-    <article className="rise" style={{ marginBottom: 28 }}>
-      <Link to={`/u/${trip.author.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, padding: '4px 0', textDecoration: 'none', color: 'var(--ink)' }}>
+    <article className="rise feed-card">
+      <Link to={`/u/${trip.author.username}`} className="feed-author">
         <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} />
         <span style={{ flex: 1 }}>
-          <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{trip.author.username}</span>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>{trip.author.username}</span>
           <span style={{ display: 'block', marginTop: 1, fontSize: 12, color: 'var(--muted)' }}>{timeAgo(trip.publishedAt)}</span>
         </span>
       </Link>
-      <Link to={`/trips/${trip.slug}`} className="cover" style={{ height: 400, borderRadius: 'var(--radius-sm)' }}>
+      <Link to={`/trips/${trip.slug}`} className="feed-cover">
         <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} />
-        <div className="cover-overlay">
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase' }}><span>{trip.kind === 'FULL' ? 'Full trip' : `Short story${trip.shortTag ? ` · ${TAG_LABEL[trip.shortTag]}` : ''}`}</span><span>Weyvo</span></div>
-          <div><p style={{ margin: 0, fontSize: 11, letterSpacing: '.18em', textTransform: 'uppercase' }}>{trip.place}</p><p className="display" style={{ margin: '6px 0 0', fontSize: 34 }}>{trip.title}</p></div>
+        <span className="feed-shade" aria-hidden="true" />
+        <div className="feed-top">
+          <span className="feed-glass">{trip.kind === 'FULL' ? 'Issue' : `Short story${trip.shortTag ? ` · ${TAG_LABEL[trip.shortTag]}` : ''}`}</span>
+          <span className="feed-mast">weyvo</span>
+        </div>
+        <div className="feed-text">
+          <p className="feed-place"><Icon.pin size={13} />{trip.place}</p>
+          <p className="display feed-title">{trip.title}</p>
         </div>
       </Link>
-      <div style={{ marginTop: 12 }}><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>
+      <div className="feed-reactions"><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>
     </article>
   );
 }

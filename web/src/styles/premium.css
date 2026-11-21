@@ -1,0 +1,85 @@
+/* ---- Premium finish ----
+   A layer over the base styles: warmer light, layered soft shadows, rounder shapes, gradient buttons with a little
+   shine, raised tabs and a frosted bottom bar. Colours stay the same tokens, so the dark theme follows. */
+
+:root {
+  --radius: 18px;
+  --radius-lg: 28px;
+  --shadow-sm: 0 1px 2px rgba(40, 30, 20, .06), 0 4px 12px rgba(40, 30, 20, .06);
+  --shadow-md: 0 2px 4px rgba(40, 30, 20, .06), 0 12px 28px rgba(40, 30, 20, .12);
+  --shadow-lg: 0 4px 10px rgba(40, 30, 20, .08), 0 24px 56px rgba(40, 30, 20, .18);
+  --glow: radial-gradient(1100px 520px at 85% -120px, color-mix(in srgb, var(--gold) 16%, transparent), transparent 70%),
+          radial-gradient(900px 480px at -10% 0%, color-mix(in srgb, var(--green) 9%, transparent), transparent 65%);
+}
+:root[data-theme='dark'] {
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .3);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, .4), 0 12px 28px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 4px 10px rgba(0, 0, 0, .45), 0 24px 56px rgba(0, 0, 0, .6);
+}
+
+body { background: var(--glow), var(--paper); background-attachment: fixed; }
+
+/* Headlines: a touch tighter and crisper */
+.display { letter-spacing: -0.035em; }
+
+/* Buttons */
+.btn { font-weight: 700; letter-spacing: -.005em; transition: transform .15s ease, box-shadow .2s, background .2s, filter .2s; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: linear-gradient(180deg, color-mix(in srgb, var(--green) 82%, #fff) 0%, var(--green) 55%, var(--green-dark) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 16px color-mix(in srgb, var(--green) 35%, transparent); }
+.btn-primary:hover { filter: brightness(1.06); background: linear-gradient(180deg, color-mix(in srgb, var(--green) 82%, #fff) 0%, var(--green) 55%, var(--green-dark) 100%); }
+.btn-outline { border-color: var(--line-strong); background: var(--card); box-shadow: var(--shadow-sm); }
+.btn-outline:hover { border-color: var(--ink); background: var(--card); }
+
+/* Tabs: raised pills */
+.tab { border-color: transparent; background: var(--card); box-shadow: var(--shadow-sm); font-weight: 600; }
+.tab[aria-selected='true'] { background: var(--ink); color: var(--paper); box-shadow: 0 6px 16px rgba(28, 27, 24, .25); }
+
+/* Pills and tags */
+.pill { border-color: var(--line); box-shadow: var(--shadow-sm); font-weight: 600; }
+.tag-gold { background: linear-gradient(135deg, #F2C56B, var(--gold)); }
+
+/* Cards */
+.paper-card { border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); box-shadow: var(--shadow-sm); }
+.lift:hover { box-shadow: var(--shadow-lg); }
+.input { border-radius: 16px; border-color: var(--line); box-shadow: inset 0 1px 2px rgba(40,30,20,.04); transition: border-color .15s, box-shadow .15s; }
+.input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 16%, transparent); }
+
+/* Bottom bar (phones): frosted glass, gold Create, a small glowing dot under the current tab */
+@media (max-width: 1023px) {
+  .bottom-nav { background: color-mix(in srgb, var(--nav-bg) 82%, transparent); backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4); border: 1px solid rgba(255,255,255,.08); border-radius: 30px; padding: 7px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
+  .bottom-nav a { position: relative; transition: color .2s, background .2s, transform .15s; }
+  .bottom-nav a:active { transform: scale(.9); }
+  .bottom-nav a.active { background: rgba(255,255,255,.12); }
+  .bottom-nav a.active::after { content: ''; position: absolute; bottom: 5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%;
+    background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+  .bottom-nav a.create { background: linear-gradient(145deg, #F4C76E, var(--gold) 60%, #C9842A); border-radius: 20px;
+    box-shadow: 0 8px 18px rgba(227,162,59,.45), inset 0 1px 0 rgba(255,255,255,.4); }
+}
+
+/* Feed: magazine cover cards */
+.feed-card { margin-bottom: 26px; }
+.feed-author { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 2px; text-decoration: none; color: var(--ink); }
+.feed-cover { position: relative; display: block; height: 440px; border-radius: var(--radius-lg); overflow: hidden; color: #fff; text-decoration: none;
+  box-shadow: var(--shadow-md); transform: translateZ(0); transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s; }
+.feed-cover:hover { color: #fff; transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.feed-cover:active { transform: scale(.985); }
+.feed-cover > :first-child { position: absolute; inset: 0; transition: transform 1.2s cubic-bezier(.2,.7,.2,1); }
+.feed-cover:hover > :first-child { transform: scale(1.04); }
+.feed-shade { position: absolute; inset: 0; background:
+  linear-gradient(to top, rgba(12,9,6,.86) 0%, rgba(12,9,6,.35) 38%, rgba(12,9,6,0) 60%), linear-gradient(to bottom, rgba(12,9,6,.35), transparent 26%); }
+.feed-top { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between; align-items: center; }
+.feed-glass { padding: 6px 11px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.feed-mast { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: -.02em; opacity: .9; }
+.feed-text { position: absolute; left: 20px; right: 20px; bottom: 20px; }
+.feed-place { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: #F4C76E; }
+.feed-title { margin: 8px 0 0; font-size: 38px; line-height: .95; text-wrap: balance; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+.feed-reactions { margin-top: 12px; }
+
+/* "This week" header */
+.week-hero { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 22px 20px 20px; color: #FBF8F2;
+  background: radial-gradient(500px 220px at 100% 0%, rgba(227,162,59,.35), transparent 60%), linear-gradient(150deg, #24221E, #141311); box-shadow: var(--shadow-md); }
