@@ -107,11 +107,17 @@ app:
       short-story-photos: ${PLAN_FREE_SHORT_STORY_PHOTOS:4}
       total-photos: ${PLAN_FREE_TOTAL_PHOTOS:15}
       uploads-per-hour: ${PLAN_FREE_UPLOADS_PER_HOUR:10}
+      places-per-issue: ${PLAN_FREE_PLACES_PER_ISSUE:3}
+      all-layouts: false        # Classic and Editorial only
+      print-issues: false
     premium:
       full-trip-sections: ${PLAN_PREMIUM_FULL_TRIP_SECTIONS:8}
       short-story-photos: ${PLAN_PREMIUM_SHORT_STORY_PHOTOS:8}
       total-photos: ${PLAN_PREMIUM_TOTAL_PHOTOS:20}
       uploads-per-hour: ${PLAN_PREMIUM_UPLOADS_PER_HOUR:60}
+      places-per-issue: ${PLAN_PREMIUM_PLACES_PER_ISSUE:12}
+      all-layouts: true
+      print-issues: true
   storage:
     # local: files under local-dir (development). supabase: private Supabase Storage bucket.
     provider: ${APP_STORAGE_PROVIDER:local}

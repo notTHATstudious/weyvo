@@ -33,7 +33,16 @@ public final class TripDtos {
             @NotNull Trip.Visibility visibility,
             // Hard ceiling for any plan; the owner's plan sets the real limit in TripService.
             @Size(max = 20) List<@Valid SectionInput> sections,
-            @Size(max = 3) List<@NotBlank @Size(max = 120) String> moments) {}
+            @Size(max = 3) List<@NotBlank @Size(max = 120) String> moments,
+            // Places inside a full issue; the owner's plan sets the real limit.
+            @Size(max = 20) List<@Valid StopInput> stops,
+            Trip.Layout layout) {}
+
+    /** keepPhotoIds: this place's existing photos, in order (when editing); new ones are uploaded after saving. */
+    public record StopInput(@NotBlank @Size(max = 120) String place, @Size(max = 300) String note, @Size(max = 3) List<Long> keepPhotoIds) {}
+
+    /** A place inside an issue, with up to three photos. */
+    public record Stop(String place, String note, List<PhotoRef> photos) {}
 
     public record Author(String username, String displayName, String avatarUrl) {}
 
@@ -47,7 +56,9 @@ public final class TripDtos {
             List<Section> sections, int totalSections, List<String> moments, String finalNote,
             boolean locked, boolean owner, Reactions reactions,
             /** Only for the author: "CHECKING" while held for a quick look, "REMOVED" if taken down. */
-            String review) {}
+            String review,
+            /** Places inside the issue; a locked reader gets only the first. */
+            List<Stop> stops, int totalStops, Trip.Layout layout) {}
 
     public record TripCard(
             long id, String slug, Trip.Kind kind, Trip.ShortTag shortTag, String title, String place,

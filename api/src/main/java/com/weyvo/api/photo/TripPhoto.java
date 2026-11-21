@@ -14,7 +14,7 @@ import jakarta.persistence.Table;
 public class TripPhoto {
 
     /** COVER is a full trip's cover; SECTION photos sit with the story section at the same position. */
-    public enum Role { COVER, SECTION }
+    public enum Role { COVER, SECTION, STOP }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,6 +62,7 @@ public class TripPhoto {
     public Long getTripId() { return tripId; }
     public Role getRole() { return role; }
     public int getPosition() { return position; }
+    public void setPosition(int position) { this.position = position; }
     public String getLargeKey() { return largeKey; }
     public String getThumbKey() { return thumbKey; }
     public int getWidth() { return width; }

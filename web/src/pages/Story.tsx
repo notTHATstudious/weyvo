@@ -13,6 +13,8 @@ import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { BackButton } from '../components/BackButton';
 import { postedLabel } from '../components/Talk';
+import { PlaceTiles } from '../components/PlaceTiles';
+import { useIssueFonts } from '../issueFonts';
 import { likeThisTrip, planLink } from '../atlas';
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
@@ -23,6 +25,7 @@ export function Story() {
   const [sharing, setSharing] = useState(false);
   // Refetch when the signed-in user changes: the server decides how much of the story to return.
   const { data: trip, error, loading } = useApi(() => api.trip(slug), [slug, user?.id]);
+  useIssueFonts();
 
   if (loading && !trip) return <div className="app" style={{ padding: 20 }}><Loading /></div>;
   if (error || !trip) {
@@ -39,12 +42,12 @@ export function Story() {
   const meta = [trip.kind === 'SHORT' && trip.shortTag ? TAG_LABEL[trip.shortTag] : null, trip.place, dateRange(trip.startDate, trip.endDate)].filter(Boolean).join(' · ');
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 60 }}>
+    <div className={`issue issue--${(trip.kind === 'FULL' ? trip.layout ?? 'CLASSIC' : 'CLASSIC').toLowerCase()}`} style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 60 }}>
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 3, zIndex: 30, background: 'var(--line)' }}>
         <span style={{ display: 'block', height: '100%', width: `${share}%`, background: 'var(--green)', transition: 'width .6s' }} />
       </div>
 
-      <div style={{ height: '72vh', minHeight: 480, maxHeight: 640, position: 'relative', color: '#fff' }}>
+      <div className="issue-hero" style={{ height: '72vh', minHeight: 480, maxHeight: 640, position: 'relative', color: '#fff' }}>
         <Photo scene={sceneFor(trip.id)} src={trip.cover?.url} alt={`Cover photo: ${trip.title}`} />
         <div style={{ position: 'absolute', top: 12, left: 10, right: 10, display: 'flex', justifyContent: 'space-between' }}>
           <BackButton fallback="/discover" solid style={{ color: 'var(--ink)' }} />
@@ -55,8 +58,8 @@ export function Story() {
         </div>
         <div style={{ position: 'absolute', inset: 'auto 0 0 0', padding: 22, background: 'linear-gradient(to top, rgba(20,14,10,.75), rgba(20,14,10,0))' }}>
           {trip.status === 'DRAFT' && <span className="tag tag-gold" style={{ marginBottom: 10 }}>Draft · only you can see this</span>}
-          <p style={{ margin: 0, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>{meta}</p>
-          <h1 className="display rise" style={{ margin: '8px 0 0', fontSize: 'clamp(44px, 8vw, 72px)' }}>{trip.title}</h1>
+          <p className="issue-meta" style={{ margin: 0, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase' }}>{meta}</p>
+          <h1 className="display rise issue-title" style={{ margin: '8px 0 0', fontSize: 'clamp(44px, 8vw, 72px)' }}>{trip.title}</h1>
           <Link to={`/u/${trip.author.username}`} style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 10, color: '#fff', textDecoration: 'none' }}>
             <Avatar name={trip.author.displayName} url={trip.author.avatarUrl} size={32} ring="#fff" />
             <span style={{ fontSize: 13 }}>by <strong>{trip.author.username}</strong>{trip.publishedAt && <span style={{ opacity: 0.8 }}> · {postedLabel(trip.publishedAt)}</span>}</span>
@@ -64,7 +67,7 @@ export function Story() {
         </div>
       </div>
 
-      {trip.owner && <OwnerBar id={trip.id} slug={trip.slug} status={trip.status} visibility={trip.visibility} />}
+      {trip.owner && <OwnerBar id={trip.id} slug={trip.slug} status={trip.status} visibility={trip.visibility} full={trip.kind === 'FULL'} />}
       {trip.owner && trip.review && (
         <div role="status" className="paper-card" style={{ margin: '10px 16px 0', borderLeft: `4px solid ${trip.review === 'CHECKING' ? 'var(--gold)' : '#B3261E'}` }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{trip.review === 'CHECKING' ? 'Quick check in progress' : 'This story was taken down'}</p>
@@ -86,7 +89,7 @@ export function Story() {
         <section key={i} className="rise">
           <div style={{ padding: '0 22px' }}>
             {trip.kind === 'FULL' && (
-              <h2 className="eyebrow" style={{ margin: '30px 0 8px', fontWeight: 600 }}>{NUMERALS[i]}{s.heading ? ` · ${s.heading}` : ''}</h2>
+              <h2 className="eyebrow issue-kicker" style={{ margin: '30px 0 8px', fontWeight: 600 }}><span className="issue-numeral">{NUMERALS[i] ?? i + 1}</span>{s.heading ? <span className="issue-heading">{` · ${s.heading}`}</span> : ''}</h2>
             )}
             {trip.kind === 'SHORT' && <div style={{ height: 22 }} />}
             {trip.kind === 'SHORT' && (
@@ -94,16 +97,18 @@ export function Story() {
                 <Photo scene={sceneFor(trip.id + i + 1)} src={s.photo?.url} alt={s.body} />
               </div>
             )}
-            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'var(--ink-soft)' }}>{s.body}</p>
+            <p className={`issue-body ${i === 0 ? 'issue-first' : ''}`} style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'var(--ink-soft)' }}>{s.body}</p>
           </div>
           {trip.kind === 'FULL' && s.photo && (
-            <figure style={{ margin: '22px 0 0' }}>
+            <figure className={`issue-figure ${i % 2 ? 'tilt-r' : 'tilt-l'}`} style={{ margin: '22px 0 0' }}>
               <div style={{ height: 'min(70vw, 460px)' }}><Photo scene={sceneFor(trip.id + i + 1)} src={s.photo.url} alt={s.photoCaption ?? s.heading ?? 'Trip photo'} /></div>
-              {s.photoCaption && <figcaption style={{ padding: '8px 22px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.photoCaption}</figcaption>}
+              {s.photoCaption && <figcaption className="issue-caption" style={{ padding: '8px 22px 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{s.photoCaption}</figcaption>}
             </figure>
           )}
         </section>
       ))}
+
+      {trip.kind === 'FULL' && <PlaceTiles stops={trip.stops ?? []} total={trip.totalStops ?? 0} tripId={trip.id} joinLink={`/signin?mode=join&next=${next}`} />}
 
       {trip.locked ? (
         <>
@@ -125,7 +130,7 @@ export function Story() {
               <h2 className="eyebrow" style={{ margin: '0 0 12px', fontWeight: 600 }}>Favourite moments</h2>
               <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {trip.moments.map((m, i) => (
-                  <li key={i} className="paper-card" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <li key={i} className="paper-card issue-moment" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <span className="display" style={{ fontSize: 28, color: 'var(--green)' }}>{i + 1}</span><span style={{ fontSize: 14 }}>{m}</span>
                   </li>
                 ))}
@@ -135,7 +140,7 @@ export function Story() {
           {trip.finalNote && (
             <>
               <h2 className="eyebrow" style={{ margin: '28px 0 0', fontWeight: 600, textAlign: 'center' }}>End credits</h2>
-              <p className="display" style={{ margin: '8px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>
+              <p className="display issue-credits" style={{ margin: '8px 0 0', fontSize: 26, textAlign: 'center', fontWeight: 700 }}>"{trip.finalNote}"</p>
             </>
           )}
           {trip.status === 'PUBLISHED' && <div style={{ marginTop: 26 }}><Reactions tripId={trip.id} initial={trip.reactions} author={trip.author.username} /></div>}
@@ -206,7 +211,7 @@ function ReportStory({ tripId }: { tripId: number }) {
 }
 
 /** Only the author sees this: status, Edit, and Delete with a confirmation step. */
-function OwnerBar({ id, slug, status, visibility }: { id: number; slug: string; status: string; visibility: string }) {
+function OwnerBar({ id, slug, status, visibility, full }: { id: number; slug: string; status: string; visibility: string; full: boolean }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [confirming, setConfirming] = useState(false);
@@ -228,6 +233,7 @@ function OwnerBar({ id, slug, status, visibility }: { id: number; slug: string; 
       {!confirming ? (
         <>
           <Link to={`/trips/${slug}/edit`} state={{ back: true }} className="btn btn-primary" style={{ minHeight: 40 }}>Edit</Link>
+          {full && <Link to={`/trips/${slug}/print`} className="btn btn-outline" style={{ minHeight: 40 }}>Print issue</Link>}
           <button type="button" className="btn btn-outline" style={{ minHeight: 40 }} onClick={() => setConfirming(true)}>Delete</button>
         </>
       ) : (

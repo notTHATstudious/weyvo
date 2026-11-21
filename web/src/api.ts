@@ -35,7 +35,7 @@ export interface PlaceDetail {
   stories: number; shorts: number; wantToGo: number; months: number[]; trips: TripCard[]; reactions: PlaceReactions;
 }
 export interface PlaceReactions { been: number; want: number; beenByMe: boolean; wantByMe: boolean }
-export interface PlanLimits { fullTripSections: number; shortStoryPhotos: number; totalPhotos: number; uploadsPerHour: number }
+export interface PlanLimits { fullTripSections: number; shortStoryPhotos: number; totalPhotos: number; uploadsPerHour: number; placesPerIssue: number; allLayouts: boolean; printIssues: boolean }
 export interface PlanUsage { plan: 'FREE' | 'PREMIUM'; limits: PlanLimits; photosUsed: number; uploadsLastHour: number; premiumUntil: string | null }
 export type Period = 'MONTH' | 'YEAR';
 export interface BillingPlans {
@@ -62,6 +62,9 @@ export interface Reactions { been: number; want: number; beenByMe: boolean; want
 export interface Author { username: string; displayName: string; avatarUrl: string | null }
 export interface PhotoRef { id: number; url: string; thumbUrl: string; width: number; height: number }
 export interface Section { heading: string | null; body: string; photoCaption: string | null; photo: PhotoRef | null }
+export type Layout = 'CLASSIC' | 'EDITORIAL' | 'SCRAPBOOK' | 'MINIMAL';
+/** A place inside a full issue (Candolim, Panjim…), with up to three photos. */
+export interface Stop { place: string; note: string | null; photos: PhotoRef[] }
 
 export interface TripCard {
   id: number; slug: string; kind: Kind; shortTag: ShortTag | null; title: string; place: string;
@@ -103,12 +106,15 @@ export interface TripView extends TripCard {
   locked: boolean; owner: boolean;
   /** Only for the author: being checked by the Weyvo team, or taken down. */
   review?: 'CHECKING' | 'REMOVED' | null;
+  /** Places inside the issue; signed-out readers get only the first. */
+  stops: Stop[]; totalStops: number;
+  layout: Layout;
 }
 
 export interface TripInput {
   kind: Kind; shortTag?: ShortTag | null; title: string; place: string;
   startDate?: string | null; endDate?: string | null; intro?: string | null; finalNote?: string | null;
-  visibility: Visibility; sections: { heading?: string | null; body: string; photoCaption?: string | null }[]; moments?: string[];
+  visibility: Visibility; sections: { heading?: string | null; body: string; photoCaption?: string | null }[]; moments?: string[]; stops?: { place: string; note?: string | null; keepPhotoIds?: number[] }[]; layout?: Layout;
 }
 
 export class ApiError extends Error {
@@ -280,7 +286,7 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) => request<void>('POST', '/auth/password/change', { currentPassword, newPassword }),
   deleteAccount: (password: string) => request<void>('DELETE', '/me', { password }),
   publishTrip: (id: number) => request<TripView>('POST', `/trips/${id}/publish`),
-  uploadPhoto: async (tripId: number, file: File, role: 'COVER' | 'SECTION', position = 0) => {
+  uploadPhoto: async (tripId: number, file: File, role: 'COVER' | 'SECTION' | 'STOP', position = 0) => {
     const form = new FormData();
     form.append('file', await shrinkPhoto(file));
     form.append('role', role);

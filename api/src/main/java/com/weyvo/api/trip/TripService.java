@@ -80,7 +80,8 @@ public class TripService {
                 trip.getVisibility(), trip.getStatus(), trip.getPublishedAt(), pics.cover(),
                 shown, all.size(), locked ? List.of() : List.copyOf(trip.getMoments()), locked ? null : trip.getFinalNote(),
                 locked, trip.isOwnedBy(viewerId), reactions.forTrips(List.of(trip.getId()), viewerId).get(trip.getId()),
-                trip.isOwnedBy(viewerId) ? trip.getReview() : null);
+                trip.isOwnedBy(viewerId) ? trip.getReview() : null,
+                stops(trip, pics, locked), trip.getStops().size(), trip.getLayout());
     }
 
     @Transactional(readOnly = true)
@@ -170,6 +171,7 @@ public class TripService {
         screen(trip, req);
         trip.touch();
         photos.pruneSections(trip.getId(), trip.getSections().size());
+        photos.arrangeStops(trip.getId(), req.stops() == null ? List.of() : req.stops().stream().map(TripDtos.StopInput::keepPhotoIds).toList());
         return view(trip.getSlug(), ownerId);
     }
 
@@ -205,9 +207,12 @@ public class TripService {
         if (req.kind() == Trip.Kind.FULL) {
             trip.setFinalNote(blankToNull(req.finalNote()));
             trip.replaceMoments(req.moments() == null ? List.of() : req.moments().stream().map(String::trim).toList());
+            trip.setLayout(req.layout());
+            trip.replaceStops(req.stops() == null ? List.of() : req.stops().stream().map(s -> new TripStop(s.place().trim(), blankToNull(s.note()))).toList());
         } else {
             trip.setFinalNote(null);
             trip.replaceMoments(List.of());
+            trip.replaceStops(List.of());
         }
         trip.replaceSections(IntStream.range(0, sections.size())
                 .mapToObj(i -> {
@@ -218,10 +223,19 @@ public class TripService {
                 .toList());
     }
 
+    private static List<TripDtos.Stop> stops(Trip trip, PhotoService.TripPhotos pics, boolean locked) {
+        List<TripStop> all = trip.getStops();
+        return IntStream.range(0, locked ? Math.min(1, all.size()) : all.size())
+                .mapToObj(i -> new TripDtos.Stop(all.get(i).getPlace(), all.get(i).getNote(),
+                        IntStream.range(0, TripStop.PHOTOS).mapToObj(j -> pics.stops().get(i * TripStop.PHOTOS + j)).filter(java.util.Objects::nonNull).toList()))
+                .toList();
+    }
+
     /** Words that don't belong in a travel story hold it for a quick admin look; nothing is rejected. */
     private void screen(Trip trip, TripRequest req) {
         var texts = new java.util.ArrayList<String>(List.of(nz(req.title()), nz(req.place()), nz(req.intro()), nz(req.finalNote())));
         if (req.moments() != null) texts.addAll(req.moments());
+        if (req.stops() != null) req.stops().forEach(s -> texts.addAll(java.util.Arrays.asList(nz(s.place()), nz(s.note()))));
         if (req.sections() != null) req.sections().forEach(s -> texts.addAll(java.util.Arrays.asList(nz(s.heading()), nz(s.body()), nz(s.photoCaption()))));
         filter.check(texts).ifPresent(r -> trip.hold(r.name()));
     }
@@ -244,6 +258,12 @@ public class TripService {
         if (req.kind() == Trip.Kind.FULL) {
             if (req.shortTag() != null) throw ApiException.badRequest("Only short stories have a tag");
             if (sections > limits.fullTripSections()) throw ApiException.badRequest("Your plan allows up to " + limits.fullTripSections() + " story sections");
+            Trip.Layout layout = req.layout() == null ? Trip.Layout.CLASSIC : req.layout();
+            if (!limits.allLayouts() && layout != Trip.Layout.CLASSIC && layout != Trip.Layout.EDITORIAL) {
+                throw ApiException.badRequest("The " + layout.name().charAt(0) + layout.name().substring(1).toLowerCase() + " layout is part of Premium");
+            }
+            int places = req.stops() == null ? 0 : req.stops().size();
+            if (places > limits.placesPerIssue()) throw ApiException.badRequest("Your plan allows up to " + limits.placesPerIssue() + " places in an issue");
             if (req.sections() != null && req.sections().stream().anyMatch(s -> s.body() == null || s.body().isBlank())) {
                 throw ApiException.badRequest("Every story section needs some writing");
             }
@@ -253,6 +273,7 @@ public class TripService {
             boolean longCaption = req.sections() != null && req.sections().stream().anyMatch(s -> s.body() != null && s.body().trim().length() > MAX_SHORT_CAPTION);
             if (longCaption) throw ApiException.badRequest("Short story captions are up to " + MAX_SHORT_CAPTION + " characters");
             if (req.moments() != null && !req.moments().isEmpty()) throw ApiException.badRequest("Favourite moments are for full trips");
+            if (req.stops() != null && !req.stops().isEmpty()) throw ApiException.badRequest("Places are for full issues");
         }
     }
 

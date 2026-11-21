@@ -27,6 +27,9 @@ import java.util.List;
 @Table(name = "trips")
 public class Trip {
 
+    /** How a full issue looks. */
+    public enum Layout { CLASSIC, EDITORIAL, SCRAPBOOK, MINIMAL }
+
     public enum Kind { FULL, SHORT }
     public enum ShortTag { WEEKEND, ONE_NIGHT, LONG_DRIVE, DAY_TRIP }
     public enum Visibility { PUBLIC, UNLISTED, PRIVATE }
@@ -89,6 +92,10 @@ public class Trip {
     @Column(name = "removed_at")
     private Instant removedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "layout", nullable = false, length = 12)
+    private Layout layout = Layout.CLASSIC;
+
     /** When a posted short story gets deleted; full issues and drafts have none. */
     @Column(name = "expires_at")
     private Instant expiresAt;
@@ -106,6 +113,11 @@ public class Trip {
     @OrderColumn(name = "position")
     @Column(name = "text", nullable = false)
     private List<String> moments = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "trip_stops", joinColumns = @JoinColumn(name = "trip_id"))
+    @OrderColumn(name = "position")
+    private List<TripStop> stops = new ArrayList<>();
 
     protected Trip() {}
 
@@ -146,6 +158,11 @@ public class Trip {
         sections.clear();
         sections.addAll(next);
         next.forEach(s -> s.attachTo(this));
+    }
+
+    public void replaceStops(List<TripStop> next) {
+        stops.clear();
+        stops.addAll(next);
     }
 
     public void replaceMoments(List<String> next) {
@@ -191,4 +208,7 @@ public class Trip {
     public Instant getUpdatedAt() { return updatedAt; }
     public List<TripSection> getSections() { return sections; }
     public List<String> getMoments() { return moments; }
+    public List<TripStop> getStops() { return stops; }
+    public Layout getLayout() { return layout; }
+    public void setLayout(Layout layout) { this.layout = layout == null ? Layout.CLASSIC : layout; }
 }

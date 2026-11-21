@@ -37,7 +37,8 @@ public record AppProperties(Jwt jwt, Cookie cookie, Cors cors, Story story, Sign
     public record Plans(PlanLimits free, PlanLimits premium) {}
 
     /** Per-plan limits. For totalPhotos and uploadsPerHour, 0 means unlimited. */
-    public record PlanLimits(int fullTripSections, int shortStoryPhotos, int totalPhotos, int uploadsPerHour) {}
+    public record PlanLimits(int fullTripSections, int shortStoryPhotos, int totalPhotos, int uploadsPerHour, int placesPerIssue,
+                             boolean allLayouts, boolean printIssues) {}
 
     public record Storage(String provider, String localDir, String supabaseUrl, String supabaseServiceKey, String supabaseBucket) {}
 }

@@ -1,0 +1,150 @@
+/* ---- Print-ready issue ----
+   Every page is an A4 sheet. Sizes use container units (cqw = 1% of the page width), so the same page is a phone-size
+   preview on screen and exactly 210 × 297 mm on paper. */
+
+.print-root {
+  --pp-ink: #1C1B18; --pp-paper: #FBF8F2; --pp-soft: #4a4640; --pp-muted: #8a847a; --pp-accent: #1F4D3A; --pp-gold: #C98A2B;
+  --pp-display: 'Bricolage Grotesque', system-ui, sans-serif; --pp-text: 'Fraunces', Georgia, serif;
+  --pp-display-weight: 800; --pp-title-style: normal;
+  min-height: 100vh; background: #E7E1D6; padding-bottom: 60px;
+}
+.print-root.issue--editorial { --pp-display: 'Fraunces', Georgia, serif; --pp-display-weight: 300; --pp-title-style: italic; --pp-accent: #8C2F1B; }
+.print-root.issue--scrapbook { --pp-display: 'Caveat', cursive; --pp-display-weight: 700; --pp-paper: #F6EFE2; --pp-accent: #2B6A50; }
+.print-root.issue--minimal { --pp-display: 'Inter', system-ui, sans-serif; --pp-display-weight: 300; --pp-paper: #FFFFFF; --pp-accent: #1C1B18; --pp-gold: #9a9a9a;
+  --pp-text: 'Inter', system-ui, sans-serif; }
+
+/* Screen-only toolbar */
+.print-toolbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+  background: rgba(28,27,24,.92); color: #FBF8F2; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.print-toolbar strong { display: block; font-size: 15px; }
+.print-toolbar span { display: block; font-size: 12px; opacity: .7; text-transform: capitalize; }
+.print-back { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FBF8F2; text-decoration: none;
+  font-size: 20px; background: rgba(255,255,255,.1); }
+.print-go { min-height: 42px; padding: 0 18px; border: 0; border-radius: 999px; background: #E3A23B; color: #1C1B18; font: 700 14px var(--font-body);
+  display: inline-flex; align-items: center; text-decoration: none; box-shadow: 0 6px 18px rgba(227,162,59,.35); }
+.print-go:disabled { opacity: .6; }
+.print-tip { margin: 12px auto 0; max-width: 794px; padding: 0 16px; font-size: 12.5px; color: #6b655b; text-align: center; }
+
+.print-pages { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 18px 12px 0; }
+
+/* A page */
+.pp { position: relative; container-type: inline-size; width: min(794px, calc(100vw - 24px)); aspect-ratio: 210 / 297; overflow: hidden;
+  background: var(--pp-paper); color: var(--pp-ink); font-family: var(--pp-text); box-shadow: 0 20px 50px rgba(40,30,20,.22), 0 2px 6px rgba(40,30,20,.12);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.pp img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pp-blank { width: 100%; height: 100%; background: linear-gradient(135deg, #7d9a86, #2b4b3c); }
+.pp-pad { position: relative; padding: 9cqw 9cqw 0; }
+.pp-label { margin: 0; font: 700 1.55cqw/1 var(--font-body); letter-spacing: .32em; text-transform: uppercase; color: var(--pp-accent); }
+.pp-h2 { margin: 1.6cqw 0 0; font: var(--pp-title-style) var(--pp-display-weight) 7.4cqw/1 var(--pp-display); letter-spacing: -.02em; }
+.pp-foot { position: absolute; left: 9cqw; right: 9cqw; bottom: 4.6cqw; display: flex; justify-content: space-between; padding-top: 1.4cqw;
+  border-top: .15cqw solid color-mix(in srgb, var(--pp-ink) 25%, transparent); font: 600 1.35cqw/1 var(--font-body); letter-spacing: .22em; text-transform: uppercase; color: var(--pp-muted); }
+
+/* Cover */
+.pp-cover { color: #fff; }
+.pp-bleed { position: absolute; inset: 0; }
+.pp-cover-shade { position: absolute; inset: 0; background:
+  linear-gradient(to bottom, rgba(8,8,6,.55) 0%, rgba(8,8,6,0) 28%, rgba(8,8,6,0) 52%, rgba(8,8,6,.78) 100%); }
+.pp-mast { position: absolute; top: 5cqw; left: 6cqw; right: 6cqw; text-align: center; }
+.pp-mast-word { display: block; font: 800 21cqw/.82 'Bricolage Grotesque', sans-serif; letter-spacing: -.045em; }
+.issue--editorial .pp-mast-word { font-family: 'Fraunces', serif; font-weight: 700; letter-spacing: -.03em; }
+.issue--minimal .pp-mast-word { font-family: 'Inter', sans-serif; font-weight: 200; letter-spacing: .12em; font-size: 13cqw; }
+.pp-mast-word.small { font-size: 7cqw; color: var(--pp-accent); }
+.pp-mast-line { display: block; margin-top: 2cqw; padding-top: 1.6cqw; border-top: .2cqw solid rgba(255,255,255,.7); font: 600 1.6cqw/1 var(--font-body);
+  letter-spacing: .32em; text-transform: uppercase; }
+.pp-coverlines { position: absolute; right: 6cqw; top: 46%; margin: 0; padding: 0; list-style: none; text-align: right; display: grid; gap: 1.6cqw;
+  font: 600 2.1cqw/1.2 var(--font-body); text-transform: uppercase; letter-spacing: .14em; }
+.pp-coverlines b { display: block; font: 800 6cqw/1 'Bricolage Grotesque', sans-serif; color: #E3A23B; letter-spacing: 0; }
+.pp-cover-text { position: absolute; left: 6cqw; right: 6cqw; bottom: 7cqw; }
+.pp-kicker { margin: 0; font: 700 2cqw/1 var(--font-body); letter-spacing: .34em; text-transform: uppercase; color: #E3A23B; }
+.pp-cover-title { margin: 2cqw 0 0; font: var(--pp-title-style) var(--pp-display-weight) 12.5cqw/.9 var(--pp-display); letter-spacing: -.03em;
+  text-shadow: 0 .4cqw 3cqw rgba(0,0,0,.35); }
+.issue--scrapbook .pp-cover-title { font-size: 15cqw; transform: rotate(-2deg); }
+.pp-byline { margin: 2.4cqw 0 0; font: italic 400 2.6cqw/1.3 'Fraunces', Georgia, serif; opacity: .92; }
+
+/* Contents */
+.pp-toc { list-style: none; margin: 6cqw 0 0; padding: 0; }
+.pp-toc li { display: flex; align-items: baseline; gap: 2.4cqw; padding: 2.3cqw 0; border-bottom: .15cqw solid color-mix(in srgb, var(--pp-ink) 14%, transparent); }
+.pp-toc-num { width: 6cqw; font: italic 500 3cqw/1 'Fraunces', serif; color: var(--pp-gold); }
+.pp-toc-name { flex: 1; font: 500 3.2cqw/1.2 var(--pp-text); }
+.issue--scrapbook .pp-toc-name { font-family: 'Caveat', cursive; font-size: 4.4cqw; }
+.pp-toc-page { font: 700 2cqw/1 var(--font-body); color: var(--pp-muted); letter-spacing: .1em; }
+.pp-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3cqw 4cqw; margin-top: 7cqw; padding: 4cqw; border-radius: 2cqw;
+  background: color-mix(in srgb, var(--pp-accent) 7%, var(--pp-paper)); }
+.pp-facts span { display: block; font: 700 1.4cqw/1 var(--font-body); letter-spacing: .28em; text-transform: uppercase; color: var(--pp-muted); }
+.pp-facts b { display: block; margin-top: 1.2cqw; font: 500 3cqw/1.15 var(--pp-text); }
+.pp-pull { margin: 7cqw 0 0; padding-left: 4cqw; border-left: .6cqw solid var(--pp-gold); font: italic 300 4.6cqw/1.25 'Fraunces', serif; color: var(--pp-soft); }
+
+/* Chapters: photo on top (or below on alternate pages), text with a drop cap in two columns */
+.pp-chapter { display: flex; flex-direction: column; }
+.pp-chapter.flip { flex-direction: column-reverse; justify-content: flex-end; }
+.pp-chapter-photo { position: relative; margin: 0; height: 52%; flex: 0 0 auto; }
+.pp-chapter.flip .pp-chapter-photo { margin: 0 9cqw 13cqw; height: 44%; border-radius: 1.2cqw; overflow: hidden; }
+.pp-chapter-photo figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 6cqw 5cqw 2.4cqw; color: #fff;
+  font: italic 400 2cqw/1.3 'Fraunces', serif; background: linear-gradient(to top, rgba(0,0,0,.6), transparent); }
+.pp-chapter-text { padding-top: 6cqw; }
+.pp-chapter-text.no-photo { padding-top: 22cqw; }
+.pp-ghost { position: absolute; right: 7cqw; top: 1cqw; font: italic 300 24cqw/1 'Fraunces', serif; color: color-mix(in srgb, var(--pp-gold) 22%, transparent); pointer-events: none; }
+.pp-body { margin: 4cqw 0 0; column-count: 2; column-gap: 5cqw; font: 300 2.55cqw/1.62 var(--pp-text); color: var(--pp-ink); text-align: left; hyphens: auto; -webkit-hyphens: auto; }
+.pp-body::first-letter { float: left; font: 700 10cqw/.8 'Fraunces', serif; padding: 1cqw 1.4cqw 0 0; color: var(--pp-accent); }
+.issue--minimal .pp-body { column-count: 1; max-width: 70cqw; text-align: left; font-size: 2.6cqw; line-height: 1.8; }
+.issue--minimal .pp-body::first-letter { all: unset; }
+.issue--scrapbook .pp-chapter-photo { margin: 7cqw 9cqw 0; height: 46%; padding: 2cqw 2cqw 7cqw; background: #fff; transform: rotate(-1.5deg);
+  box-shadow: 0 1.5cqw 4cqw rgba(0,0,0,.18); }
+.issue--scrapbook .pp-chapter.flip .pp-chapter-photo { transform: rotate(1.5deg); }
+.issue--scrapbook .pp-chapter-photo figcaption { position: absolute; bottom: 1cqw; padding: 0; background: none; color: #3a3530; text-align: center;
+  font: 700 3.6cqw/1 'Caveat', cursive; }
+
+/* Places */
+.pp-place-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5cqw 4.5cqw; margin-top: 5cqw; }
+.pp-place-photo { position: relative; aspect-ratio: 4 / 3.2; border-radius: 1.6cqw; overflow: hidden; }
+.issue--scrapbook .pp-place-photo { border-radius: 0; border: 1.4cqw solid #fff; border-bottom-width: 4cqw; box-shadow: 0 1cqw 3cqw rgba(0,0,0,.15); }
+.issue--scrapbook .pp-place:nth-child(odd) .pp-place-photo { transform: rotate(-1.4deg); }
+.issue--scrapbook .pp-place:nth-child(even) .pp-place-photo { transform: rotate(1.2deg); }
+.pp-place-num { position: absolute; top: 1.6cqw; left: 1.8cqw; padding: .8cqw 1.4cqw; border-radius: 99px; background: rgba(251,248,242,.92); color: var(--pp-accent);
+  font: 800 1.7cqw/1 var(--font-body); letter-spacing: .06em; }
+.pp-place h3 { margin: 2.4cqw 0 0; font: var(--pp-title-style) var(--pp-display-weight) 4.4cqw/1 var(--pp-display); letter-spacing: -.01em; }
+.pp-place p { margin: 1.2cqw 0 0; font: 300 2.15cqw/1.5 var(--pp-text); color: var(--pp-soft); }
+.pp-place-thumbs { display: flex; gap: 1.2cqw; margin-top: 1.6cqw; }
+.pp-place-thumbs img { width: 9cqw; height: 9cqw; border-radius: 1cqw; }
+
+/* Closing */
+.pp-moments { list-style: none; margin: 3cqw 0 0; padding: 0; display: grid; gap: 2.4cqw; }
+.pp-moments li { display: flex; gap: 3cqw; align-items: baseline; font: 400 3.4cqw/1.3 var(--pp-text); }
+.issue--scrapbook .pp-moments li { font: 700 4.6cqw/1.2 'Caveat', cursive; }
+.pp-moments span { font: 800 4.6cqw/1 'Bricolage Grotesque', sans-serif; color: var(--pp-gold); }
+.pp-credits { margin: 2.4cqw 0 0; font: italic 300 6cqw/1.15 'Fraunces', serif; letter-spacing: -.01em; }
+.issue--scrapbook .pp-credits { font: 700 7cqw/1.1 'Caveat', cursive; color: var(--pp-accent); }
+.pp-colophon { position: absolute; left: 9cqw; right: 9cqw; bottom: 12cqw; padding-top: 3cqw; border-top: .3cqw solid var(--pp-ink); }
+.pp-colophon p { margin: 1cqw 0 0; font: 400 1.9cqw/1.4 var(--font-body); color: var(--pp-soft); }
+
+/* Paper */
+@page { size: A4; margin: 0; }
+@media print {
+  html, body { background: #fff !important; }
+  body * { visibility: hidden; }
+  .print-root, .print-root * { visibility: visible; }
+  .print-root { position: absolute; inset: 0 auto auto 0; background: none; padding: 0; }
+  .print-toolbar, .print-tip { display: none !important; }
+  .print-pages { display: block; padding: 0; }
+  .pp { width: 210mm; height: 297mm; aspect-ratio: auto; box-shadow: none; break-after: page; page-break-after: always; }
+  .pp:last-child { break-after: auto; page-break-after: auto; }
+}
+
+/* Fit four places on one sheet; long notes stop at three lines. */
+.pp-place-grid { gap: 3.6cqw 4.5cqw; margin-top: 4cqw; }
+.pp-place-photo { aspect-ratio: 16 / 10.5; }
+.pp-place h3 { font-size: 3.8cqw; margin-top: 1.8cqw; }
+.pp-place p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 2cqw; }
+.pp-place-thumbs img { width: 7cqw; height: 7cqw; }
+
+/* Closing page: the colophon sits at the foot of the page, not over the moments. */
+.pp-closing .pp-pad { position: static; }
+.pp-closing .pp-colophon { bottom: 11cqw; }
+.pp-closing .pp-moments { margin-top: 3cqw; }
+.pp-closing .pp-credits { max-width: 70cqw; }
+
+.pp-strip { position: absolute; left: 9cqw; right: 9cqw; bottom: 34cqw; display: grid; gap: 1.6cqw; height: 22cqw; }
+.pp-strip img { border-radius: 1.2cqw; }
+.issue--scrapbook .pp-strip img { border-radius: 0; border: 1cqw solid #fff; box-shadow: 0 .8cqw 2cqw rgba(0,0,0,.15); }
+.issue--scrapbook .pp-strip img:nth-child(odd) { transform: rotate(-2deg); }
+.issue--scrapbook .pp-strip img:nth-child(even) { transform: rotate(2deg); }

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { api, ApiError, TAG_LABEL, type PhotoRef, type PlanUsage, type ShortTag, type TripInput, type TripView, type Visibility } from '../api';
+import { api, ApiError, TAG_LABEL, type PhotoRef, type PlanUsage, type Layout, type ShortTag, type TripInput, type TripView, type Visibility } from '../api';
 import { useApi } from '../useApi';
 import { useAuth } from '../auth';
 import { Icon } from '../components/Icons';
 import { Photo } from '../components/Photo';
 import { PhotoPicker } from '../components/PhotoPicker';
 import { useAutosave } from '../useAutosave';
+import { LAYOUTS } from '../issueFonts';
 import { PlaceField } from '../components/PlaceField';
 import { forgetAtlasPrefill, readAtlasPrefill, stashAtlasPrefill } from '../atlas';
 
@@ -50,7 +51,7 @@ function TravelOnlyNote() {
 }
 
 /** A photo waiting to be uploaded into a slot once the trip exists. */
-interface Upload { file: File; role: 'COVER' | 'SECTION'; position: number }
+interface Upload { file: File; role: 'COVER' | 'SECTION' | 'STOP'; position: number }
 
 export function Create() {
   const { signedIn, loading, user } = useAuth();
@@ -102,7 +103,7 @@ export function Create() {
         )}
         {mode !== 'pick' && plan.data && <PlanNote usage={plan.data} />}
         {mode === 'short' && <ShortForm maxPhotos={plan.data?.limits.shortStoryPhotos ?? 4} />}
-        {mode === 'full' && (plan.data || plan.error) && <FullForm maxSections={plan.data?.limits.fullTripSections ?? 3} />}
+        {mode === 'full' && (plan.data || plan.error) && <FullForm maxSections={plan.data?.limits.fullTripSections ?? 3} maxPlaces={plan.data?.limits.placesPerIssue ?? 3} allLayouts={!!plan.data?.limits.allLayouts} />}
       </div>
     </div>
   );
@@ -190,6 +191,7 @@ function useSave(existing?: TripView, onSaved?: () => void) {
 
 /** A photo slot: a new file to upload, or the photo already on the story (editing). */
 interface Slot { file: File | null; existing: PhotoRef | null }
+interface StopForm { place: string; note: string; photos: Slot[] }
 const emptySlot = (): Slot => ({ file: null, existing: null });
 /** Clearing a slot drops both; choosing a file replaces the existing photo on save. */
 const pick = (file: File | null): Partial<Slot> => (file ? { file } : { file: null, existing: null });
@@ -271,7 +273,7 @@ export function ShortForm({ maxPhotos, existing }: { maxPhotos: number; existing
   );
 }
 
-export function FullForm({ maxSections, existing }: { maxSections: number; existing?: TripView }) {
+export function FullForm({ maxSections, maxPlaces = 3, allLayouts = false, existing }: { maxSections: number; maxPlaces?: number; allLayouts?: boolean; existing?: TripView }) {
   // Started from a BubDub's Atlas plan: its title, place, dates and days become the first draft.
   const [atlas] = useState(() => (existing ? null : readAtlasPrefill()));
   const [f, setF] = useState({
@@ -288,12 +290,18 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
         ? atlas.sections.slice(0, maxSections).map((x) => ({ heading: x.heading, body: x.body, photoCaption: '', ...emptySlot() }))
         : [{ heading: '', body: '', photoCaption: '', ...emptySlot() }]);
   const [moments, setMoments] = useState(() => (existing?.moments.length ? existing.moments.slice(0, 3) : ['']));
+  // Places inside the issue (Candolim, Panjim…): each a mini story with a note and up to three photos.
+  const [stops, setStops] = useState<StopForm[]>(() => (existing?.stops ?? []).map((s) => ({
+    place: s.place, note: s.note ?? '', photos: [0, 1, 2].map((j) => ({ file: null, existing: s.photos[j] ?? null })) })));
+  const [placeLimit, setPlaceLimit] = useState(false);
+  const [layout, setLayout] = useState<Layout>(existing?.layout ?? 'CLASSIC');
   const [sectionLimit, setSectionLimit] = useState(false);
   const [visibility, setVisibility] = useState<Visibility>(existing?.visibility ?? 'PUBLIC');
   useEffect(() => { if (atlas) forgetAtlasPrefill(); }, [atlas]);
   const fromAtlas = atlas ? { days: atlas.sections.length, kept: Math.min(atlas.sections.length, maxSections) } : null;
   const draft = useAutosave(`full:${existing?.id ?? 'new'}`, {
-    f, visibility, moments, sections: sections.map(({ heading, body, photoCaption }) => ({ heading, body, photoCaption })) });
+    f, visibility, moments, sections: sections.map(({ heading, body, photoCaption }) => ({ heading, body, photoCaption })),
+    stops: stops.map(({ place, note }) => ({ place, note })), layout });
   const { save, busy, progress, error, fields, needs } = useSave(existing, draft.clear);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
 
@@ -301,6 +309,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
     const d = draft.accept();
     if (!d) return;
     setF(d.f); setVisibility(d.visibility); setMoments(d.moments);
+    if (d.layout) setLayout(d.layout);
+    if (d.stops) setStops((ss) => d.stops.map((t, i) => ({ ...(ss[i] ?? { photos: [emptySlot(), emptySlot(), emptySlot()] }), ...t })));
     setSections((ss) => d.sections.map((text, i) => ({ ...(ss[i] ?? { heading: '', body: '', photoCaption: '', ...emptySlot() }), ...text })));
   }
 
@@ -311,6 +321,8 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
     if (future) return document.getElementById(future)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     // Sections left without writing are simply left out; only the filled ones are posted.
     const filled = sections.filter((s) => s.body.trim());
+    // Places without a name are left out, like empty sections.
+    const places = stops.filter((s) => s.place.trim());
     if (publish && filled.length === 0) {
       return needs('b0', 'Write at least one story section before publishing. Save draft works without one.');
     }
@@ -319,14 +331,23 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       startDate: f.startDate || null, endDate: f.endDate || null, intro: existing?.intro ?? null, finalNote: f.finalNote || null,
       sections: filled.map((s) => ({ heading: s.heading || null, body: s.body, photoCaption: s.photoCaption || null })),
       moments: moments.map((m) => m.trim()).filter(Boolean),
+      layout,
+      // A place's kept photos go first; new ones are uploaded after them.
+      stops: places.map((s) => ({ place: s.place.trim(), note: s.note.trim() || null,
+        keepPhotoIds: s.photos.filter((p) => !p.file && p.existing).map((p) => p.existing!.id) })),
     };
     const uploads: Upload[] = [
       ...(cover.file ? [{ file: cover.file, role: 'COVER' as const, position: 0 }] : []),
       ...filled.flatMap((s, position) => (s.file ? [{ file: s.file, role: 'SECTION' as const, position }] : [])),
+      ...places.flatMap((s, i) => {
+        const kept = s.photos.filter((p) => !p.file && p.existing).length;
+        return s.photos.filter((p) => p.file).map((p, n) => ({ file: p.file!, role: 'STOP' as const, position: i * 3 + kept + n }));
+      }),
     ];
     save(input, uploads, removedPhotos(original, [cover, ...filled]), publish);
   }
 
+  const updateStop = (i: number, patch: Partial<StopForm>) => setStops((ss) => ss.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const updateSection = (i: number, patch: Partial<(typeof sections)[number]>) =>
     setSections((ss) => ss.map((s, j) => (j === i ? { ...s, ...patch } : s)));
 
@@ -380,6 +401,34 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       }}><Icon.plus size={16} /> Add a section</button>
       {sectionLimit && <p role="status" style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--ink-soft)' }}>You can tell up to {maxSections} stories in one issue.</p>}
 
+      <p className="eyebrow" style={{ margin: '8px 0 4px', fontWeight: 600 }}>Places you went</p>
+      <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ink-soft)' }}>Each place becomes a tile readers can tap, like Candolim, Panjim and Baga in a Goa issue.</p>
+      {stops.map((s, i) => (
+        <div key={i} className="paper-card place-card" style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span className="place-num">{String(i + 1).padStart(2, '0')}</span>
+            <button type="button" className="pill" style={{ minHeight: 32, fontSize: 12 }}
+              onClick={() => { setStops((ss) => ss.filter((_, j) => j !== i)); setPlaceLimit(false); }}>Remove</button>
+          </div>
+          <PlaceField id={`sp${i}`} label="Place" value={s.place} onChange={(v) => updateStop(i, { place: v })} placeholder="Candolim, Goa" />
+          <TextField id={`sn${i}`} label={`Little story · ${s.note.length} / 300`} value={s.note} onChange={(v) => updateStop(i, { note: v })} max={300}
+            placeholder="Sunset shacks, quiet mornings, crowded after 6" multiline />
+          <p className="field-label">Photos <span>· up to 3</span></p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+            {s.photos.map((p, j) => (
+              <PhotoPicker key={j} file={p.file} existingUrl={p.existing?.url} height={96} label={`place ${i + 1} photo ${j + 1}`}
+                onChange={(file) => updateStop(i, { photos: s.photos.map((x, k) => (k === j ? { ...x, ...pick(file) } : x)) })} />
+            ))}
+          </div>
+        </div>
+      ))}
+      <button type="button" className="pill" style={{ marginBottom: placeLimit ? 6 : 18 }} onClick={() => {
+        if (stops.length >= maxPlaces) return setPlaceLimit(true);
+        setStops((ss) => [...ss, { place: '', note: '', photos: [emptySlot(), emptySlot(), emptySlot()] }]);
+      }}><Icon.plus size={16} /> Add a place</button>
+      {placeLimit && <p role="status" style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--ink-soft)' }}>
+        Your plan fits {maxPlaces} places in an issue. <Link to="/premium">Premium</Link> fits more.</p>}
+
       <p className="eyebrow" style={{ margin: '8px 0 10px', fontWeight: 600 }}>Favourite moments</p>
       {moments.map((m, i) => {
         const last = i === moments.length - 1;
@@ -400,6 +449,7 @@ export function FullForm({ maxSections, existing }: { maxSections: number; exist
       })}
       <TextField id="fn" label="End credits · 200 characters" value={f.finalNote} onChange={set('finalNote')} max={200} error={fields.finalNote} placeholder="Go before the road gets paved." />
 
+      <LayoutPicker value={layout} onChange={setLayout} allLayouts={allLayouts} />
       <VisibilityPicker value={visibility} onChange={setVisibility} />
       {error && <p role="alert" style={{ margin: '14px 0 0', fontSize: 14, color: '#B3261E' }}>{error}</p>}
       <FooterBar busy={busy} progress={progress} existing={existing} primary="Publish" onDraft={(e) => submit(e, false)} />
@@ -450,6 +500,29 @@ function TextField(props: {
         : <input id={id} className="input" type={type} max={latest} maxLength={max} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} style={style} aria-invalid={!!error} />}
       {error && <p style={{ margin: '6px 2px 0', fontSize: 13, color: '#B3261E' }}>{error}</p>}
     </div>
+  );
+}
+
+/** Four looks for an issue, each with a tiny drawn preview. Premium ones are marked for Free plans. */
+function LayoutPicker({ value, onChange, allLayouts }: { value: Layout; onChange: (l: Layout) => void; allLayouts: boolean }) {
+  return (
+    <fieldset style={{ border: 0, padding: 0, margin: '8px 0 18px' }}>
+      <legend className="field-label">Layout</legend>
+      <div className="layout-grid">
+        {LAYOUTS.map((l) => {
+          const locked = l.premium && !allLayouts;
+          return (
+            <label key={l.id} className={`layout-card ${value === l.id ? 'on' : ''} ${locked ? 'locked' : ''}`}>
+              <input type="radio" name="layout" value={l.id} checked={value === l.id} disabled={locked} onChange={() => onChange(l.id)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }} />
+              <span className={`layout-thumb thumb-${l.id.toLowerCase()}`} aria-hidden="true"><i /><b /><b /><em /></span>
+              <strong>{l.name}{locked && <span className="tag tag-gold" style={{ marginLeft: 6, fontSize: 9 }}>Premium</span>}</strong>
+              <small>{l.hint}</small>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

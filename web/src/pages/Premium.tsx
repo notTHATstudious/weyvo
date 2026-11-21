@@ -126,8 +126,9 @@ export function Premium() {
               <Perk icon={<Icon.pin />} title={`${unlimited(p.premium.totalPhotos)} photos in total`} body={p.free.totalPhotos ? `Free keeps ${p.free.totalPhotos}.` : 'No cap on your archive.'} />
               <Perk icon={<Icon.share />} title={`${unlimited(p.premium.uploadsPerHour)} uploads an hour`} body="Post a whole trip in one sitting." />
               <Perk icon={<Icon.user />} title="Premium badge" body="A small gold mark on your profile." />
-              <Perk icon={<Icon.bookmark />} title="Magazine themes" body="Extra layouts for your issues." soon />
-              <Perk icon={<Icon.compass />} title="Print-ready PDF" body="Turn a trip into a printable issue." soon />
+              <Perk icon={<Icon.pin />} title={`${p.premium.placesPerIssue} places per issue`} body={`Tiles with mini stories for every stop. Free has ${p.free.placesPerIssue}.`} />
+              <Perk icon={<Icon.bookmark />} title="All magazine layouts" body="Scrapbook and Minimal, on top of Classic and Editorial." />
+              <Perk icon={<Icon.compass />} title="Print-ready PDF" body="Your trip as a real A4 magazine: cover, chapters, places, end credits." />
               <Perk icon={<Icon.bell />} title="Early access" body="Try new features before everyone else." soon />
             </div>
 

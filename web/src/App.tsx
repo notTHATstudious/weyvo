@@ -37,6 +37,7 @@ const Premium = page(() => import('./pages/Premium'), 'Premium');
 const Legal = page(() => import('./pages/Legal'), 'Legal');
 const EditProfile = page(() => import('./pages/EditProfile'), 'EditProfile');
 const Chat = page(() => import('./pages/Chat'), 'Chat');
+const IssuePrint = page(() => import('./pages/IssuePrint'), 'IssuePrint');
 const ChatThread = page(() => import('./pages/ChatThread'), 'ChatThread');
 const Places = page(() => import('./pages/Places'), 'Places');
 const Search = page(() => import('./pages/Search'), 'Search');
@@ -82,6 +83,7 @@ export function App() {
         <Route path="/legal/:page" element={<Legal />} />
         <Route path="/profile/edit" element={<EditProfile />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/trips/:slug/print" element={<IssuePrint />} />
         <Route path="/chat/:id" element={<ChatThread />} />
         <Route path="/guidelines" element={<Navigate to="/legal/guidelines" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

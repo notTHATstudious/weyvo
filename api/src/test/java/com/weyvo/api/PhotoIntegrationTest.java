@@ -118,6 +118,54 @@ class PhotoIntegrationTest {
 
     // ---- helpers ----
 
+    @Test
+    void placesInAnIssueKeepTheirPhotosAndSignedOutReadersSeeTheFirst() throws Exception {
+        Cookie owner = signup("places");
+        String stops = "[{\"place\":\"Candolim, Goa\",\"note\":\"Quiet mornings\"},{\"place\":\"Panjim, Goa\"},{\"place\":\"Baga, Goa\"}]";
+        String body = "{\"kind\":\"FULL\",\"title\":\"Goa\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\"Beaches\"}],\"stops\":" + stops + "}";
+        long tripId = json.readTree(mvc.perform(post("/api/trips").cookie(owner).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+        // A photo for Panjim (place 2, first photo = position 3).
+        mvc.perform(multipart("/api/trips/" + tripId + "/photos").file(photo(jpeg(400, 300))).param("role", "STOP").param("position", "3").cookie(owner))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/trips/" + tripId + "/publish").cookie(owner)).andExpect(status().isOk());
+
+        JsonNode mine = tripJson(owner, tripId);
+        assertThat(mine.get("totalStops").asInt()).isEqualTo(3);
+        long panjimPhoto = mine.get("stops").get(1).get("photos").get(0).get("id").asLong();
+        String slug = mine.get("slug").asText();
+        JsonNode public_ = json.readTree(mvc.perform(get("/api/trips/" + slug)).andReturn().getResponse().getContentAsString());
+        assertThat(public_.get("stops")).hasSize(1);
+        assertThat(public_.get("totalStops").asInt()).isEqualTo(3);
+        mvc.perform(get("/api/photos/" + panjimPhoto + "/large")).andExpect(status().isNotFound());
+
+        // Remove Candolim: Panjim becomes place 1 and its photo moves with it.
+        String edited = "{\"kind\":\"FULL\",\"title\":\"Goa\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\"Beaches\"}],"
+                + "\"stops\":[{\"place\":\"Panjim, Goa\",\"keepPhotoIds\":[" + panjimPhoto + "]},{\"place\":\"Baga, Goa\"}]}";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/trips/" + tripId).cookie(owner)
+                .contentType(MediaType.APPLICATION_JSON).content(edited)).andExpect(status().isOk());
+        JsonNode after = tripJson(owner, tripId);
+        assertThat(after.get("stops").get(0).get("place").asText()).isEqualTo("Panjim, Goa");
+        assertThat(after.get("stops").get(0).get("photos").get(0).get("id").asLong()).isEqualTo(panjimPhoto);
+    }
+
+    @Test
+    void freePlansGetClassicAndEditorialLayoutsOnly() throws Exception {
+        Cookie owner = signup("layouts");
+        String base = "{\"kind\":\"FULL\",\"title\":\"Goa\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\"x\"}],\"layout\":\"";
+        mvc.perform(post("/api/trips").cookie(owner).contentType(MediaType.APPLICATION_JSON).content(base + "EDITORIAL\"}")).andExpect(status().isCreated());
+        mvc.perform(post("/api/trips").cookie(owner).contentType(MediaType.APPLICATION_JSON).content(base + "SCRAPBOOK\"}")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void placesAreLimitedByPlan() throws Exception {
+        Cookie owner = signup("toomany");
+        StringBuilder stops = new StringBuilder();
+        for (int i = 0; i < 4; i++) stops.append(i == 0 ? "" : ",").append("{\"place\":\"Stop ").append(i).append("\"}");
+        String body = "{\"kind\":\"FULL\",\"title\":\"Goa\",\"place\":\"Goa\",\"visibility\":\"PUBLIC\",\"sections\":[{\"body\":\"x\"}],\"stops\":[" + stops + "]}";
+        mvc.perform(post("/api/trips").cookie(owner).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+    }
+
     private Cookie signup(String name) throws Exception {
         String username = name + "_" + UUID.randomUUID().toString().substring(0, 8);
         return mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)

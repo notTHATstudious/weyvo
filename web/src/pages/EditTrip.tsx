@@ -32,7 +32,8 @@ export function EditTrip() {
       <div style={{ padding: '0 20px' }}>
         {t.kind === 'SHORT'
           ? <ShortForm existing={t} maxPhotos={Math.max(limits?.shortStoryPhotos ?? 4, t.sections.length)} />
-          : <FullForm existing={t} maxSections={Math.max(limits?.fullTripSections ?? 3, t.sections.length)} />}
+          : <FullForm existing={t} maxSections={Math.max(limits?.fullTripSections ?? 3, t.sections.length)} maxPlaces={Math.max(limits?.placesPerIssue ?? 3, t.stops?.length ?? 0)}
+            allLayouts={!!limits?.allLayouts || t.layout === 'SCRAPBOOK' || t.layout === 'MINIMAL'} />}
       </div>
     </div>
   );

@@ -57,6 +57,8 @@ public class PhotoService {
         if (role == TripPhoto.Role.COVER) {
             if (trip.getKind() != Trip.Kind.FULL) throw ApiException.badRequest("Short stories use their first photo as the cover");
             position = 0;
+        } else if (role == TripPhoto.Role.STOP) {
+            if (position < 0 || position >= trip.getStops().size() * com.weyvo.api.trip.TripStop.PHOTOS) throw ApiException.badRequest("That place isn't in this issue");
         } else if (position < 0 || position >= trip.getSections().size()) {
             throw ApiException.badRequest("Add the caption or section before its photo");
         }
@@ -99,6 +101,31 @@ public class PhotoService {
         deleteFilesAfterCommit(gone);
     }
 
+    /**
+     * Files place photos under their place after an edit: keep.get(i) lists the photo ids place i keeps, in order.
+     * Photos no place keeps are deleted. Positions move in two steps so the (trip, role, position) rule holds.
+     */
+    @Transactional
+    public void arrangeStops(long tripId, List<List<Long>> keep) {
+        List<TripPhoto> all = photos.findByTripId(tripId).stream().filter(p -> p.getRole() == TripPhoto.Role.STOP).toList();
+        Map<Long, Integer> target = new HashMap<>();
+        for (int i = 0; i < keep.size(); i++) {
+            List<Long> ids = keep.get(i) == null ? List.of() : keep.get(i);
+            for (int j = 0; j < Math.min(ids.size(), com.weyvo.api.trip.TripStop.PHOTOS); j++) {
+                target.putIfAbsent(ids.get(j), i * com.weyvo.api.trip.TripStop.PHOTOS + j);
+            }
+        }
+        List<TripPhoto> gone = all.stream().filter(p -> !target.containsKey(p.getId())).toList();
+        photos.deleteAll(gone);
+        photos.flush();
+        List<TripPhoto> kept = all.stream().filter(p -> target.containsKey(p.getId())).toList();
+        kept.forEach(p -> p.setPosition(-1 - (int) (long) p.getId()));
+        photos.flush();
+        kept.forEach(p -> p.setPosition(target.get(p.getId())));
+        photos.flush();
+        deleteFilesAfterCommit(gone);
+    }
+
     /** Storage cleanup for a trip being deleted (rows go with the trip's ON DELETE CASCADE). */
     @Transactional
     public void deleteAllFor(long tripId) {
@@ -117,21 +144,27 @@ public class PhotoService {
                 && photo.getPosition() >= gate.freeCount(trip.getSections().size())) {
             throw ApiException.notFound();
         }
+        // Signed-out readers see the first place only.
+        if (photo.getRole() == TripPhoto.Role.STOP && gate.locked(trip, viewerId) && photo.getPosition() >= com.weyvo.api.trip.TripStop.PHOTOS) {
+            throw ApiException.notFound();
+        }
         return storage.get(size == Size.LARGE ? photo.getLargeKey() : photo.getThumbKey()).orElseThrow(ApiException::notFound);
     }
 
-    public record TripPhotos(PhotoRef cover, Map<Integer, PhotoRef> sections) {}
+    public record TripPhotos(PhotoRef cover, Map<Integer, PhotoRef> sections, Map<Integer, PhotoRef> stops) {}
 
     @Transactional(readOnly = true)
     public TripPhotos forTrip(Trip trip) {
         Map<Integer, PhotoRef> sections = new HashMap<>();
+        Map<Integer, PhotoRef> stops = new HashMap<>();
         PhotoRef cover = null;
         for (TripPhoto p : photos.findByTripId(trip.getId())) {
             if (p.getRole() == TripPhoto.Role.COVER) cover = PhotoRef.of(p);
+            else if (p.getRole() == TripPhoto.Role.STOP) stops.put(p.getPosition(), PhotoRef.of(p));
             else sections.put(p.getPosition(), PhotoRef.of(p));
         }
         if (cover == null && trip.getKind() == Trip.Kind.SHORT) cover = sections.get(0);
-        return new TripPhotos(cover, sections);
+        return new TripPhotos(cover, sections, stops);
     }
 
     /** Cover per trip id for feed cards. Full trips use their cover; short stories their first photo. */

@@ -65,6 +65,18 @@ render.yaml          Render blueprint, security headers, /api rewrite
 - **Future trip dates** are refused.
 - **Usernames** can change once every 90 days.
 
+## Issues: places, layouts, print
+
+- **Places in an issue** (`trip_stops`, photo role `STOP` at position `stop × 3 + n`): tiles under the story, each
+  opening a full-screen mini story. Free 3 / Premium 12 per issue (`app.plans.*.places-per-issue`). Signed-out
+  readers see the first place. When editing, the app sends each place's kept photo ids and the server re-files them.
+- **Layouts** (`trips.layout`): Classic, Editorial (Fraunces serif, drop caps), Scrapbook (polaroids, Caveat),
+  Minimal. CSS themes over the same markup (`.issue--*` in `global.css`). Free gets Classic and Editorial.
+- **Print-ready PDF** (`/trips/:slug/print`, `IssuePrint.tsx`, `styles/print.css`): A4 pages (cover with
+  masthead and cover lines, contents, a chapter per section, places spreads, closing page with moments, end credits,
+  photo strip and colophon). Sized in container units so the preview and the paper match; the browser's "Save as
+  PDF" makes the file, so the server does nothing extra. Premium (`print-issues`).
+
 ## Private chat
 
 Snapchat-style one-to-one chat. Signed-in, verified accounts only.
