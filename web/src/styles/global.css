@@ -385,3 +385,13 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .today-yesterday a { font-weight: 700; color: var(--ink); text-decoration: none; }
 .today-yesterday em { color: var(--muted); font-style: normal; }
 .today-reminder { display: block; margin: 12px auto 0; border: 0; background: none; color: var(--green); font: inherit; font-size: 13px; font-weight: 700; min-height: 32px; }
+
+/* After the quiz: it folds away; a one-liner remembers the answer. When everything's done, the card is one slim line. */
+.today-quiz.leaving { animation: todayFold .5s ease 4s both; overflow: hidden; }
+@keyframes todayFold { to { opacity: 0; transform: scale(.98); } }
+.today-played { margin: 4px 2px 0; font-size: 13.5px; color: var(--ink-soft); }
+.today-played a { font-weight: 700; }
+.today-done-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; padding: 10px 14px; border-radius: 18px;
+  font-size: 13.5px; font-weight: 700; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm, none); }
+.today-done-strip .today-streak { padding: 4px 10px; font-size: 12px; }
+.today-done-next { margin-left: auto; font-weight: 600; color: var(--muted); font-size: 12.5px; }

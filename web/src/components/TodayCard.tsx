@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, ApiError, type DailyQuiz, type DailyToday } from '../api';
 import { useAuth } from '../auth';
@@ -17,10 +17,28 @@ export function TodayCard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
+  // Right after a guess the result shows for a few seconds, then the quiz folds away.
+  const [justPlayed, setJustPlayed] = useState(false);
+  useEffect(() => {
+    if (!justPlayed) return;
+    const t = setTimeout(() => setJustPlayed(false), 4500);
+    return () => clearTimeout(t);
+  }, [justPlayed]);
   if (!data) return null;
 
   const q = quiz ?? data.quiz;
   const played = !!q?.myAnswer;
+  const showQuiz = !!q && (!played || justPlayed);
+  // Quiz played and question answered: just a slim line until tomorrow.
+  if (user && (!q || played) && data.question.myAnswer && !justPlayed && !open) {
+    return (
+      <p className="today-done-strip" role="status">
+        <span>✓ Done for today</span>
+        <span className={`today-streak ${data.streak.days >= 3 ? 'hot' : ''}`}><span aria-hidden="true">🔥</span> {data.streak.days} {data.streak.days === 1 ? 'day' : 'days'}</span>
+        <span className="today-done-next">New quiz tomorrow</span>
+      </p>
+    );
+  }
   const day = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
 
   async function guess(option: string) {
@@ -30,6 +48,7 @@ export function TodayCard() {
     setError('');
     try {
       setQuiz(await api.dailyGuess(option));
+      setJustPlayed(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Try again.');
     } finally {
@@ -51,8 +70,8 @@ export function TodayCard() {
         )}
       </header>
 
-      {q && (
-        <div className="today-quiz">
+      {showQuiz && q && (
+        <div className={`today-quiz ${played ? 'leaving' : ''}`}>
           <div className="today-photo">
             <img src={q.photoUrl} alt="Mystery place" loading="lazy" />
             <span className="today-photo-label">Where in the world?</span>
@@ -87,6 +106,9 @@ export function TodayCard() {
         </span>
         <span aria-hidden="true" className={`today-chev ${open ? 'open' : ''}`}>›</span>
       </button>
+      {played && !justPlayed && (
+        <p className="today-played">{q?.correct ? '🎉' : '🌍'} Today's place was <b>{q?.answer}</b>{q?.tripSlug && <> · <Link to={`/trips/${q.tripSlug}`}>See the story</Link></>}</p>
+      )}
       {open && <QuestionPanel data={data} signedIn={!!user} onAnswered={retry} />}
 
       {user && !data.reminder && <ReminderLink />}
