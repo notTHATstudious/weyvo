@@ -50,12 +50,17 @@ public class PhotoController {
             case "thumb" -> PhotoService.Size.THUMB;
             default -> throw ApiException.notFound();
         };
-        byte[] bytes = service.read(photoId, s, user == null ? null : user.id());
+        PhotoService.PhotoBytes photo = service.read(photoId, s, user == null ? null : user.id());
+        // A photo's bytes never change (a new photo gets a new id), so devices may keep it a long time: thumbnails
+        // 30 days, full size 1 day. Photos anyone could see may also sit in Cloudflare's shared cache, but only for
+        // an hour, so a story made private or deleted stops being reachable within that. Everything else is private.
+        CacheControl cache = photo.everyone()
+                ? CacheControl.maxAge(s == PhotoService.Size.THUMB ? Duration.ofDays(30) : Duration.ofDays(1)).cachePublic().sMaxAge(Duration.ofHours(1))
+                : CacheControl.maxAge(Duration.ofMinutes(5)).cachePrivate();
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
-                // Private: a trip can turn private later, so shared caches must never keep a copy.
-                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePrivate())
+                .cacheControl(cache)
                 .header("X-Content-Type-Options", "nosniff")
-                .body(bytes);
+                .body(photo.bytes());
     }
 }

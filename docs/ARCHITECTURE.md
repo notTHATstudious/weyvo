@@ -45,6 +45,16 @@ docs/                these notes, roadmap, deploy guide
 render.yaml          Render blueprint, security headers, /api rewrite
 ```
 
+## Photo caching
+
+Photos never change after upload (a replaced photo gets a new id), so they're cached:
+- Photos a signed-out stranger could see (public, published, inside the free preview): `public, max-age` 30 days
+  (thumbnails) or 1 day (full size) on devices, and `s-maxage` 1 hour in Cloudflare's shared cache, so a story made
+  private or deleted stops being reachable by new visitors within an hour.
+- Everything else (unlisted, private, drafts, past the preview): `private, max-age=300`, as before.
+- Photo responses never carry the session-renewal cookie, so a shared copy can't include anyone's cookie.
+- The service worker still keeps at most 120 photos on a device, oldest dropped first.
+
 ## How a request flows
 
 1. The phone calls `/api/...` on the web's own address. Render forwards it to the API, so the session cookie

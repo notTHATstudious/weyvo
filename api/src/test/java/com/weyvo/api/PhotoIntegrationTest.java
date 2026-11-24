@@ -82,6 +82,25 @@ class PhotoIntegrationTest {
         mvc.perform(get("/api/photos/" + third + "/thumb")).andExpect(status().isNotFound());
         Cookie reader = signup("reader");
         mvc.perform(get("/api/photos/" + third + "/large").cookie(reader)).andExpect(status().isOk());
+
+        // Anyone can see the first photo: devices keep it long, the shared cache for an hour at most.
+        String open = mvc.perform(get("/api/photos/" + first + "/thumb")).andReturn().getResponse().getHeader("Cache-Control");
+        assertThat(open).contains("public").contains("max-age=2592000").contains("s-maxage=3600");
+        // Past the preview, only members see it, so it never goes in a shared cache, even for a signed-in reader.
+        String members = mvc.perform(get("/api/photos/" + third + "/large").cookie(reader)).andReturn().getResponse().getHeader("Cache-Control");
+        assertThat(members).contains("private").doesNotContain("public");
+    }
+
+    @Test
+    void unlistedTripPhotosAreNeverSharedCached() throws Exception {
+        Cookie owner = signup("unlisted");
+        long tripId = createFullTrip(owner, "UNLISTED", 1);
+        mvc.perform(multipart("/api/trips/" + tripId + "/photos").file(photo(jpeg(400, 300))).param("role", "COVER").cookie(owner))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/trips/" + tripId + "/publish").cookie(owner)).andExpect(status().isOk());
+        long photoId = photoIdOf(owner, tripId, "cover");
+        String cache = mvc.perform(get("/api/photos/" + photoId + "/large")).andExpect(status().isOk()).andReturn().getResponse().getHeader("Cache-Control");
+        assertThat(cache).contains("private").doesNotContain("public");
     }
 
     @Test

@@ -134,21 +134,29 @@ public class PhotoService {
 
     // ---- reads ----
 
+    /** A photo's bytes, and whether anyone at all (even signed out) may see it, which makes it safe to share-cache. */
+    public record PhotoBytes(byte[] bytes, boolean everyone) {}
+
     /** Photo bytes if the viewer may see this photo; 404 otherwise, exactly like a missing photo. */
     @Transactional(readOnly = true)
-    public byte[] read(long photoId, Size size, Long viewerId) {
+    public PhotoBytes read(long photoId, Size size, Long viewerId) {
         TripPhoto photo = photos.findById(photoId).orElseThrow(ApiException::notFound);
         Trip trip = trips.findById(photo.getTripId()).orElseThrow(ApiException::notFound);
-        if (!trip.isVisibleTo(viewerId)) throw ApiException.notFound();
+        if (!canSee(trip, photo, viewerId)) throw ApiException.notFound();
+        // Public only when a signed-out stranger would get it too, and the story is public (not unlisted).
+        boolean everyone = trip.getVisibility() == Trip.Visibility.PUBLIC && canSee(trip, photo, null);
+        byte[] bytes = storage.get(size == Size.LARGE ? photo.getLargeKey() : photo.getThumbKey()).orElseThrow(ApiException::notFound);
+        return new PhotoBytes(bytes, everyone);
+    }
+
+    private boolean canSee(Trip trip, TripPhoto photo, Long viewerId) {
+        if (!trip.isVisibleTo(viewerId)) return false;
         if (photo.getRole() == TripPhoto.Role.SECTION && gate.locked(trip, viewerId)
                 && photo.getPosition() >= gate.freeCount(trip.getSections().size())) {
-            throw ApiException.notFound();
+            return false;
         }
         // Signed-out readers see the first place only.
-        if (photo.getRole() == TripPhoto.Role.STOP && gate.locked(trip, viewerId) && photo.getPosition() >= com.weyvo.api.trip.TripStop.PHOTOS) {
-            throw ApiException.notFound();
-        }
-        return storage.get(size == Size.LARGE ? photo.getLargeKey() : photo.getThumbKey()).orElseThrow(ApiException::notFound);
+        return !(photo.getRole() == TripPhoto.Role.STOP && gate.locked(trip, viewerId) && photo.getPosition() >= com.weyvo.api.trip.TripStop.PHOTOS);
     }
 
     public record TripPhotos(PhotoRef cover, Map<Integer, PhotoRef> sections, Map<Integer, PhotoRef> stops) {}

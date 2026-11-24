@@ -50,7 +50,8 @@ public class JwtCookieFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
             seen(user.id());
             // Sliding session: anyone who keeps using Weyvo gets a fresh cookie once a day and never times out.
-            if (claims.issuedAt().isBefore(java.time.Instant.now().minus(RENEW_AFTER))) {
+            // Never on photos: a photo response may be kept in a shared cache, and must not carry anyone's cookie.
+            if (claims.issuedAt().isBefore(java.time.Instant.now().minus(RENEW_AFTER)) && !request.getRequestURI().startsWith("/api/photos/")) {
                 response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
                         cookie.create(jwt.issue(user.id(), claims.sessionVersion())).toString());
             }
